@@ -45,6 +45,31 @@ col3.metric("MA50", f"{ma50:,.0f}")
 col4.metric("Market State", state)
 
 st.divider()
+st.subheader("Stock Chart Viewer")
+selected_stock = st.selectbox("Select Stock", [t.replace(".NS","") for t in watchlist])
+selected_ticker = selected_stock + ".NS"
+stock_df = yf.download(selected_ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
+fig_candle = go.Figure(go.Candlestick(
+    x=stock_df.index,
+    open=stock_df['Open'].squeeze(),
+    high=stock_df['High'].squeeze(),
+    low=stock_df['Low'].squeeze(),
+    close=stock_df['Close'].squeeze(),
+    name=selected_stock
+))
+sc = stock_df['Close'].squeeze()
+fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=20).mean(), name="EMA20", line=dict(color="#00ff88", width=1)))
+fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=50).mean(), name="EMA50", line=dict(color="#ffaa00", width=1)))
+fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=200).mean(), name="EMA200", line=dict(color="#ff4444", width=1)))
+fig_candle.update_layout(
+    plot_bgcolor="#0d0d0d", paper_bgcolor="#0d0d0d",
+    font_color="#00ff88", height=500,
+    xaxis=dict(gridcolor="#1a1a1a", rangeslider=dict(visible=False)),
+    yaxis=dict(gridcolor="#1a1a1a")
+)
+st.plotly_chart(fig_candle, use_container_width=True)
+
+st.divider()
 st.subheader("Sector Rotation")
 
 sectors = {
