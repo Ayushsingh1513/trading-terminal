@@ -10,8 +10,7 @@ CHAT_ID = "-1003707574219"
 
 def send_telegram(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    r = requests.post(url, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
-    st.write(r.json())
+    requests.post(url, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
 
 def get_close(ticker, period="1y"):
     df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
