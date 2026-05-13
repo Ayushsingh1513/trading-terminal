@@ -174,7 +174,7 @@ if st.button("Send Morning Alert"):
     vcp3 = scan_df[scan_df['VCP'] == '3/4']['Stock'].tolist()
     oversold = scan_df[scan_df['Signal'] == 'Oversold']['Stock'].tolist()
     msg = (
-        f"<b>India Trading Terminal</b>\n"
+        f"<b>MOMENTUM FRENZY Trading Terminal</b>\n"
         f"{datetime.now().strftime('%d %b %Y %H:%M')}\n\n"
         f"<b>Nifty:</b> {last_close:,.0f} | {state}\n"
         f"<b>Top Sector:</b> {top['Sector']} ({top['Score']})\n\n"
