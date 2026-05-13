@@ -28,7 +28,7 @@ div[data-testid="metric-container"] {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("IN India Trading Terminal")
+st.title("MOMENTUM FRENZY TRADING Terminal")
 
 nifty_close = get_close("^NSEI")
 ma200 = float(nifty_close.rolling(200).mean().iloc[-1])
