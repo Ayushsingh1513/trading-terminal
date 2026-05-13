@@ -12,11 +12,10 @@ def send_telegram(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     r = requests.post(url, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
     st.write(r.json())
+
 def get_close(ticker, period="1y"):
     df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
-    close = df['Close']
-    if isinstance(close.columns if hasattr(close, 'columns') else [], pd.Index):
-        close = close.squeeze()
+    close = df['Close'].squeeze()
     return close.dropna()
 
 st.set_page_config(page_title="India Trading Terminal", layout="wide")
@@ -43,31 +42,6 @@ col1.metric("Nifty 50", f"{last_close:,.0f}")
 col2.metric("MA200", f"{ma200:,.0f}")
 col3.metric("MA50", f"{ma50:,.0f}")
 col4.metric("Market State", state)
-
-st.divider()
-st.subheader("Stock Chart Viewer")
-selected_stock = st.selectbox("Select Stock", [t.replace(".NS","") for t in watchlist])
-selected_ticker = selected_stock + ".NS"
-stock_df = yf.download(selected_ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
-fig_candle = go.Figure(go.Candlestick(
-    x=stock_df.index,
-    open=stock_df['Open'].squeeze(),
-    high=stock_df['High'].squeeze(),
-    low=stock_df['Low'].squeeze(),
-    close=stock_df['Close'].squeeze(),
-    name=selected_stock
-))
-sc = stock_df['Close'].squeeze()
-fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=20).mean(), name="EMA20", line=dict(color="#00ff88", width=1)))
-fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=50).mean(), name="EMA50", line=dict(color="#ffaa00", width=1)))
-fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=200).mean(), name="EMA200", line=dict(color="#ff4444", width=1)))
-fig_candle.update_layout(
-    plot_bgcolor="#0d0d0d", paper_bgcolor="#0d0d0d",
-    font_color="#00ff88", height=500,
-    xaxis=dict(gridcolor="#1a1a1a", rangeslider=dict(visible=False)),
-    yaxis=dict(gridcolor="#1a1a1a")
-)
-st.plotly_chart(fig_candle, use_container_width=True)
 
 st.divider()
 st.subheader("Sector Rotation")
@@ -118,34 +92,27 @@ for t in watchlist:
             continue
         close = df['Close'].squeeze().dropna()
         volume = df['Volume'].squeeze().dropna()
-
         ema20 = float(close.ewm(span=20).mean().iloc[-1])
         ema50 = float(close.ewm(span=50).mean().iloc[-1])
         ema200 = float(close.ewm(span=200).mean().iloc[-1])
         price = float(close.iloc[-1])
-
         delta = close.diff()
         gain = delta.clip(lower=0).rolling(14).mean()
         loss = -delta.clip(upper=0).rolling(14).mean()
         rsi = float(100 - (100 / (1 + gain.iloc[-1] / loss.iloc[-1])))
-
         week52_high = float(close.rolling(min(252, len(close))).max().iloc[-1])
         pct_from_high = round((price / week52_high - 1) * 100, 1)
-
         vol_avg20 = float(volume.rolling(20).mean().iloc[-1])
         vol_today = float(volume.iloc[-1])
         vol_surge = round(vol_today / vol_avg20, 1) if vol_avg20 > 0 else 0
-
         stock_1m = float((close.iloc[-1] / close.iloc[-21] - 1) * 100)
         rs = round(stock_1m - nifty_1m_ret, 1)
-
         stage2 = price > ema20 > ema50 > ema200
         near_52w = pct_from_high > -10
         vol_ok = vol_surge >= 1.5
         rs_ok = rs > 0
         vcp_score = sum([stage2, near_52w, vol_ok, rs_ok])
         signal = "Oversold" if rsi < 30 else ("Overbought" if rsi > 70 else "Neutral")
-
         rows2.append({
             "Stock": t.replace(".NS", ""),
             "Price": round(price, 1),
@@ -162,6 +129,31 @@ for t in watchlist:
 
 scan_df = pd.DataFrame(rows2).sort_values("VCP", ascending=False)
 st.dataframe(scan_df, use_container_width=True)
+
+st.divider()
+st.subheader("Stock Chart Viewer")
+selected_stock = st.selectbox("Select Stock", [t.replace(".NS","") for t in watchlist])
+selected_ticker = selected_stock + ".NS"
+stock_df = yf.download(selected_ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
+fig_candle = go.Figure(go.Candlestick(
+    x=stock_df.index,
+    open=stock_df['Open'].squeeze(),
+    high=stock_df['High'].squeeze(),
+    low=stock_df['Low'].squeeze(),
+    close=stock_df['Close'].squeeze(),
+    name=selected_stock
+))
+sc = stock_df['Close'].squeeze()
+fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=20).mean(), name="EMA20", line=dict(color="#00ff88", width=1)))
+fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=50).mean(), name="EMA50", line=dict(color="#ffaa00", width=1)))
+fig_candle.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=200).mean(), name="EMA200", line=dict(color="#ff4444", width=1)))
+fig_candle.update_layout(
+    plot_bgcolor="#0d0d0d", paper_bgcolor="#0d0d0d",
+    font_color="#00ff88", height=500,
+    xaxis=dict(gridcolor="#1a1a1a", rangeslider=dict(visible=False)),
+    yaxis=dict(gridcolor="#1a1a1a")
+)
+st.plotly_chart(fig_candle, use_container_width=True)
 
 st.divider()
 st.subheader("Nifty Chart")
