@@ -9,12 +9,9 @@ BOT_TOKEN = "8651727429:AAHAA9nFtPpUO2npxgdR6MyZkZBMqHLyTRg"
 CHAT_ID = "-4037707574219"
 
 def send_telegram(msg):
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        requests.post(url, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
-    except:
-        pass
-
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    r = requests.post(url, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
+    st.write(r.json())
 def get_close(ticker, period="1y"):
     df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
     close = df['Close']
