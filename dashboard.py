@@ -457,7 +457,7 @@ nifty_df = get_ohlcv("^NSEI", "1y")
 nc = nifty_df['Close'].squeeze()
 
 fig3 = go.Figure()
-fig3.add_trace(go.Scatter(x=nifty_df.index, y=nc, name="Nifty", line=dict(color="#00e676", width=1.5), fill="tozeroy", fillcolor="#00e67611"))
+fig3.add_trace(go.Scatter(x=nifty_df.index, y=nc, name="Nifty", line=dict(color="#00e676", width=1.5), fill="tozeroy", fillcolor="rgba(0,230,118,0.07)"))
 fig3.add_trace(go.Scatter(x=nifty_df.index, y=nc.rolling(200).mean(), name="MA200", line=dict(color="#ff5252", dash="dash", width=1)))
 fig3.add_trace(go.Scatter(x=nifty_df.index, y=nc.rolling(50).mean(),  name="MA50",  line=dict(color="#ffaa00", dash="dot",  width=1)))
 fig3.update_layout(
