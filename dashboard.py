@@ -178,6 +178,11 @@ with st.spinner("Loading market data…"):
     bank_close  = get_close("^NSEBANK")
     vix_close   = get_close("^INDIAVIX", period="1mo")
 
+
+if len(nifty_close) < 2 or len(bank_close) < 2 or len(vix_close) < 2:
+    st.error("⚠️ Market data unavailable. Yahoo Finance may be rate-limiting. Please refresh in 1-2 minutes.")
+    st.stop()
+
 nifty_last = float(nifty_close.iloc[-1]); nifty_prev = float(nifty_close.iloc[-2])
 nifty_chg  = (nifty_last / nifty_prev - 1) * 100
 bank_last  = float(bank_close.iloc[-1]);  bank_prev  = float(bank_close.iloc[-2])
@@ -188,7 +193,7 @@ ma200      = float(nifty_close.rolling(200).mean().iloc[-1])
 ma50       = float(nifty_close.rolling(50).mean().iloc[-1])
 state      = "BULL" if nifty_last > ma200 else "BEAR"
 state_color= "#00e676" if state == "BULL" else "#ff5252"
-nifty_1m   = float((nifty_close.iloc[-1] / nifty_close.iloc[-21] - 1) * 100)
+nifty_1m   = float((nifty_close.iloc[-1] / nifty_close.iloc[max(-21,-len(nifty_close))] - 1) * 100)
 
 
 # ── Pulse Bar ─────────────────────────────────────────────────────────────────
