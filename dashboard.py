@@ -13,6 +13,218 @@ CHAT_ID   = "-1003707574219"
 
 st.set_page_config(page_title="Momentum Frenzy Terminal", layout="wide", initial_sidebar_state="collapsed")
 
+# ── Session State ─────────────────────────────────────────────────────────────
+if "page" not in st.session_state:
+    st.session_state.page = "landing"
+
+# ── Landing Page ──────────────────────────────────────────────────────────────
+if st.session_state.page == "landing":
+    st.markdown("""
+    <style>
+    html,body,.stApp{background:#0a0a0f;color:#e0e0e0;font-family:'Inter',sans-serif;}
+    .block-container{padding:0;max-width:100%;}
+    header[data-testid="stHeader"]{display:none;}
+    #MainMenu{display:none;}footer{display:none;}
+    .hero{
+      min-height:100vh;
+      background:radial-gradient(ellipse at 20% 50%,#0d1f0d 0%,#0a0a0f 60%),
+                 linear-gradient(135deg,#0a0a0f 0%,#0f0f1a 100%);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:40px 20px;position:relative;overflow:hidden;
+    }
+    .hero::before{
+      content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+      background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e676' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      opacity:0.5;
+    }
+    .badge{
+      display:inline-block;background:#00380a;border:1px solid #00e676;
+      color:#00e676;font-size:12px;font-weight:600;letter-spacing:.1em;
+      text-transform:uppercase;padding:6px 16px;border-radius:999px;margin-bottom:24px;
+    }
+    .hero-title{
+      font-size:clamp(36px,6vw,80px);font-weight:800;line-height:1.1;
+      margin:0 0 16px 0;
+      background:linear-gradient(135deg,#ffffff 0%,#00e676 50%,#00aa55 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .hero-sub{
+      font-size:clamp(16px,2.5vw,22px);color:#888;max-width:600px;
+      line-height:1.6;margin:0 auto 40px auto;
+    }
+    .cta-btn{
+      display:inline-block;background:linear-gradient(135deg,#00e676,#00aa55);
+      color:#000;font-size:16px;font-weight:700;padding:16px 40px;
+      border-radius:8px;text-decoration:none;letter-spacing:.05em;
+      cursor:pointer;border:none;transition:all .2s;
+    }
+    .cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,230,118,0.3);}
+    .features{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:20px;max-width:1100px;margin:80px auto 40px auto;padding:0 20px;
+    }
+    .feat-card{
+      background:#0f0f1a;border:1px solid #1e1e3a;border-radius:12px;
+      padding:24px;text-align:left;transition:border-color .2s;
+    }
+    .feat-card:hover{border-color:#00e676;}
+    .feat-icon{font-size:28px;margin-bottom:12px;}
+    .feat-title{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:8px;}
+    .feat-desc{font-size:13px;color:#666;line-height:1.6;}
+    .stats-bar{
+      display:flex;gap:40px;flex-wrap:wrap;justify-content:center;
+      padding:40px 20px;border-top:1px solid #1e1e3a;border-bottom:1px solid #1e1e3a;
+      margin:40px 0;background:#0f0f1a;
+    }
+    .stat-item{text-align:center;}
+    .stat-num{font-size:36px;font-weight:800;color:#00e676;}
+    .stat-label{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.1em;}
+    .how-section{max-width:900px;margin:0 auto;padding:40px 20px;}
+    .how-title{font-size:28px;font-weight:700;text-align:center;margin-bottom:32px;}
+    .step{display:flex;gap:16px;margin-bottom:24px;align-items:flex-start;}
+    .step-num{
+      min-width:36px;height:36px;border-radius:50%;
+      background:#00e676;color:#000;font-weight:700;
+      display:flex;align-items:center;justify-content:center;font-size:14px;
+    }
+    .step-text h4{margin:0 0 4px 0;color:#e0e0e0;font-size:15px;}
+    .step-text p{margin:0;color:#666;font-size:13px;}
+    .disclaimer{
+      max-width:800px;margin:0 auto;padding:20px;
+      background:#0f0f1a;border:1px solid #1e1e3a;border-radius:8px;
+      font-size:11px;color:#555;line-height:1.6;text-align:center;
+    }
+    .footer{
+      text-align:center;padding:30px 20px;
+      border-top:1px solid #1e1e3a;color:#444;font-size:12px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Hero
+    st.markdown("""
+    <div class="hero">
+      <div class="badge">⚡ Live Indian Markets</div>
+      <h1 class="hero-title">Momentum Frenzy<br>Trading Terminal</h1>
+      <p class="hero-sub">
+        Professional-grade momentum scanner for Indian markets.
+        Scan Nifty 500, identify breakouts, track sector rotation —
+        all in one powerful terminal.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # CTA Button
+    col1,col2,col3 = st.columns([1,1,1])
+    with col2:
+        if st.button("🚀 Launch Terminal", use_container_width=True, type="primary"):
+            st.session_state.page = "terminal"
+            st.rerun()
+        st.markdown("<p style='text-align:center;color:#555;font-size:12px;margin-top:8px'>Free · No login required · Real-time data</p>", unsafe_allow_html=True)
+
+    # Stats
+    st.markdown("""
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-num">500+</div><div class="stat-label">Stocks Scanned</div></div>
+      <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Sectors Tracked</div></div>
+      <div class="stat-item"><div class="stat-num">15m</div><div class="stat-label">Data Refresh</div></div>
+      <div class="stat-item"><div class="stat-num">100</div><div class="stat-label">Momentum Score</div></div>
+      <div class="stat-item"><div class="stat-num">2x</div><div class="stat-label">Daily Alerts</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Features
+    st.markdown("""
+    <div class="features">
+      <div class="feat-card">
+        <div class="feat-icon">🔍</div>
+        <div class="feat-title">Nifty 500 Scanner</div>
+        <div class="feat-desc">Scan entire Nifty 500 universe with proprietary Momentum Score (0–100). Find BUY, WATCH & AVOID signals instantly.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">4-Quadrant Sector Rotation</div>
+        <div class="feat-desc">Identify Leading, Improving, Weakening & Lagging sectors. Know where smart money is rotating in real time.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📈</div>
+        <div class="feat-title">Professional Charts</div>
+        <div class="feat-desc">Candlestick charts with EMA 20/50/200, volume analysis, and setup markers. Full chart viewer for any Nifty 500 stock.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💼</div>
+        <div class="feat-title">Portfolio Tracker</div>
+        <div class="feat-desc">Track your holdings with live P&L in ₹ and %. Real-time CMP updates, visual P&L chart and portfolio summary.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📲</div>
+        <div class="feat-title">Telegram Alerts</div>
+        <div class="feat-desc">Auto morning & evening alerts at 9:30 AM and 3:30 PM IST. Get top BUY signals, sector leaders and market summary daily.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Market Pulse Bar</div>
+        <div class="feat-desc">Sticky real-time bar showing Nifty, BankNifty, VIX, MA200 and market regime (BULL/BEAR) at all times.</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # How it works
+    st.markdown("""
+    <div class="how-section">
+      <h2 class="how-title">How It Works</h2>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <h4>Scanner Runs Automatically</h4>
+          <p>Our engine downloads 1 year of price + volume data for Nifty 500 stocks and computes Momentum Score, RSI, Relative Strength, and Stage 2 criteria.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <h4>Stocks Are Ranked & Classified</h4>
+          <p>Each stock gets a Score (0–100), Setup Type (Breakout, Pullback, Vol Surge), Signal (BUY/WATCH/AVOID) and Risk Level.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <h4>You Take Action</h4>
+          <p>Filter by signal, view charts, track your portfolio and receive Telegram alerts — all from one terminal.</p>
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Second CTA
+    col1,col2,col3 = st.columns([1,1,1])
+    with col2:
+        if st.button("⚡ Enter Terminal Now", use_container_width=True):
+            st.session_state.page = "terminal"
+            st.rerun()
+
+    # Disclaimer + Footer
+    st.markdown("""
+    <div style="max-width:800px;margin:40px auto;padding:0 20px;">
+      <div class="disclaimer">
+        ⚠️ <b>Disclaimer:</b> Momentum Frenzy is for educational and informational purposes only.
+        Nothing on this platform constitutes financial advice or a recommendation to buy or sell any security.
+        Always do your own research and consult a SEBI-registered advisor before investing.
+        Past performance is not indicative of future results.
+      </div>
+    </div>
+    <div class="footer">
+      © 2025 Momentum Frenzy · Built for Indian Markets · Data: Yahoo Finance<br>
+      <span style="color:#333">momentumfrenzy.online</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.stop()
+
+
+
 st.markdown("""
 <style>
 html, body, .stApp { background:#0a0a0f; color:#e0e0e0; font-family:'Inter',sans-serif; }
