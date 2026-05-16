@@ -377,8 +377,8 @@ def style_score(val):
     return "color:#ff5252"
 
 styled = filtered.style\
-    .applymap(style_signal, subset=["Signal"])\
-    .applymap(style_score,  subset=["Score"])\
+    .map(style_signal, subset=["Signal"])\
+    .map(style_score,  subset=["Score"])\
     .format({"Price":"{:.1f}","RSI":"{:.1f}","RS":"{:+.1f}","VolSurge":"{:.1f}x","52W%":"{:.1f}%","Score":"{:.0f}"})
 
 st.dataframe(styled, use_container_width=True, height=320)
