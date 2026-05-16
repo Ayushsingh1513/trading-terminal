@@ -423,7 +423,7 @@ if len(stock_df) > 0:
     fig2.add_trace(go.Scatter(x=stock_df.index, y=sc.ewm(span=200).mean(), name="EMA200", line=dict(color="#ff5252",width=1.2)), row=1, col=1)
 
     # Volume bars
-    vol_colors = ["#00e67655" if c >= o else "#ff525255"
+    vol_colors = ["rgba(0,230,118,0.4)" if c >= o else "rgba(255,82,82,0.4)"
                   for c,o in zip(stock_df['Close'].squeeze(), stock_df['Open'].squeeze())]
     fig2.add_trace(go.Bar(x=stock_df.index, y=sv, name="Volume", marker_color=vol_colors, showlegend=False), row=2, col=1)
 
