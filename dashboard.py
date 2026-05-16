@@ -105,6 +105,7 @@ if st.session_state.page == "landing":
     # Hero
     st.markdown("""
     <div class="hero">
+      <img src="https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png" style="width:180px;height:180px;object-fit:contain;margin-bottom:16px;border-radius:50%;box-shadow:0 0 40px rgba(0,230,118,0.3);" />
       <div class="badge">⚡ Live Indian Markets</div>
       <h1 class="hero-title">Momentum Frenzy<br>Trading Terminal</h1>
       <p class="hero-sub">
@@ -485,8 +486,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("<h2 style='color:#00e676;margin:0 0 4px 0;font-size:20px;letter-spacing:.05em'>⚡ MOMENTUM FRENZY TRADING TERMINAL</h2>", unsafe_allow_html=True)
-st.markdown("<p style='color:#555;font-size:12px;margin:0'>Indian Markets · Nifty 500 Momentum Scanner</p>", unsafe_allow_html=True)
+hc1, hc2 = st.columns([1, 10])
+with hc1:
+    st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png", width=60)
+with hc2:
+    st.markdown("<h2 style='color:#00e676;margin:0 0 4px 0;font-size:20px;letter-spacing:.05em'>⚡ MOMENTUM FRENZY TRADING TERMINAL</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#555;font-size:12px;margin:0'>Indian Markets · Nifty 500 Momentum Scanner</p>", unsafe_allow_html=True)
 
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
