@@ -127,7 +127,7 @@ if st.session_state.page == "landing":
     st.markdown("""
     <div class="stats-bar">
       <div class="stat-item"><div class="stat-num">500+</div><div class="stat-label">Stocks Scanned</div></div>
-      <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Sectors Tracked</div></div>
+      <div class="stat-item"><div class="stat-num">18</div><div class="stat-label">Sectors Tracked</div></div>
       <div class="stat-item"><div class="stat-num">15m</div><div class="stat-label">Data Refresh</div></div>
       <div class="stat-item"><div class="stat-num">100</div><div class="stat-label">Momentum Score</div></div>
       <div class="stat-item"><div class="stat-num">2x</div><div class="stat-label">Daily Alerts</div></div>
@@ -500,8 +500,25 @@ with tab1:
     # ── Sector Rotation ──────────────────────────────────────────────────────
     st.markdown("<div class='section-header'>📊 Sector Rotation — 4 Quadrant</div>", unsafe_allow_html=True)
     sectors = {
-        "IT":"^CNXIT","Bank":"^NSEBANK","Auto":"^CNXAUTO","Pharma":"^CNXPHARMA",
-        "FMCG":"^CNXFMCG","Metal":"^CNXMETAL","Energy":"^CNXENERGY","Realty":"^CNXREALTY"
+        # Original
+        "IT":          "^CNXIT",
+        "Pvt Bank":    "^CNXPVTBANK",
+        "PSU Bank":    "^CNXPSUBANK",
+        "Auto":        "^CNXAUTO",
+        "Pharma":      "^CNXPHARMA",
+        "FMCG":        "^CNXFMCG",
+        "Metal":       "^CNXMETAL",
+        "Energy":      "^CNXENERGY",
+        "Realty":      "^CNXREALTY",
+        # New Sectors
+        "Infra":       "^CNXINFRA",
+        "Cap Goods":   "^CNXCMDT",
+        "Cons Durable":"^CNXCONSUM",
+        "Chemicals":   "NIFTYCHEMICALS.NS",
+        "Defence":     "MIDHSMCAP400.NS",
+        "PSE":         "^CNXPSE",
+        "MNC":         "^CNXMNC",
+        "Media":       "^CNXMEDIA",
     }
     with st.spinner("Loading sectors…"):
         rows = []
