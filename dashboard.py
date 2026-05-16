@@ -286,7 +286,7 @@ with tab1:
     with sc1: sig_filter   = st.selectbox("Signal",["All","BUY","WATCH","AVOID"])
     with sc2: risk_filter  = st.selectbox("Risk",["All","Low","Medium","High"])
     with sc3: setup_filter = st.selectbox("Setup",["All","Breakout","Pullback","Vol Surge","Trend","Oversold","Base"])
-    with sc4: top_n        = st.selectbox("Show Top",["Top 50","Top 100","Top 200","All 500"],[0])
+    with sc4: top_n        = st.selectbox("Show Top",["Top 50","Top 100","Top 200","All 500"],index=0)
 
     top_map = {"Top 50":50,"Top 100":100,"Top 200":200,"All 500":len(NIFTY500)}
     scan_limit = top_map[top_n]
