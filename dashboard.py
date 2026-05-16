@@ -67,14 +67,24 @@ def send_telegram(msg):
         requests.post(url, data={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"}, timeout=10)
     except: pass
 
-@st.cache_data(ttl=900)
+@st.cache_data(ttl=1800)
 def get_close(ticker, period="1y"):
-    df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
-    return df['Close'].squeeze().dropna()
+    for _ in range(3):
+        try:
+            df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
+            r = df['Close'].squeeze().dropna()
+            if len(r) > 2: return r
+        except: pass
+    return pd.Series(dtype=float)
 
-@st.cache_data(ttl=900)
+@st.cache_data(ttl=1800)
 def get_ohlcv(ticker, period="6mo"):
-    return yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
+    for _ in range(3):
+        try:
+            df = yf.download(ticker, period=period, interval="1d", progress=False, auto_adjust=True)
+            if len(df) > 2: return df
+        except: pass
+    return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
 def get_price(ticker):
@@ -82,6 +92,53 @@ def get_price(ticker):
         df = yf.download(ticker, period="2d", interval="1d", progress=False, auto_adjust=True)
         return float(df['Close'].squeeze().dropna().iloc[-1])
     except: return None
+
+@st.cache_data(ttl=1800)
+def batch_scan(tickers, nifty_1m):
+    """Batch download all scanner tickers at once for speed"""
+    rows = []
+    try:
+        raw = yf.download(tickers, period="1y", interval="1d",
+                          progress=False, auto_adjust=True, group_by="ticker")
+    except:
+        return pd.DataFrame()
+    for t in tickers:
+        try:
+            if len(tickers) == 1:
+                close  = raw['Close'].squeeze().dropna()
+                volume = raw['Volume'].squeeze().dropna()
+            else:
+                close  = raw[t]['Close'].squeeze().dropna()
+                volume = raw[t]['Volume'].squeeze().dropna()
+            if len(close) < 50: continue
+            ema20  = float(close.ewm(span=20).mean().iloc[-1])
+            ema50  = float(close.ewm(span=50).mean().iloc[-1])
+            ema200 = float(close.ewm(span=200).mean().iloc[-1])
+            price  = float(close.iloc[-1])
+            delta  = close.diff()
+            gain   = delta.clip(lower=0).rolling(14).mean()
+            loss   = -delta.clip(upper=0).rolling(14).mean()
+            rsi    = float(100 - (100/(1+gain.iloc[-1]/(loss.iloc[-1]+1e-9))))
+            w52h   = float(close.rolling(min(252,len(close))).max().iloc[-1])
+            pfh    = round((price/w52h-1)*100,1)
+            va     = float(volume.rolling(20).mean().iloc[-1])
+            vs     = round(float(volume.iloc[-1])/va,1) if va>0 else 0
+            s1m    = float((close.iloc[-1]/close.iloc[max(-21,-len(close))]-1)*100)
+            rs     = round(s1m - nifty_1m, 1)
+            stage2 = price > ema20 > ema50 > ema200
+            vcp    = sum([stage2, pfh>-10, vs>=1.5, rs>0])
+            sc     = round(min(
+                min(max((rsi-40)/30*25,0),25)+min(max(rs/10*20,0),20)+
+                min(max((vs-1)/2*20,0),20)+vcp/4*25+min(max((10+pfh)/10*10,0),10),100))
+            name = t.replace(".NS","")
+            rows.append({"Stock":name,"Price":round(price,1),
+                "Setup":setup_type(stage2,rsi,vs,pfh),"Score":sc,
+                "Signal":signal_label(sc,stage2),"RSI":round(rsi,1),
+                "RS":rs,"VolSurge":vs,"52W%":pfh,
+                "Risk":risk_level(vs,pfh,rsi),"VCP":f"{vcp}/4",
+                "Stage2":"✅" if stage2 else "❌"})
+        except: pass
+    return pd.DataFrame(rows).sort_values("Score",ascending=False).reset_index(drop=True)
 
 def color_val(v): return "pulse-up" if v >= 0 else "pulse-down"
 def arrow(v): return "▲" if v >= 0 else "▼"
@@ -292,46 +349,10 @@ with tab1:
     scan_limit = top_map[top_n]
     scan_tickers = NIFTY500[:scan_limit]
 
-    with st.spinner(f"Scanning {scan_limit} stocks… (may take 1-2 min)"):
-        rows2 = []
-        for t in scan_tickers:
-            try:
-                df = yf.download(t, period="1y", interval="1d", progress=False, auto_adjust=True)
-                if len(df) < 50: continue
-                close  = df['Close'].squeeze().dropna()
-                volume = df['Volume'].squeeze().dropna()
-                ema20  = float(close.ewm(span=20).mean().iloc[-1])
-                ema50  = float(close.ewm(span=50).mean().iloc[-1])
-                ema200 = float(close.ewm(span=200).mean().iloc[-1])
-                price  = float(close.iloc[-1])
-                delta  = close.diff()
-                gain   = delta.clip(lower=0).rolling(14).mean()
-                loss   = -delta.clip(upper=0).rolling(14).mean()
-                rsi    = float(100 - (100 / (1 + gain.iloc[-1]/(loss.iloc[-1]+1e-9))))
-                week52_high   = float(close.rolling(min(252,len(close))).max().iloc[-1])
-                pct_from_high = round((price/week52_high-1)*100, 1)
-                vol_avg20 = float(volume.rolling(20).mean().iloc[-1])
-                vol_surge = round(float(volume.iloc[-1])/vol_avg20, 1) if vol_avg20 > 0 else 0
-                stock_1m  = float((close.iloc[-1]/close.iloc[-21]-1)*100)
-                rs        = round(stock_1m - nifty_1m, 1)
-                stage2    = price > ema20 > ema50 > ema200
-                vcp_int   = sum([stage2, pct_from_high>-10, vol_surge>=1.5, rs>0])
-                mscore    = momentum_score(rsi, rs, vol_surge, vcp_int, pct_from_high)
-                rows2.append({
-                    "Stock": t.replace(".NS",""),
-                    "Price": round(price,1),
-                    "Setup": setup_type(stage2, rsi, vol_surge, pct_from_high),
-                    "Score": mscore,
-                    "Signal": signal_label(mscore, stage2),
-                    "RSI": round(rsi,1), "RS": rs,
-                    "VolSurge": vol_surge, "52W%": pct_from_high,
-                    "Risk": risk_level(vol_surge, pct_from_high, rsi),
-                    "VCP": f"{vcp_int}/4",
-                    "Stage2": "✅" if stage2 else "❌",
-                })
-            except: pass
-
-    scan_df = pd.DataFrame(rows2).sort_values("Score", ascending=False).reset_index(drop=True)
+    with st.spinner(f"Scanning {scan_limit} stocks… using batch download ⚡"):
+        scan_df = batch_scan(scan_tickers, nifty_1m)
+    if len(scan_df) == 0:
+        st.warning("Scanner returned no data. Try refreshing.")
     filtered = scan_df.copy()
     if sig_filter  != "All": filtered = filtered[filtered["Signal"]==sig_filter]
     if risk_filter != "All": filtered = filtered[filtered["Risk"]==risk_filter]
