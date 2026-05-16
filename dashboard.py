@@ -17,7 +17,10 @@ st.markdown("""
 <style>
 /* ── Base ── */
 html, body, .stApp { background:#0a0a0f; color:#e0e0e0; font-family:'Inter',sans-serif; }
-.block-container { padding:0.5rem 1rem 2rem 1rem; max-width:100%; }
+.block-container { padding:0rem 1rem 2rem 1rem; max-width:100%; }
+header[data-testid="stHeader"] { display:none; }
+#MainMenu { display:none; }
+footer { display:none; }
 
 /* ── Market Pulse Bar ── */
 .pulse-bar {
