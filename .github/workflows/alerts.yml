@@ -1,0 +1,17 @@
+name: Market Alerts
+on:
+  schedule:
+    - cron: '0 4 * * 1-5'    # 9:30 AM IST
+    - cron: '0 10 * * 1-5'   # 3:30 PM IST
+  workflow_dispatch:
+
+jobs:
+  send-alert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install yfinance requests pandas
+      - run: python alert.py
