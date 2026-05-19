@@ -887,34 +887,83 @@ with tab5:
 
     @st.cache_data(ttl=300)
     def get_options_chain(symbol):
-        """Fetch options chain from NSE"""
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://www.nseindia.com/option-chain",
-        }
-        session = requests.Session()
-        try:
-            # Get cookies first
-            session.get("https://www.nseindia.com", headers=headers, timeout=10)
-            session.get("https://www.nseindia.com/option-chain", headers=headers, timeout=10)
-            if symbol in ["NIFTY","BANKNIFTY","FINNIFTY"]:
-                url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
-            else:
-                url = f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
-            resp = session.get(url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                return resp.json()
-        except: pass
+        """Fetch options chain from NSE with multiple fallback methods"""
+        import time
+        HEADERS_LIST = [
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "*/*",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.nseindia.com/option-chain",
+                "X-Requested-With": "XMLHttpRequest",
+                "Connection": "keep-alive",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+            },
+            {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+                "Accept": "application/json, text/plain, */*",
+                "Referer": "https://www.nseindia.com/",
+                "Connection": "keep-alive",
+            }
+        ]
+        if symbol in ["NIFTY","BANKNIFTY","FINNIFTY"]:
+            api_url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
+        else:
+            api_url = f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
+
+        for headers in HEADERS_LIST:
+            try:
+                session = requests.Session()
+                session.get("https://www.nseindia.com", headers=headers, timeout=8)
+                time.sleep(0.5)
+                session.get("https://www.nseindia.com/option-chain", headers=headers, timeout=8)
+                time.sleep(0.5)
+                resp = session.get(api_url, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data and "records" in data:
+                        return data
+            except: pass
         return None
+
+    def get_mock_options(symbol, spot_price):
+        """Generate realistic mock options data when NSE is unavailable"""
+        import random
+        expiries = ["29-May-2026", "05-Jun-2026", "26-Jun-2026"]
+        strikes = [round(spot_price * (1 + i*0.01), -2) for i in range(-10, 11)]
+        data = []
+        for strike in strikes:
+            dist = abs(strike - spot_price) / spot_price
+            iv_base = 15 + dist * 100
+            ce_ltp = max(0.5, spot_price - strike if spot_price > strike else spot_price * 0.01 * (1 - dist*5))
+            pe_ltp = max(0.5, strike - spot_price if strike > spot_price else spot_price * 0.01 * (1 - dist*5))
+            oi_base = int(random.gauss(500000, 200000) * (1 - dist*3))
+            data.append({
+                "strikePrice": strike,
+                "expiryDate": expiries[0],
+                "CE": {"lastPrice": round(ce_ltp, 1), "openInterest": max(1000, oi_base),
+                       "changeinOpenInterest": random.randint(-50000, 50000),
+                       "totalTradedVolume": max(1000, oi_base//2),
+                       "impliedVolatility": round(iv_base + random.uniform(-2,2), 1)},
+                "PE": {"lastPrice": round(pe_ltp, 1), "openInterest": max(1000, oi_base),
+                       "changeinOpenInterest": random.randint(-50000, 50000),
+                       "totalTradedVolume": max(1000, oi_base//2),
+                       "impliedVolatility": round(iv_base + random.uniform(-2,2), 1)}
+            })
+        return {"records": {"underlyingValue": spot_price, "expiryDates": expiries, "data": data},
+                "_mock": True}
 
     def parse_options(data, atm_range=10):
         """Parse NSE options chain data"""
         if not data: return None, None, None
         records = data.get("records", {})
+        if not records: return None, None, None
         spot    = records.get("underlyingValue", 0)
         expiries= records.get("expiryDates", [])
+        if not spot or spot == 0: return None, None, None
         return records, spot, expiries
 
     def black_scholes_greeks(S, K, T, r, sigma, option_type="CE"):
@@ -951,15 +1000,23 @@ with tab5:
     with st.spinner(f"Fetching {opt_symbol} options chain from NSE…"):
         raw_data = get_options_chain(opt_symbol)
 
+    is_mock = False
     if raw_data is None:
-        st.error("⚠️ NSE data unavailable right now. NSE blocks requests during market hours sometimes. Try again in 1-2 minutes.")
-        st.info("💡 **Tip:** NSE rate-limits automated requests. If this persists, the market may be closed or NSE is blocking the request.")
-    else:
-        records, spot, expiries = parse_options(raw_data)
+        st.warning("⚠️ NSE live data unavailable (NSE blocks cloud servers). Showing **simulated data** for demo. For live data, run locally.")
+        # Get spot price from yfinance as fallback
+        try:
+            yf_sym = "^NSEI" if opt_symbol=="NIFTY" else ("^NSEBANK" if opt_symbol=="BANKNIFTY" else opt_symbol+".NS")
+            spot_fb = float(yf.download(yf_sym, period="1d", interval="1m", progress=False, auto_adjust=True)['Close'].squeeze().dropna().iloc[-1])
+        except: spot_fb = 24000 if opt_symbol=="NIFTY" else 52000
+        raw_data = get_mock_options(opt_symbol, spot_fb)
+        is_mock = True
 
-        if not records or not spot:
-            st.error("Could not parse options data. Please try again.")
-        else:
+    records, spot, expiries = parse_options(raw_data)
+
+    if not records or not spot:
+        st.error("Could not load options data. Please try again.")
+    if is_mock:
+            st.info("📊 Showing simulated options data for demo purposes. Live NSE data requires running the app locally.")
             # Update expiry selectbox
             exp_idx = 0
             if expiries:
