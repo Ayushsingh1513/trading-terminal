@@ -495,7 +495,7 @@ with hc2:
 
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Market & Scanner", "📈 Charts", "💼 Portfolio", "📲 Alerts"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Market & Scanner", "📈 Charts", "💼 Portfolio", "📲 Alerts", "⚡ Options Chain"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -862,5 +862,331 @@ print("Alert sent!")
             st.success("✅ Custom alert sent!")
         else:
             st.warning("Please type a message first")
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — Options Chain
+# ══════════════════════════════════════════════════════════════════════════════
+with tab5:
+    import json, math
+
+    st.markdown("<div class='section-header'>⚡ Options Chain Analyzer</div>", unsafe_allow_html=True)
+
+    # F&O eligible stocks + indices
+    FNO_STOCKS = [
+        "NIFTY","BANKNIFTY","FINNIFTY",
+        "RELIANCE","TCS","HDFCBANK","INFY","ICICIBANK","SBIN","AXISBANK",
+        "LT","BAJFINANCE","KOTAKBANK","ITC","HINDUNILVR","WIPRO","HCLTECH",
+        "MARUTI","SUNPHARMA","TITAN","TECHM","LTIM","BAJAJ-AUTO","HEROMOTOCO",
+        "M&M","TATAMOTORS","JSWSTEEL","HINDALCO","NTPC","POWERGRID","COALINDIA",
+        "DIVISLAB","DRREDDY","CIPLA","APOLLOHOSP","ADANIENT","ADANIPORTS",
+        "TATAPOWER","TRENT","ZOMATO","IRCTC","HAL","BEL","DIXON","POLYCAB",
+        "HAVELLS","CHOLAFIN","PERSISTENT","MPHASIS","COFORGE"
+    ]
+
+    @st.cache_data(ttl=300)
+    def get_options_chain(symbol):
+        """Fetch options chain from NSE"""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.nseindia.com/option-chain",
+        }
+        session = requests.Session()
+        try:
+            # Get cookies first
+            session.get("https://www.nseindia.com", headers=headers, timeout=10)
+            session.get("https://www.nseindia.com/option-chain", headers=headers, timeout=10)
+            if symbol in ["NIFTY","BANKNIFTY","FINNIFTY"]:
+                url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
+            else:
+                url = f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
+            resp = session.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                return resp.json()
+        except: pass
+        return None
+
+    def parse_options(data, atm_range=10):
+        """Parse NSE options chain data"""
+        if not data: return None, None, None, None
+        records = data.get("records", {})
+        spot    = records.get("underlyingValue", 0)
+        expiries= records.get("expiryDates", [])
+        return records, spot, expiries
+
+    def black_scholes_greeks(S, K, T, r, sigma, option_type="CE"):
+        """Calculate Black-Scholes Greeks"""
+        if T <= 0 or sigma <= 0: return {}
+        try:
+            d1 = (math.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*math.sqrt(T))
+            d2 = d1 - sigma*math.sqrt(T)
+            from scipy.stats import norm
+            if option_type == "CE":
+                delta = norm.cdf(d1)
+                price = S*norm.cdf(d1) - K*math.exp(-r*T)*norm.cdf(d2)
+            else:
+                delta = norm.cdf(d1) - 1
+                price = K*math.exp(-r*T)*norm.cdf(-d2) - S*norm.cdf(-d1)
+            gamma  = norm.pdf(d1) / (S*sigma*math.sqrt(T))
+            theta  = (-S*norm.pdf(d1)*sigma/(2*math.sqrt(T)) - r*K*math.exp(-r*T)*norm.cdf(d2)) / 365
+            vega   = S*norm.pdf(d1)*math.sqrt(T) / 100
+            return {"delta":round(delta,3),"gamma":round(gamma,5),
+                    "theta":round(theta,2),"vega":round(vega,2),"bs_price":round(price,2)}
+        except:
+            return {}
+
+    # ── Controls ──────────────────────────────────────────────────────────────
+    oc1, oc2, oc3 = st.columns([2,2,1])
+    with oc1:
+        opt_symbol = st.selectbox("Select Symbol", FNO_STOCKS, key="opt_sym")
+    with oc2:
+        expiry_choice = st.selectbox("Expiry", ["Loading..."], key="opt_exp")
+    with oc3:
+        strikes_show = st.selectbox("Strikes", ["ATM ±5","ATM ±10","All"], key="opt_strikes")
+
+    # ── Fetch Data ────────────────────────────────────────────────────────────
+    with st.spinner(f"Fetching {opt_symbol} options chain from NSE…"):
+        raw_data = get_options_chain(opt_symbol)
+
+    if raw_data is None:
+        st.error("⚠️ NSE data unavailable right now. NSE blocks requests during market hours sometimes. Try again in 1-2 minutes.")
+        st.info("💡 **Tip:** NSE rate-limits automated requests. If this persists, the market may be closed or NSE is blocking the request.")
+    else:
+        records, spot, expiries = parse_options(raw_data)
+
+        if not records or not spot:
+            st.error("Could not parse options data. Please try again.")
+        else:
+            # Update expiry selectbox
+            exp_idx = 0
+            if expiries:
+                exp_choice = st.selectbox("Select Expiry", expiries, key="opt_exp2")
+            else:
+                exp_choice = None
+
+            st.markdown(f"""
+            <div style='display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;'>
+              <div style='background:#0f0f1a;border:1px solid #1e1e3a;border-radius:8px;padding:10px 20px;'>
+                <div style='font-size:11px;color:#888;'>SPOT PRICE</div>
+                <div style='font-size:20px;font-weight:700;color:#e0e0e0;'>{spot:,.2f}</div>
+              </div>
+              <div style='background:#0f0f1a;border:1px solid #1e1e3a;border-radius:8px;padding:10px 20px;'>
+                <div style='font-size:11px;color:#888;'>SYMBOL</div>
+                <div style='font-size:20px;font-weight:700;color:#00e676;'>{opt_symbol}</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Parse chain data
+            chain_data = records.get("data", [])
+            ce_rows = []; pe_rows = []
+            total_ce_oi = 0; total_pe_oi = 0
+
+            for item in chain_data:
+                if exp_choice and item.get("expiryDate") != exp_choice:
+                    continue
+                strike = item.get("strikePrice", 0)
+                ce = item.get("CE", {})
+                pe = item.get("PE", {})
+
+                if ce:
+                    total_ce_oi += ce.get("openInterest", 0)
+                    T = 30/365
+                    greeks = black_scholes_greeks(spot, strike, T, 0.065,
+                                ce.get("impliedVolatility",20)/100, "CE")
+                    ce_rows.append({
+                        "Strike": strike,
+                        "CE LTP": ce.get("lastPrice", 0),
+                        "CE OI": ce.get("openInterest", 0),
+                        "CE Chg OI": ce.get("changeinOpenInterest", 0),
+                        "CE Vol": ce.get("totalTradedVolume", 0),
+                        "CE IV%": round(ce.get("impliedVolatility", 0), 1),
+                        "CE Δ": greeks.get("delta",""),
+                        "CE θ": greeks.get("theta",""),
+                    })
+
+                if pe:
+                    total_pe_oi += pe.get("openInterest", 0)
+                    T = 30/365
+                    greeks = black_scholes_greeks(spot, strike, T, 0.065,
+                                pe.get("impliedVolatility",20)/100, "PE")
+                    pe_rows.append({
+                        "Strike": strike,
+                        "PE LTP": pe.get("lastPrice", 0),
+                        "PE OI": pe.get("openInterest", 0),
+                        "PE Chg OI": pe.get("changeinOpenInterest", 0),
+                        "PE Vol": pe.get("totalTradedVolume", 0),
+                        "PE IV%": round(pe.get("impliedVolatility", 0), 1),
+                        "PE Δ": greeks.get("delta",""),
+                        "PE θ": greeks.get("theta",""),
+                    })
+
+            # ── PCR & Analysis ────────────────────────────────────────────────
+            pcr = round(total_pe_oi / total_ce_oi, 2) if total_ce_oi > 0 else 0
+            if pcr > 1.3:
+                pcr_signal = "🟢 BULLISH"; pcr_color = "#00e676"
+            elif pcr < 0.7:
+                pcr_signal = "🔴 BEARISH"; pcr_color = "#ff5252"
+            else:
+                pcr_signal = "🟡 NEUTRAL"; pcr_color = "#ffaa00"
+
+            # Find max pain
+            if ce_rows and pe_rows:
+                ce_df_mp = pd.DataFrame(ce_rows)
+                pe_df_mp = pd.DataFrame(pe_rows)
+                strikes_list = sorted(set(ce_df_mp["Strike"].tolist()))
+                pain = {}
+                for s in strikes_list:
+                    ce_loss = ce_df_mp[ce_df_mp["Strike"] < s]["CE OI"].sum() * 0
+                    pe_loss = sum([max(0, s - k) * r for k, r in
+                                  zip(pe_df_mp["Strike"], pe_df_mp["PE OI"])])
+                    ce_loss2 = sum([max(0, k - s) * r for k, r in
+                                   zip(ce_df_mp["Strike"], ce_df_mp["CE OI"])])
+                    pain[s] = pe_loss + ce_loss2
+                max_pain = min(pain, key=pain.get) if pain else spot
+
+            # ── Key Metrics ───────────────────────────────────────────────────
+            km1,km2,km3,km4,km5 = st.columns(5)
+            km1.metric("Spot Price",   f"{spot:,.0f}")
+            km2.metric("PCR",          f"{pcr}", pcr_signal)
+            km3.metric("Total CE OI",  f"{total_ce_oi/100000:.1f}L")
+            km4.metric("Total PE OI",  f"{total_pe_oi/100000:.1f}L")
+            km5.metric("Max Pain",     f"{max_pain:,.0f}" if ce_rows and pe_rows else "N/A")
+
+            # ── Signal Panel ──────────────────────────────────────────────────
+            st.markdown("<div class='section-header'>🎯 Options Signal</div>", unsafe_allow_html=True)
+
+            # Find ATM strike
+            atm = min([r["Strike"] for r in ce_rows], key=lambda x: abs(x-spot)) if ce_rows else spot
+            atm_ce = next((r for r in ce_rows if r["Strike"]==atm), {})
+            atm_pe = next((r for r in pe_rows if r["Strike"]==atm), {})
+
+            otm_call = next((r for r in sorted(ce_rows, key=lambda x: x["Strike"]) if r["Strike"] > spot), {})
+            otm_put  = next((r for r in sorted(pe_rows, key=lambda x: x["Strike"], reverse=True) if r["Strike"] < spot), {})
+
+            # Bias detection
+            if pcr > 1.3 and total_pe_oi > total_ce_oi * 1.2:
+                bias = "BULLISH"; bias_color="#00e676"
+                strategy = "Bull Call Spread"
+                trade = f"BUY {atm} CE @ ₹{atm_ce.get('CE LTP',0):.0f} | SELL {otm_call.get('Strike',atm+100)} CE @ ₹{otm_call.get('CE LTP',0):.0f}"
+                reason = "High PCR + Strong PE OI buildup at lower strikes = support. Market likely to go UP."
+            elif pcr < 0.7 and total_ce_oi > total_pe_oi * 1.2:
+                bias = "BEARISH"; bias_color="#ff5252"
+                strategy = "Bear Put Spread"
+                trade = f"BUY {atm} PE @ ₹{atm_pe.get('PE LTP',0):.0f} | SELL {otm_put.get('Strike',atm-100)} PE @ ₹{otm_put.get('PE LTP',0):.0f}"
+                reason = "Low PCR + Strong CE OI buildup at higher strikes = resistance. Market likely to go DOWN."
+            else:
+                bias = "SIDEWAYS"; bias_color="#ffaa00"
+                strategy = "Iron Condor / Short Straddle"
+                trade = f"SELL {atm} CE @ ₹{atm_ce.get('CE LTP',0):.0f} + SELL {atm} PE @ ₹{atm_pe.get('PE LTP',0):.0f}"
+                reason = "Balanced PCR + OI on both sides = range-bound market. Sell premium."
+
+            st.markdown(f"""
+            <div style='background:#0f0f1a;border:1px solid {bias_color}44;border-radius:10px;padding:16px 20px;margin-bottom:12px;'>
+              <div style='display:flex;gap:20px;flex-wrap:wrap;align-items:center;'>
+                <div>
+                  <div style='font-size:11px;color:#888;text-transform:uppercase;'>Market Bias</div>
+                  <div style='font-size:22px;font-weight:800;color:{bias_color};'>{bias}</div>
+                </div>
+                <div>
+                  <div style='font-size:11px;color:#888;text-transform:uppercase;'>Suggested Strategy</div>
+                  <div style='font-size:16px;font-weight:700;color:#e0e0e0;'>{strategy}</div>
+                </div>
+                <div style='flex:1;min-width:200px;'>
+                  <div style='font-size:11px;color:#888;text-transform:uppercase;'>Trade Setup</div>
+                  <div style='font-size:13px;font-weight:600;color:{bias_color};font-family:monospace;'>{trade}</div>
+                </div>
+              </div>
+              <div style='margin-top:10px;font-size:12px;color:#666;border-top:1px solid #1e1e3a;padding-top:8px;'>
+                💡 {reason}
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ── OI Bar Chart ──────────────────────────────────────────────────
+            st.markdown("<div class='section-header'>📊 OI Buildup Chart</div>", unsafe_allow_html=True)
+
+            if ce_rows and pe_rows:
+                ce_df2 = pd.DataFrame(ce_rows).sort_values("Strike")
+                pe_df2 = pd.DataFrame(pe_rows).sort_values("Strike")
+
+                # Filter ATM ± range
+                if strikes_show == "ATM ±5":
+                    atm_idx = ce_df2["Strike"].tolist().index(atm) if atm in ce_df2["Strike"].tolist() else len(ce_df2)//2
+                    ce_df2 = ce_df2.iloc[max(0,atm_idx-5):atm_idx+5]
+                    pe_df2 = pe_df2.iloc[max(0,atm_idx-5):atm_idx+5]
+                elif strikes_show == "ATM ±10":
+                    atm_idx = ce_df2["Strike"].tolist().index(atm) if atm in ce_df2["Strike"].tolist() else len(ce_df2)//2
+                    ce_df2 = ce_df2.iloc[max(0,atm_idx-10):atm_idx+10]
+                    pe_df2 = pe_df2.iloc[max(0,atm_idx-10):atm_idx+10]
+
+                fig_oi = go.Figure()
+                fig_oi.add_trace(go.Bar(
+                    x=ce_df2["Strike"], y=ce_df2["CE OI"],
+                    name="CE OI", marker_color="rgba(255,82,82,0.7)"
+                ))
+                fig_oi.add_trace(go.Bar(
+                    x=pe_df2["Strike"], y=pe_df2["PE OI"],
+                    name="PE OI", marker_color="rgba(0,230,118,0.7)"
+                ))
+                fig_oi.add_vline(x=spot, line_color="#ffaa00", line_dash="dash",
+                                 annotation_text=f"Spot {spot:,.0f}", annotation_font_color="#ffaa00")
+                if ce_rows and pe_rows:
+                    fig_oi.add_vline(x=max_pain, line_color="#ff5252", line_dash="dot",
+                                     annotation_text=f"Max Pain {max_pain:,.0f}", annotation_font_color="#ff5252")
+                fig_oi.update_layout(
+                    plot_bgcolor="#0a0a0f", paper_bgcolor="#0a0a0f",
+                    font_color="#888", height=350, barmode="group",
+                    margin=dict(l=0,r=0,t=20,b=0),
+                    xaxis=dict(gridcolor="#1a1a2e", title="Strike Price"),
+                    yaxis=dict(gridcolor="#1a1a2e", title="Open Interest"),
+                    legend=dict(bgcolor="#0f0f1a", bordercolor="#1e1e3a")
+                )
+                st.plotly_chart(fig_oi, use_container_width=True)
+
+            # ── IV Smile Chart ────────────────────────────────────────────────
+            st.markdown("<div class='section-header'>📈 IV Smile</div>", unsafe_allow_html=True)
+            if ce_rows:
+                ce_iv = pd.DataFrame(ce_rows).sort_values("Strike")
+                pe_iv = pd.DataFrame(pe_rows).sort_values("Strike")
+                fig_iv = go.Figure()
+                fig_iv.add_trace(go.Scatter(x=ce_iv["Strike"], y=ce_iv["CE IV%"],
+                    name="CE IV", line=dict(color="#ff5252", width=2)))
+                fig_iv.add_trace(go.Scatter(x=pe_iv["Strike"], y=pe_iv["PE IV%"],
+                    name="PE IV", line=dict(color="#00e676", width=2)))
+                fig_iv.add_vline(x=spot, line_color="#ffaa00", line_dash="dash")
+                fig_iv.update_layout(
+                    plot_bgcolor="#0a0a0f", paper_bgcolor="#0a0a0f",
+                    font_color="#888", height=280, margin=dict(l=0,r=0,t=10,b=0),
+                    xaxis=dict(gridcolor="#1a1a2e"),
+                    yaxis=dict(gridcolor="#1a1a2e", title="IV %"),
+                    legend=dict(bgcolor="#0f0f1a", bordercolor="#1e1e3a")
+                )
+                st.plotly_chart(fig_iv, use_container_width=True)
+
+            # ── Full Options Chain Table ──────────────────────────────────────
+            st.markdown("<div class='section-header'>📋 Full Options Chain</div>", unsafe_allow_html=True)
+
+            if ce_rows and pe_rows:
+                ce_df3 = pd.DataFrame(ce_rows).set_index("Strike")
+                pe_df3 = pd.DataFrame(pe_rows).set_index("Strike")
+                chain_merged = ce_df3.join(pe_df3, how="outer").reset_index()
+                chain_merged = chain_merged.sort_values("Strike")
+
+                def highlight_atm(row):
+                    if abs(row["Strike"] - spot) < (chain_merged["Strike"].diff().median() or 50):
+                        return ["background-color:#1a1a0a;font-weight:700"]*len(row)
+                    return [""]*len(row)
+
+                chain_styled = chain_merged.style                    .apply(highlight_atm, axis=1)                    .format({c: "{:,.0f}" for c in ["CE OI","CE Chg OI","CE Vol","PE OI","PE Chg OI","PE Vol","Strike"]},
+                            na_rep="—")                    .format({c: "{:.1f}" for c in ["CE LTP","PE LTP","CE IV%","PE IV%"]}, na_rep="—")
+
+                st.dataframe(chain_styled, use_container_width=True, height=400)
+
+            st.caption("⚠️ Options data from NSE India. For educational purposes only. Not financial advice.")
+
 
 st.caption(f"Momentum Frenzy Terminal · {datetime.now().strftime('%d %b %Y %H:%M')} IST · Nifty 500 · Data: Yahoo Finance")
