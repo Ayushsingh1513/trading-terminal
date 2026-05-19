@@ -911,7 +911,7 @@ with tab5:
 
     def parse_options(data, atm_range=10):
         """Parse NSE options chain data"""
-        if not data: return None, None, None, None
+        if not data: return None, None, None
         records = data.get("records", {})
         spot    = records.get("underlyingValue", 0)
         expiries= records.get("expiryDates", [])
