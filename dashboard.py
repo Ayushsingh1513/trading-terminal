@@ -253,6 +253,50 @@ def get_sector_intelligence(sectors_dict, nifty_close):
         except: pass
     return pd.DataFrame(rows).sort_values("Outlook", ascending=False).reset_index(drop=True)
 
+
+@st.cache_data(ttl=7200)
+def get_sector_volume_punch(sectors_dict):
+    """Get volume punch ratio for each sector index"""
+    rows = []
+    for name, ticker in sectors_dict.items():
+        try:
+            df = yf.download(ticker, period="3mo", interval="1d", progress=False, auto_adjust=True)
+            if len(df) < 20: continue
+            vol   = df['Volume'].squeeze().dropna()
+            close = df['Close'].squeeze().dropna()
+            if len(vol) < 20: continue
+
+            avg20   = float(vol.rolling(20).mean().iloc[-1])
+            avg5    = float(vol.rolling(5).mean().iloc[-1])
+            today   = float(vol.iloc[-1])
+            punch   = round(today / avg20, 2) if avg20 > 0 else 1.0
+            punch5  = round(avg5 / avg20, 2) if avg20 > 0 else 1.0
+
+            # Last 30 days volume ratio for bar chart
+            recent_vol  = vol.iloc[-30:]
+            recent_avg  = float(vol.iloc[-50:-30].mean()) if len(vol) >= 50 else avg20
+            vol_ratios  = (recent_vol / recent_avg).round(2).tolist()
+            dates       = [str(d.date()) for d in recent_vol.index]
+
+            # Price change today
+            pct_today = float((close.iloc[-1]/close.iloc[-2]-1)*100) if len(close)>=2 else 0
+
+            # Punch signal
+            if punch >= 3.0:   psig, pcol = "🔥 EXTREME", "#ff5252"
+            elif punch >= 2.0: psig, pcol = "⚡ HIGH",    "#ffaa00"
+            elif punch >= 1.5: psig, pcol = "📈 ELEVATED","#aaff00"
+            elif punch >= 0.8: psig, pcol = "➡️ NORMAL",  "#888888"
+            else:              psig, pcol = "📉 LOW",     "#555555"
+
+            rows.append({
+                "Sector": name, "Today Vol Ratio": punch,
+                "5D Avg Ratio": punch5, "Signal": psig,
+                "SigColor": pcol, "PctToday": round(pct_today,2),
+                "Dates": dates, "VolRatios": vol_ratios
+            })
+        except: pass
+    return sorted(rows, key=lambda x: x["Today Vol Ratio"], reverse=True)
+
 @st.cache_data(ttl=14400)
 def batch_scan(tickers_tuple, nifty_1m):
     tickers=list(tickers_tuple); all_rows=[]; CHUNK=50
@@ -544,6 +588,116 @@ with tab1:
     else:
         st.warning("Sector data unavailable. Try refreshing.")
         sector_df=pd.DataFrame()
+
+    # ── Volume Punch ──────────────────────────────────────────────────────────
+    st.markdown("<div class='section-header'>💥 Sector Volume Punch — Unusual Activity Detector</div>",unsafe_allow_html=True)
+
+    with st.spinner("Analyzing sector volume punches…"):
+        vol_data = get_sector_volume_punch(SECTORS)
+
+    if vol_data:
+        # Top punch cards
+        vp1,vp2,vp3 = st.columns(3)
+        for col, item in zip([vp1,vp2,vp3], vol_data[:3]):
+            with col:
+                bar_color = item["SigColor"]
+                price_color = "#00e676" if item["PctToday"] >= 0 else "#ff5252"
+                st.markdown(f"""
+                <div style='background:#0f0f1a;border:1px solid {bar_color}44;border-radius:10px;padding:14px;'>
+                  <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>
+                    <div style='font-size:15px;font-weight:700;color:#e0e0e0;'>{item["Sector"]}</div>
+                    <div style='font-size:11px;font-weight:700;color:{bar_color};'>{item["Signal"]}</div>
+                  </div>
+                  <div style='font-size:28px;font-weight:800;color:{bar_color};'>{item["Today Vol Ratio"]}x
+                    <span style='font-size:12px;color:#555;font-weight:400;'>vs 20D avg</span></div>
+                  <div style='font-size:12px;color:#888;margin-top:4px;'>
+                    5D avg: <b style='color:#e0e0e0;'>{item["5D Avg Ratio"]}x</b> &nbsp;|&nbsp;
+                    Today: <b style='color:{price_color};'>{item["PctToday"]:+.2f}%</b>
+                  </div>
+                </div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Volume punch bar chart — all sectors
+        fig_vp = go.Figure()
+        sec_names  = [d["Sector"] for d in vol_data]
+        vol_ratios = [d["Today Vol Ratio"] for d in vol_data]
+        colors_vp  = [d["SigColor"] for d in vol_data]
+        pct_today  = [d["PctToday"] for d in vol_data]
+
+        fig_vp.add_trace(go.Bar(
+            x=sec_names, y=vol_ratios,
+            marker_color=colors_vp,
+            name="Vol Ratio",
+            text=[f"{v:.1f}x" for v in vol_ratios],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Vol Ratio: %{y:.2f}x<extra></extra>"
+        ))
+        fig_vp.add_hline(y=1.0, line_color="#555", line_dash="dot",
+                         annotation_text="Normal", annotation_font_color="#555")
+        fig_vp.add_hline(y=2.0, line_color="#ffaa0066", line_dash="dash",
+                         annotation_text="High", annotation_font_color="#ffaa00")
+        fig_vp.update_layout(
+            plot_bgcolor="#0a0a0f", paper_bgcolor="#0a0a0f",
+            font_color="#888", height=320,
+            margin=dict(l=0,r=0,t=30,b=0),
+            xaxis=dict(gridcolor="#1a1a2e"),
+            yaxis=dict(gridcolor="#1a1a2e", title="Volume Ratio vs 20D Avg"),
+            title=dict(text="Today's Volume Punch by Sector", font=dict(color="#888",size=13))
+        )
+        st.plotly_chart(fig_vp, use_container_width=True)
+
+        # 30-day volume punch timeline for selected sector
+        st.markdown("<div class='section-header'>📅 30-Day Volume History — Select Sector</div>", unsafe_allow_html=True)
+        selected_sec = st.selectbox("Sector", [d["Sector"] for d in vol_data], key="vol_sec")
+        sel_data = next((d for d in vol_data if d["Sector"]==selected_sec), None)
+        if sel_data and sel_data["VolRatios"]:
+            fig_hist = go.Figure()
+            bar_colors = []
+            for v in sel_data["VolRatios"]:
+                if v >= 3.0:   bar_colors.append("#ff5252")
+                elif v >= 2.0: bar_colors.append("#ffaa00")
+                elif v >= 1.5: bar_colors.append("#aaff00")
+                elif v >= 0.8: bar_colors.append("#00e676")
+                else:          bar_colors.append("#333333")
+
+            fig_hist.add_trace(go.Bar(
+                x=sel_data["Dates"], y=sel_data["VolRatios"],
+                marker_color=bar_colors, name="Vol Ratio",
+                text=[f"{v:.1f}x" if v>=1.5 else "" for v in sel_data["VolRatios"]],
+                textposition="outside"
+            ))
+            fig_hist.add_hline(y=1.0, line_color="#555", line_dash="dot")
+            fig_hist.add_hline(y=2.0, line_color="#ffaa0066", line_dash="dash")
+            fig_hist.update_layout(
+                plot_bgcolor="#0a0a0f", paper_bgcolor="#0a0a0f",
+                font_color="#888", height=280,
+                margin=dict(l=0,r=0,t=10,b=0),
+                xaxis=dict(gridcolor="#1a1a2e", tickangle=-45),
+                yaxis=dict(gridcolor="#1a1a2e", title="Vol Ratio"),
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
+
+            # Interpretation
+            today_punch = sel_data["Today Vol Ratio"]
+            if today_punch >= 2.0:
+                st.markdown(f"""
+                <div style='background:#2a1a0022;border:1px solid #ffaa0055;border-radius:8px;padding:12px;font-size:13px;'>
+                  ⚡ <b style='color:#ffaa00;'>{selected_sec}</b> is showing <b>{today_punch}x</b> volume today.
+                  High volume punches often signal institutional activity — a potential move is brewing.
+                  Watch for breakout or reversal in next 1–3 days.
+                </div>""", unsafe_allow_html=True)
+            elif today_punch >= 1.5:
+                st.markdown(f"""
+                <div style='background:#1a2a0022;border:1px solid #aaff0055;border-radius:8px;padding:12px;font-size:13px;'>
+                  📈 <b style='color:#aaff00;'>{selected_sec}</b> showing elevated volume ({today_punch}x).
+                  Decent participation — monitor for continuation or accumulation signal.
+                </div>""", unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style='background:#0f0f1a;border:1px solid #1e1e3a;border-radius:8px;padding:12px;font-size:13px;color:#666;'>
+                  ➡️ {selected_sec} volume is normal ({today_punch}x). No unusual activity today.
+                </div>""", unsafe_allow_html=True)
 
     # ── Scanner ───────────────────────────────────────────────────────────────
     st.markdown("<div class='section-header'>🔍 Nifty 500 Momentum Scanner</div>",unsafe_allow_html=True)
