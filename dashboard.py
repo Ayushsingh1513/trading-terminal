@@ -635,7 +635,7 @@ with tab1:
         ))
         fig_vp.add_hline(y=1.0, line_color="#555", line_dash="dot",
                          annotation_text="Normal", annotation_font_color="#555")
-        fig_vp.add_hline(y=2.0, line_color="#ffaa0066", line_dash="dash",
+        fig_vp.add_hline(y=2.0, line_color="rgba(255,170,0,0.4)", line_dash="dash",
                          annotation_text="High", annotation_font_color="#ffaa00")
         fig_vp.update_layout(
             plot_bgcolor="#0a0a0f", paper_bgcolor="#0a0a0f",
@@ -668,7 +668,7 @@ with tab1:
                 textposition="outside"
             ))
             fig_hist.add_hline(y=1.0, line_color="#555", line_dash="dot")
-            fig_hist.add_hline(y=2.0, line_color="#ffaa0066", line_dash="dash")
+            fig_hist.add_hline(y=2.0, line_color="rgba(255,170,0,0.4)", line_dash="dash")
             fig_hist.update_layout(
                 plot_bgcolor="#0a0a0f", paper_bgcolor="#0a0a0f",
                 font_color="#888", height=280,
