@@ -1,24 +1,20 @@
-
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOMENTUMFRENZY — Indian Market Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#060609;--bg2:#0d0d12;--bg3:#13131a;--border:#1e1e28;--border2:#2a2a38;--text:#e8e8f0;--muted:#6b6b80;--green:#00d97e;--red:#ff4560;--blue:#3b82f6;--gold:#f59e0b;--purple:#8b5cf6}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
-
-/* ticker */
 .ticker-wrap{background:#09090e;border-bottom:1px solid var(--border);height:34px;overflow:hidden;display:flex;align-items:center}
 .ticker-inner{display:flex;animation:tick 35s linear infinite;width:max-content}
 .ti-item{display:flex;align-items:center;gap:5px;padding:0 16px;font-size:11px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
-.ti-name{color:var(--muted)}
-.ti-val{color:var(--text);font-weight:500}
-.ti-up{color:var(--green)}.ti-dn{color:var(--red)}
-.ti-sep{color:#222;padding:0 4px}
+.ti-name{color:var(--muted)}.ti-val{color:var(--text);font-weight:500}
+.ti-up{color:var(--green)}.ti-dn{color:var(--red)}.ti-sep{color:#222;padding:0 4px}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
-/* header */
 .hdr{padding:20px 0 0;border-bottom:1px solid var(--border);position:relative}
 .hdr-inner{max-width:1200px;margin:0 auto;padding:0 20px 18px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .hdr-logo{font-size:clamp(28px,5vw,48px);font-weight:800;letter-spacing:-1px;line-height:1}
@@ -29,14 +25,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 .hdr-time{font-size:10px;color:var(--muted)}
-
-/* ad banner */
 .ad-wrap{max-width:1200px;margin:10px auto;padding:0 20px}
 .ad-slot{background:var(--bg2);border:1px dashed #1e1e28;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;color:#2a2a38;font-size:10px;letter-spacing:1px;text-transform:uppercase}
-.ad-banner{height:80px;width:100%}
-.ad-rect{width:300px;height:250px}
-
-/* nav */
+.ad-banner{height:80px;width:100%}.ad-rect{width:300px;height:250px}
 .nav{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
 .nav-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:6px;height:48px;flex-wrap:wrap;overflow:hidden}
 .nf{background:transparent;border:1px solid transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500}
@@ -44,25 +35,17 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .nf.active{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.08);color:var(--blue)}
 .nf-insta{margin-left:auto;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);border:none;color:#fff;font-size:11px;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:600;font-family:'Inter',sans-serif}
 .ref-btn{background:transparent;border:1px solid #00d97e30;color:var(--green);font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-weight:500}
-.ref-btn:hover{background:#00d97e08}
-.ref-btn:disabled{opacity:.4;cursor:not-allowed}
+.ref-btn:hover{background:#00d97e08}.ref-btn:disabled{opacity:.4;cursor:not-allowed}
 .spin{display:inline-block;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* layout */
 .body-wrap{max-width:1200px;margin:0 auto;padding:16px 20px 60px;display:grid;grid-template-columns:1fr 280px;gap:20px}
 @media(max-width:860px){.body-wrap{grid-template-columns:1fr}.sidebar{display:none}}
 .main-col{min-width:0}
-
-/* market strip */
 .mkt-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px}
 .mkt-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
 .mkt-name{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.mkt-val{font-size:14px;font-weight:700;color:var(--text)}
-.mkt-chg{font-size:11px;font-weight:600;margin-top:2px}
+.mkt-val{font-size:14px;font-weight:700;color:var(--text)}.mkt-chg{font-size:11px;font-weight:600;margin-top:2px}
 .mkt-up{color:var(--green)}.mkt-dn{color:var(--red)}
-
-/* fii panel */
 .fii-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;border-top:2px solid rgba(59,130,246,.3)}
 .fii-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .fii-title{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text)}
@@ -70,8 +53,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .fii-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .fii-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
 .fii-actor{font-size:16px;font-weight:800;letter-spacing:2px;margin-bottom:6px}
-.fii-box.fii-c .fii-actor{color:var(--blue)}
-.fii-box.dii-c .fii-actor{color:var(--gold)}
+.fii-box.fii-c .fii-actor{color:var(--blue)}.fii-box.dii-c .fii-actor{color:var(--gold)}
 .fii-row{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px}
 .fii-net{font-size:12px;font-weight:700;margin-top:6px}
 .g{color:var(--green)}.r{color:var(--red)}
@@ -79,27 +61,18 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .stock-row:last-child{border-bottom:none}
 .sn{font-weight:600;color:var(--text);min-width:70px}
 .sa{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700}
-.sa.fii-c{background:rgba(59,130,246,.12);color:var(--blue)}
-.sa.dii-c{background:rgba(245,158,11,.12);color:var(--gold)}
-.sact-b{color:var(--green);font-weight:700}
-.sact-s{color:var(--red);font-weight:700}
-.svol{color:var(--muted);margin-left:auto}
-.schg-u{color:var(--green)}.schg-d{color:var(--red)}
+.sa.fii-c{background:rgba(59,130,246,.12);color:var(--blue)}.sa.dii-c{background:rgba(245,158,11,.12);color:var(--gold)}
+.sact-b{color:var(--green);font-weight:700}.sact-s{color:var(--red);font-weight:700}
+.svol{color:var(--muted);margin-left:auto}.schg-u{color:var(--green)}.schg-d{color:var(--red)}
 .sec-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-
-/* sector bars */
 .sector-bars{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .sb-row{display:flex;align-items:center;gap:8px;font-size:10px}
 .sb-name{color:var(--muted);width:55px;flex-shrink:0}
 .sb-bar-wrap{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .sb-bar{height:100%;border-radius:3px;transition:width .4s}
 .sb-val{font-size:9px;color:var(--text);width:40px;text-align:right;font-family:'JetBrains Mono',monospace}
-
-/* section label */
 .sec-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px}
 .sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
-
-/* news grid */
 .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
 .news-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s,transform .2s;position:relative;overflow:hidden;cursor:default;animation:fadeUp .4s ease both}
 .news-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-accent,#3b82f6);opacity:.6}
@@ -119,46 +92,39 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .nc-summary{font-size:11px;color:#7a7a8e;line-height:1.65}
 .nc-why{font-size:10px;color:var(--muted);background:var(--bg3);border-left:2px solid var(--blue);padding:6px 8px;border-radius:0 5px 5px 0;line-height:1.5}
 .nc-why span{color:var(--blue);font-weight:600}
+.nc-link{font-size:10px;color:var(--blue);text-decoration:none;border-bottom:1px solid rgba(59,130,246,.3);align-self:flex-start;padding-bottom:1px}
+.nc-link:hover{border-color:var(--blue)}
 .nc-expand{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:4px 10px;border-radius:4px;cursor:pointer;align-self:flex-start;transition:all .12s;font-family:'Inter',sans-serif}
 .nc-expand:hover{border-color:var(--border2);color:var(--text)}
-
-/* shimmer */
 .shim-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;min-height:150px}
 .shim-line{height:10px;border-radius:4px;background:linear-gradient(90deg,#111 25%,#191920 50%,#111 75%);background-size:200% 100%;animation:shim 1.4s infinite;margin-bottom:8px}
 .shim-line.s{width:40%}.shim-line.m{width:65%}
 @keyframes shim{to{background-position:-200% 0}}
-
-/* sidebar */
 .sidebar{display:flex;flex-direction:column;gap:14px}
 .sb-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
 .sb-ttl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .sb-row2{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px}
 .sb-row2:last-child{border-bottom:none}
 .sb-rn{color:var(--muted)}.sb-rv{font-weight:600;color:var(--text)}.sb-rc.u{color:var(--green)}.sb-rc.d{color:var(--red)}
-
-/* empty/error */
 .empty-state{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--muted);font-size:13px}
-
-/* footer */
 .footer{border-top:1px solid var(--border);padding:20px;text-align:center;font-size:10px;color:var(--muted);letter-spacing:.5px}
 .footer a{color:var(--muted)}
-
-/* cta */
 .insta-cta{background:linear-gradient(135deg,#0f0f14,#18131f);border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:16px;text-align:center;margin-top:14px}
 .insta-cta-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
 .insta-cta-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
 .insta-btn{display:inline-block;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;padding:7px 20px;border-radius:5px;text-decoration:none;font-size:12px;font-weight:700;border:none;cursor:pointer}
+.src-badge{font-size:9px;background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.2);padding:1px 6px;border-radius:3px;font-weight:600}
 </style>
 </head>
 <body>
-
 <div id="root"></div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-
 <script>
-const {useState,useEffect,useCallback,useRef}=React;
+const {useState,useEffect,useCallback}=React;
+
+const RAPIDAPI_KEY='389cd79c39msh1f83b8b416e31c1p151ee2jsnb635fc398a55';
+const RAPIDAPI_HOST='real-time-web-search.p.rapidapi.com';
 
 const INDICES=[
   {name:"NIFTY 50",val:"24,749.85",chg:"+0.94%",up:true},
@@ -178,12 +144,9 @@ const MKT_CARDS=[
 ];
 const FII={date:"30 May 2026",fii:{buy:16240.5,sell:13820.3,net:2420.2},dii:{buy:10540.8,sell:8920.4,net:1620.4},
   sectors:[
-    {name:"Banking",fii:2210,max:3000,fiiColor:"#3b82f6",diiColor:"#f59e0b"},
-    {name:"IT",fii:1840,max:3000,fiiColor:"#3b82f6",diiColor:"#f59e0b"},
-    {name:"Auto",fii:1120,max:3000,fiiColor:"#3b82f6",diiColor:"#f59e0b"},
-    {name:"Energy",fii:890,max:3000,fiiColor:"#3b82f6",diiColor:"#f59e0b"},
-    {name:"Pharma",fii:340,max:3000,fiiColor:"#3b82f6",diiColor:"#f59e0b"},
-    {name:"FMCG",fii:-180,max:3000,fiiColor:"#3b82f6",diiColor:"#f59e0b"},
+    {name:"Banking",fii:2210,max:3000},{name:"IT",fii:1840,max:3000},
+    {name:"Auto",fii:1120,max:3000},{name:"Energy",fii:890,max:3000},
+    {name:"Pharma",fii:340,max:3000},{name:"FMCG",fii:-180,max:3000},
   ],
   topBought:[
     {n:"TCS",act:"FII",action:"BUY",vol:"21.4L",chg:"+2.1%"},
@@ -193,36 +156,113 @@ const FII={date:"30 May 2026",fii:{buy:16240.5,sell:13820.3,net:2420.2},dii:{buy
     {n:"HAL",act:"FII",action:"BUY",vol:"8.9L",chg:"+4.2%"},
   ]
 };
+
+const TOPIC_QUERIES={
+  rbi:   {q:"RBI monetary policy India 2026",label:"RBI Policy",color:"#3b82f6",tag:"RBI"},
+  vc:    {q:"India startup funding VC IPO 2026",label:"VC / IPO",color:"#f59e0b",tag:"FUNDING"},
+  macro: {q:"global economy Fed interest rate oil price India",label:"Global Macro",color:"#00d97e",tag:"MACRO"},
+  tech:  {q:"India IT sector AI technology companies NSE",label:"Tech & IT",color:"#8b5cf6",tag:"TECH"},
+  ipo:   {q:"India IPO stock market listing NSE BSE 2026",label:"IPO",color:"#f59e0b",tag:"IPO"},
+  insider:{q:"India company insider promoter stake NSE corporate",label:"Corporate",color:"#ff6b35",tag:"INSIDER"},
+};
+
 const CATS=[
-  {id:"all",label:"All News",color:"#e8e8f0"},
-  {id:"nifty",label:"Nifty Stocks",color:"#3b82f6"},
-  {id:"macro",label:"Macro",color:"#00d97e"},
-  {id:"tech",label:"Tech & AI",color:"#8b5cf6"},
-  {id:"vc",label:"VC / IPO",color:"#f59e0b"},
+  {id:"all",label:"All News"},
+  {id:"rbi",label:"RBI Policy"},
+  {id:"vc",label:"VC / Startups"},
+  {id:"macro",label:"Global Macro"},
+  {id:"tech",label:"Tech & IT"},
+  {id:"ipo",label:"IPO"},
+  {id:"insider",label:"Corporate"},
 ];
-const CAT_ACCENTS={nifty:"#3b82f6",macro:"#00d97e",tech:"#8b5cf6",vc:"#f59e0b"};
 
-const PROMPT=`You are the financial news editor for MOMENTUMFRENZY — a professional Indian market intelligence platform.
+const REWRITE_PROMPT=`You are the financial news editor for MOMENTUMFRENZY — an Indian market intelligence platform.
 
-Generate exactly 3 news items per requested category. Return ONLY a raw JSON array.
+Given a list of raw news articles, rewrite each as a structured news item. Return ONLY a raw JSON array, no markdown, no backticks.
 
-Schema:
+For each article produce:
 {
-  "category": "nifty|macro|tech|vc",
-  "headline": "Clear, informative headline about real Indian market themes",
-  "summary": "2-3 sentences with factual context. India-market focused.",
+  "category": "rbi|vc|macro|tech|ipo|insider",
+  "headline": "Sharp, clear headline — max 12 words, professional tone",
+  "summary": "2 sentences of factual context from the article",
   "impact": "BULLISH|BEARISH|NEUTRAL",
   "impactReason": "One sentence: why this matters to NSE swing traders",
-  "source": "Economic Times|Business Standard|Bloomberg|Mint|Reuters",
-  "timeAgo": "X hours ago",
-  "tag": "IPO|RBI|FII|AI|RESULTS|CAPEX|RATE|MERGER"
+  "source": "extracted publication name or domain",
+  "timeAgo": "recently",
+  "tag": "RBI|IPO|FUNDING|AI|MACRO|RESULTS|INSIDER|MERGER",
+  "url": "original article URL if available, else empty string"
 }
 
-Rules:
-- Base on plausible current Indian market themes (FII flows, RBI policy, earnings, IPOs, infra spend, defence, IT outlook)
-- Keep professional tone, no slang
-- India-centric, relevant to retail NSE traders
-- Varied sources and tags`;
+Keep professional tone. India-market focused. Use the actual article content provided.`;
+
+async function fetchRealNews(topicId){
+  const topic=TOPIC_QUERIES[topicId];
+  if(!topic) return [];
+  try{
+    const url=`https://${RAPIDAPI_HOST}/search-full?q=${encodeURIComponent(topic.q)}&num=4`;
+    const res=await fetch(url,{
+      method:'GET',
+      headers:{
+        'x-rapidapi-key': RAPIDAPI_KEY,
+        'x-rapidapi-host': RAPIDAPI_HOST
+      }
+    });
+    const data=await res.json();
+    const results=data.data||data.results||data.organic_results||[];
+    return results.slice(0,4).map(r=>({
+      title: r.title||r.snippet||'',
+      snippet: r.snippet||r.description||'',
+      url: r.url||r.link||'',
+      source: r.source||r.domain||new URL(r.url||r.link||'https://x.com').hostname.replace('www.',''),
+    }));
+  }catch(e){
+    console.error('RapidAPI fetch error',e);
+    return [];
+  }
+}
+
+async function rewriteWithClaude(articles, topicId){
+  if(!articles.length) return [];
+  const topic=TOPIC_QUERIES[topicId];
+  const articlesText=articles.map((a,i)=>
+    `Article ${i+1}:\nTitle: ${a.title}\nSnippet: ${a.snippet}\nSource: ${a.source}\nURL: ${a.url}`
+  ).join('\n\n');
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:REWRITE_PROMPT,
+        messages:[{role:'user',content:`Category: ${topicId}\n\nRewrite these ${articles.length} articles:\n\n${articlesText}\n\nReturn JSON array only.`}]
+      })
+    });
+    const d=await res.json();
+    const txt=d.content?.find(b=>b.type==='text')?.text||'[]';
+    const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    return parsed.map(item=>({
+      ...item,
+      category: topicId,
+      color: topic.color,
+    }));
+  }catch(e){
+    console.error('Claude rewrite error',e);
+    return articles.map(a=>({
+      category:topicId,
+      headline:a.title,
+      summary:a.snippet,
+      impact:'NEUTRAL',
+      impactReason:'See full article for details.',
+      source:a.source,
+      timeAgo:'recently',
+      tag:topic.tag,
+      url:a.url,
+      color:topic.color,
+    }));
+  }
+}
 
 function Ticker(){
   const items=[...INDICES,...INDICES];
@@ -246,7 +286,7 @@ function AdBanner({cls}){
 
 function NewsCard({item,idx}){
   const [exp,setExp]=useState(false);
-  const accent=CAT_ACCENTS[item.category]||'#3b82f6';
+  const accent=item.color||'#3b82f6';
   const ib=item.impact==='BULLISH'?'ib-bull':item.impact==='BEARISH'?'ib-bear':'ib-neu';
   const icon=item.impact==='BULLISH'?'▲ ':item.impact==='BEARISH'?'▼ ':'◆ ';
   return React.createElement('article',{className:'news-card',style:{'--card-accent':accent,animationDelay:`${idx*60}ms`}},
@@ -257,13 +297,15 @@ function NewsCard({item,idx}){
     React.createElement('h3',{className:'nc-headline'},item.headline),
     React.createElement('div',{className:'nc-meta'},
       React.createElement('span',{className:`impact-badge ${ib}`},icon+item.impact),
-      React.createElement('span',{className:'nc-source'},item.source)
+      React.createElement('span',{className:'nc-source'},item.source),
+      React.createElement('span',{className:'src-badge'},'LIVE')
     ),
     exp&&React.createElement('div',{className:'nc-body'},
       React.createElement('p',{className:'nc-summary'},item.summary),
       React.createElement('div',{className:'nc-why'},
         React.createElement('span',null,'Why it matters → '),item.impactReason
-      )
+      ),
+      item.url&&React.createElement('a',{className:'nc-link',href:item.url,target:'_blank',rel:'noopener'},'Read Full Article ↗')
     ),
     React.createElement('button',{className:'nc-expand',onClick:()=>setExp(v=>!v)},
       exp?'Hide ↑':'Read more ↓'
@@ -330,27 +372,31 @@ function App(){
   const [filter,setFilter]=useState('all');
   const [updated,setUpdated]=useState(null);
   const [err,setErr]=useState(null);
+  const [status,setStatus]=useState('');
 
   const fetchNews=useCallback(async()=>{
-    setLoading(true);setErr(null);
+    setLoading(true);setErr(null);setNews([]);
     try{
-      const cats=filter==='all'?['nifty','macro','tech','vc']:[filter];
-      const res=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          model:'claude-sonnet-4-20250514',
-          max_tokens:1000,
-          system:PROMPT,
-          messages:[{role:'user',content:`Generate news for categories: ${cats.join(', ')}. Return ${cats.length*3} items total as raw JSON array only.`}]
-        })
-      });
-      const d=await res.json();
-      const txt=d.content?.find(b=>b.type==='text')?.text||'[]';
-      const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
-      setNews(parsed);setUpdated(new Date());
-    }catch(e){setErr('Could not fetch news. Please try again.');}
-    finally{setLoading(false);}
+      const topicsToFetch=filter==='all'?Object.keys(TOPIC_QUERIES):[filter];
+      let allNews=[];
+      for(const topicId of topicsToFetch){
+        setStatus(`Fetching ${TOPIC_QUERIES[topicId].label} news...`);
+        const raw=await fetchRealNews(topicId);
+        if(raw.length){
+          setStatus(`Processing ${TOPIC_QUERIES[topicId].label}...`);
+          const rewritten=await rewriteWithClaude(raw,topicId);
+          allNews=[...allNews,...rewritten];
+          setNews([...allNews]);
+        }
+      }
+      setUpdated(new Date());
+      setStatus('');
+    }catch(e){
+      setErr('Could not fetch news. Please try again.');
+    }finally{
+      setLoading(false);
+      setStatus('');
+    }
   },[filter]);
 
   useEffect(()=>{fetchNews();},[fetchNews]);
@@ -359,13 +405,11 @@ function App(){
 
   return React.createElement(React.Fragment,null,
     React.createElement(Ticker),
-
-    // Header
     React.createElement('header',{className:'hdr'},
       React.createElement('div',{className:'hdr-inner'},
         React.createElement('div',null,
           React.createElement('div',{className:'hdr-logo'},'MOMENTUM',React.createElement('span',null,'FRENZY')),
-          React.createElement('div',{className:'hdr-sub'},'Indian Market Intelligence · Live Analysis')
+          React.createElement('div',{className:'hdr-sub'},'Indian Market Intelligence · Live News')
         ),
         React.createElement('div',{className:'hdr-right'},
           React.createElement('div',{className:'live-badge'},
@@ -376,31 +420,22 @@ function App(){
         )
       )
     ),
-
-    // Ad leaderboard
-    React.createElement('div',{className:'ad-wrap'},
-      React.createElement(AdBanner,{cls:'ad-banner'})
-    ),
-
-    // Nav
+    React.createElement('div',{className:'ad-wrap'},React.createElement(AdBanner,{cls:'ad-banner'})),
     React.createElement('nav',{className:'nav'},
       React.createElement('div',{className:'nav-inner'},
         CATS.map(c=>React.createElement('button',{
           key:c.id,className:`nf ${filter===c.id?'active':''}`,
-          style:filter===c.id?{borderColor:'rgba(59,130,246,.4)',background:'rgba(59,130,246,.08)',color:'var(--blue)'}:{},
           onClick:()=>setFilter(c.id)
         },c.label)),
         React.createElement('button',{className:'ref-btn',onClick:fetchNews,disabled:loading},
-          React.createElement('span',{className:loading?'spin':null},'⟳'),loading?'Loading…':'Refresh'
+          React.createElement('span',{className:loading?'spin':null},'⟳'),
+          loading?(status||'Loading…'):'Refresh'
         ),
         React.createElement('button',{className:'nf-insta',onClick:()=>window.open('https://instagram.com/momentumfrenzy')},'📸 @momentumfrenzy')
       )
     ),
-
-    // Body
     React.createElement('div',{className:'body-wrap'},
       React.createElement('main',{className:'main-col'},
-        // Market strip
         React.createElement('div',{className:'mkt-strip'},
           MKT_CARDS.map((m,i)=>React.createElement('div',{key:i,className:'mkt-card'},
             React.createElement('div',{className:'mkt-name'},m.name),
@@ -408,37 +443,25 @@ function App(){
             React.createElement('div',{className:`mkt-chg ${m.up?'mkt-up':'mkt-dn'}`},m.chg)
           ))
         ),
-
-        // FII Panel
         React.createElement(FIIPanel),
-
-        // Ad banner
         React.createElement('div',{style:{marginBottom:14}},React.createElement(AdBanner,{cls:'ad-banner'})),
-
-        // News
-        React.createElement('div',{className:'sec-label'},'Latest Market Intelligence'),
+        React.createElement('div',{className:'sec-label'},'Live Market Intelligence'),
         React.createElement('div',{className:'news-grid'},
-          loading
+          loading&&!news.length
             ?Array.from({length:6}).map((_,i)=>React.createElement(Shim,{key:i,i}))
             :err
-              ?React.createElement('div',{className:'empty-state'},React.createElement('div',null,'⚠️'),err)
+              ?React.createElement('div',{className:'empty-state'},React.createElement('div',null,'⚠️  '),err)
               :filtered.length===0
-                ?React.createElement('div',{className:'empty-state'},'No news available. Click Refresh.')
+                ?React.createElement('div',{className:'empty-state'},'Fetching live news... please wait.')
                 :filtered.map((item,i)=>React.createElement(NewsCard,{key:i,item,idx:i}))
         ),
-
-        // Bottom ad
         React.createElement('div',{style:{marginTop:20}},React.createElement(AdBanner,{cls:'ad-banner'})),
-
-        // Instagram CTA
         React.createElement('div',{className:'insta-cta'},
           React.createElement('div',{className:'insta-cta-title'},'Follow @momentumfrenzy on Instagram'),
           React.createElement('div',{className:'insta-cta-sub'},'Daily trading ideas, breakout alerts and market insights'),
           React.createElement('a',{className:'insta-btn',href:'https://instagram.com/momentumfrenzy',target:'_blank'},'Follow Now →')
         )
       ),
-
-      // Sidebar
       React.createElement('aside',{className:'sidebar'},
         React.createElement(AdBanner,{cls:'ad-rect'}),
         React.createElement('div',{className:'sb-box'},
@@ -452,9 +475,8 @@ function App(){
         React.createElement(AdBanner,{cls:'ad-rect'})
       )
     ),
-
     React.createElement('footer',{className:'footer'},
-      '© 2025 MOMENTUMFRENZY · For informational purposes only. Not SEBI-registered investment advice. · ',
+      '© 2026 MOMENTUMFRENZY · For informational purposes only. Not SEBI-registered investment advice. · ',
       React.createElement('a',{href:'#'},'Privacy'),' · ',
       React.createElement('a',{href:'#'},'Terms'),' · ',
       React.createElement('a',{href:'https://instagram.com/momentumfrenzy',target:'_blank'},'@momentumfrenzy')
