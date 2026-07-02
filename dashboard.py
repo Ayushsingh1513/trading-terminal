@@ -1,500 +1,769 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Momentum Frenzy — Indian Market Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+import streamlit as st
+import pandas as pd
+import yfinance as yf
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from datetime import datetime
+import requests
+import numpy as np
+
+BOT_TOKEN = "8651727429:AAHAA9nFtPpUO2npxgdR6MyZkZBMqHLyTRg"
+CHAT_ID   = "-1003707574219"
+
+st.set_page_config(
+    page_title="Momentum Frenzy — Indian Stock Scanner",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+if "page" not in st.session_state:
+    st.session_state.page = "landing"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# LANDING PAGE
+# ══════════════════════════════════════════════════════════════════════════════
+if st.session_state.page == "landing":
+    st.markdown("""
+    <style>
+    html,body,.stApp{background:#0a0a0f;color:#e0e0e0;font-family:'Inter',sans-serif;}
+    .block-container{padding:0;max-width:100%;}
+    header[data-testid="stHeader"]{display:none;}#MainMenu{display:none;}footer{display:none;}
+    .hero{min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0d1f0d 0%,#0a0a0f 60%);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;}
+    .badge{display:inline-block;background:#00380a;border:1px solid #00e676;color:#00e676;
+      font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+      padding:6px 16px;border-radius:999px;margin-bottom:24px;}
+    .hero-title{font-size:clamp(36px,6vw,80px);font-weight:800;line-height:1.1;margin:0 0 16px 0;
+      background:linear-gradient(135deg,#ffffff 0%,#00e676 50%,#00aa55 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero-sub{font-size:clamp(15px,2vw,20px);color:#888;max-width:580px;line-height:1.7;margin:0 auto 40px auto;}
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:16px;max-width:1000px;margin:60px auto 40px auto;padding:0 20px;}
+    .feat-card{background:#0f0f1a;border:1px solid #1e1e3a;border-radius:12px;padding:20px;}
+    .feat-card:hover{border-color:#00e676;}
+    .feat-icon{font-size:24px;margin-bottom:10px;}
+    .feat-title{font-size:14px;font-weight:700;color:#e0e0e0;margin-bottom:6px;}
+    .feat-desc{font-size:12px;color:#666;line-height:1.6;}
+    .stats-row{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;
+      padding:32px 20px;border-top:1px solid #1e1e3a;border-bottom:1px solid #1e1e3a;
+      margin:40px 0;background:#0f0f1a;}
+    .stat-num{font-size:32px;font-weight:800;color:#00e676;}
+    .stat-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.1em;}
+    .disclaimer{max-width:700px;margin:32px auto;padding:16px 20px;background:#0f0f1a;
+      border:1px solid #1e1e3a;border-radius:8px;font-size:11px;color:#555;text-align:center;}
+    .footer{text-align:center;padding:24px;border-top:1px solid #1e1e3a;color:#444;font-size:12px;}
+    </style>""", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="hero">
+      <img src="https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png"
+        style="width:160px;height:160px;object-fit:contain;margin-bottom:16px;border-radius:50%;box-shadow:0 0 40px rgba(0,230,118,0.3);" />
+      <div class="badge">⚡ Free · No Login · Indian Markets</div>
+      <h1 class="hero-title">Momentum Frenzy<br>Trading Terminal</h1>
+      <p class="hero-sub">Find today's top swing trading ideas in seconds. Momentum scanner, sector rotation, breakout alerts — built for Indian traders.</p>
+    </div>""", unsafe_allow_html=True)
+
+    c1,c2,c3=st.columns([1,1,1])
+    with c2:
+        if st.button("⚡ Open Terminal — Free",use_container_width=True,type="primary"):
+            st.session_state.page="terminal"; st.rerun()
+        st.markdown("<p style='text-align:center;color:#555;font-size:11px;margin-top:6px;'>Used by 500+ traders · Updated every 4 hours</p>",unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="stats-row">
+      <div style="text-align:center"><div class="stat-num">500+</div><div class="stat-label">Stocks Scanned</div></div>
+      <div style="text-align:center"><div class="stat-num">14</div><div class="stat-label">Sectors Tracked</div></div>
+      <div style="text-align:center"><div class="stat-num">Free</div><div class="stat-label">Always</div></div>
+      <div style="text-align:center"><div class="stat-num">2x</div><div class="stat-label">Daily Alerts</div></div>
+    </div>
+    <div class="features">
+      <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-title">Today's Top Picks</div><div class="feat-desc">Ready-to-trade stocks with entry, target, stop-loss and risk:reward — every morning.</div></div>
+      <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Market Mood</div><div class="feat-desc">Instant BULLISH / BEARISH / NEUTRAL reading so you know what to expect before markets open.</div></div>
+      <div class="feat-card"><div class="feat-icon">💥</div><div class="feat-title">Breakout Radar</div><div class="feat-desc">Stocks breaking out today with unusual volume. Catch moves before they happen.</div></div>
+      <div class="feat-card"><div class="feat-icon">🔄</div><div class="feat-title">Sector Rotation</div><div class="feat-desc">Know which sectors are leading, improving or lagging. Trade with the trend.</div></div>
+      <div class="feat-card"><div class="feat-icon">📈</div><div class="feat-title">Professional Charts</div><div class="feat-desc">Candlestick charts with EMA 20/50/200 and volume for any Nifty 500 stock.</div></div>
+      <div class="feat-card"><div class="feat-icon">📲</div><div class="feat-title">Telegram Alerts</div><div class="feat-desc">Auto morning & evening alerts with top picks sent to Telegram every market day.</div></div>
+    </div>
+    <div class="disclaimer">
+      ⚠️ <b>Disclaimer:</b> Momentum Frenzy is for educational purposes only. Nothing here is financial advice.
+      Always do your own research. Consult a SEBI-registered advisor before investing.
+    </div>
+    <div class="footer">
+      © 2025 Momentum Frenzy · Indian Markets · Data: Yahoo Finance ·
+      <a href="https://instagram.com/momentumfrenzy" style="color:#00e676;">@momentumfrenzy</a>
+    </div>""", unsafe_allow_html=True)
+    st.stop()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TERMINAL STYLES
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--green:#00d97e;--red:#ff4560;--blue:#3b82f6;--purple:#8b5cf6;--gold:#f59e0b;--bg:#060609;--bg2:#0d0d14;--border:#1a1a26}
-body{background:var(--bg);color:#e0e0f0;font-family:'Inter',sans-serif;overflow-x:hidden}
+html,body,.stApp{background:#0a0a0f;color:#e0e0e0;font-family:'Inter',sans-serif;}
+.block-container{padding:0 1rem 3rem 1rem;max-width:100%;}
+header[data-testid="stHeader"]{display:none;}#MainMenu{display:none;}footer{display:none;}
 
-/* ── Animated canvas background ── */
-#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.45}
+/* Pulse bar */
+.pulse-bar{display:flex;gap:10px;flex-wrap:wrap;background:linear-gradient(90deg,#0f0f1a,#111128);
+  border-bottom:1px solid #1e1e3a;padding:8px 16px;margin-bottom:0;position:sticky;top:0;z-index:999;}
+.pulse-item{display:flex;flex-direction:column;align-items:center;min-width:80px;}
+.pulse-label{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.08em;}
+.pulse-value{font-size:13px;font-weight:700;color:#e0e0e0;}
+.pulse-up{color:#00e676!important;}.pulse-down{color:#ff5252!important;}
 
-/* ── Ticker ── */
-.ticker{position:relative;z-index:10;background:rgba(8,8,14,.95);border-bottom:1px solid var(--border);height:32px;overflow:hidden;display:flex;align-items:center}
-.ticker-track{display:flex;animation:scroll 45s linear infinite;width:max-content}
-.ti{display:flex;align-items:center;gap:6px;padding:0 18px;font-size:10px;font-family:'JetBrains Mono',monospace;white-space:nowrap;border-right:1px solid #1a1a26}
-.tn{color:#333350}.tv{color:#b0b0c8;font-weight:500}.tu{color:var(--green)}.td{color:var(--red)}
-@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+/* Mood bar */
+.mood-bar{padding:10px 16px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #1e1e3a;}
 
-/* ── Hero ── */
-.hero{position:relative;z-index:10;min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px 48px;overflow:hidden}
+/* Section headers */
+.sh{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#444;
+  border-bottom:1px solid #1e1e3a;padding-bottom:5px;margin:20px 0 12px 0;}
 
-/* Floating orbs */
-.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.12;animation:floatOrb 12s ease-in-out infinite;pointer-events:none}
-.orb1{width:500px;height:500px;background:var(--blue);top:-100px;left:-150px;animation-delay:0s}
-.orb2{width:400px;height:400px;background:var(--purple);top:50%;right:-120px;animation-delay:-4s}
-.orb3{width:350px;height:350px;background:var(--green);bottom:-80px;left:30%;animation-delay:-8s}
-@keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(.97)}}
+/* Pick cards */
+.pick-card{border-radius:10px;padding:16px;margin-bottom:10px;border:1px solid;}
+.metric-mini{background:#0f0f1a;border:1px solid #1e1e3a;border-radius:8px;padding:8px 12px;text-align:center;}
+.metric-mini-label{font-size:10px;color:#555;text-transform:uppercase;}
+.metric-mini-value{font-size:15px;font-weight:700;}
 
-/* Grid lines */
-.grid-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)}
+/* Ad slot */
+.ad-slot{background:#0a0a0c;border:1px dashed #1e1e3a;border-radius:8px;
+  padding:20px;text-align:center;color:#333;font-size:11px;margin:16px 0;}
 
-.logo-wrap{display:flex;align-items:center;gap:14px;margin-bottom:24px;animation:fadeDown .7s ease both}
-.logo-img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.08);transition:transform .4s,box-shadow .4s}
-.logo-img:hover{transform:scale(1.1) rotate(3deg);box-shadow:0 0 32px rgba(59,130,246,.4)}
-.logo-text{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-2px;line-height:1}
-.logo-grd{background:linear-gradient(135deg,#3b82f6,#8b5cf6,#00d97e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200%;animation:gradShift 5s ease infinite}
-@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+/* Quad */
+.quad-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.quad{border-radius:8px;padding:12px;min-height:100px;}
+.quad-leading{background:#00380a22;border:1px solid rgba(0,230,118,.3);}
+.quad-improving{background:#1a2a0022;border:1px solid rgba(170,255,0,.3);}
+.quad-weakening{background:#2a1a0022;border:1px solid rgba(255,170,0,.3);}
+.quad-lagging{background:#2a000022;border:1px solid rgba(255,82,82,.3);}
+.quad-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+.quad-leading .quad-title{color:#00e676;}.quad-improving .quad-title{color:#aaff00;}
+.quad-weakening .quad-title{color:#ffaa00;}.quad-lagging .quad-title{color:#ff5252;}
+.quad-stock{font-size:11px;padding:2px 5px;border-radius:3px;display:inline-block;margin:2px;background:#ffffff0d;}
 
-@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+div[data-testid="metric-container"]{background:#0f0f1a;border:1px solid #1e1e3a;border-radius:8px;padding:8px 12px;}
+div[data-testid="metric-container"] label{color:#666;font-size:10px;}
+.stDataFrame{border-radius:8px;overflow:hidden;}
+</style>""", unsafe_allow_html=True)
 
-.live-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(0,217,126,.08);border:1px solid rgba(0,217,126,.25);color:var(--green);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:5px 16px;border-radius:20px;margin-bottom:20px;animation:fadeDown .7s .1s ease both;opacity:0}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulseDot 1.8s ease-in-out infinite}
-@keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 8px var(--green)}50%{opacity:.3;box-shadow:0 0 2px var(--green)}}
 
-.hero-title{font-size:clamp(36px,7vw,72px);font-weight:900;line-height:1.08;letter-spacing:-2px;margin-bottom:18px;animation:fadeUp .8s .18s ease both;opacity:0}
-.hero-title .line1{display:block;color:#f0f0ff}
-.hero-title .line2{display:block;background:linear-gradient(90deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def send_tg(msg):
+    try: requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data={"chat_id":CHAT_ID,"text":msg,"parse_mode":"HTML"},timeout=10)
+    except: pass
 
-.hero-sub{font-size:clamp(14px,2.2vw,18px);color:#5a5a78;max-width:540px;margin:0 auto 36px;line-height:1.75;animation:fadeUp .8s .26s ease both;opacity:0}
+def cv(v): return "pulse-up" if v>=0 else "pulse-down"
+def ar(v): return "▲" if v>=0 else "▼"
 
-.hero-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;animation:fadeUp .8s .34s ease both;opacity:0}
-.btn-primary{position:relative;overflow:hidden;background:linear-gradient(135deg,#3b82f6,#6d28d9);color:#fff;border:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:transform .25s,box-shadow .25s}
-.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15));opacity:0;transition:opacity .3s}
-.btn-primary:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(59,130,246,.45)}
-.btn-primary:hover::after{opacity:1}
-.btn-primary:active{transform:translateY(-1px)}
-.btn-insta{background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;font-size:13px;font-weight:700;padding:14px 24px;border-radius:10px;cursor:pointer;font-family:inherit;transition:transform .25s,box-shadow .25s}
-.btn-insta:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(131,58,180,.4)}
+def style_sig(val):
+    if val=="BUY":   return "background-color:#00380a;color:#00e676;font-weight:700"
+    if val=="WATCH": return "background-color:#2a2200;color:#ffaa00;font-weight:700"
+    if val=="AVOID": return "background-color:#2a0000;color:#ff5252;font-weight:700"
+    return ""
+def style_sc(val):
+    if val>=65: return "color:#00e676;font-weight:700"
+    if val>=45: return "color:#ffaa00"
+    return "color:#ff5252"
 
-/* Scroll indicator */
-.scroll-ind{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;animation:fadeIn 1s .8s ease both;opacity:0}
-.scroll-ind span{font-size:9px;color:#333350;letter-spacing:2px;text-transform:uppercase}
-.scroll-arrow{width:20px;height:20px;border-right:2px solid #2a2a40;border-bottom:2px solid #2a2a40;transform:rotate(45deg);animation:bounce 1.6s ease-in-out infinite}
-@keyframes bounce{0%,100%{transform:rotate(45deg) translateY(0)}50%{transform:rotate(45deg) translateY(6px)}}
+@st.cache_data(ttl=14400)
+def get_close(t, p="6mo"):
+    for _ in range(2):
+        try:
+            df=yf.download(t,period=p,interval="1d",progress=False,auto_adjust=True)
+            r=df['Close'].squeeze().dropna()
+            if len(r)>2: return r
+        except: pass
+    return pd.Series(dtype=float)
 
-/* ── Market strip ── */
-.mkt-wrap{position:relative;z-index:10;padding:0 20px;max-width:1040px;margin:-20px auto 0}
-.mkt-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
-.mkt-card{background:rgba(13,13,20,.9);border:1px solid #1e1e2c;border-radius:10px;padding:12px 14px;backdrop-filter:blur(10px);transition:border-color .3s,transform .3s,box-shadow .3s;cursor:default;animation:fadeUp .5s ease both;opacity:0}
-.mkt-card:hover{border-color:#2e2e46;transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.mn{font-size:9px;color:#33334a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.mv{font-size:15px;font-weight:700;color:#d0d0e8;margin-bottom:2px}
-.mc{font-size:11px;font-weight:600}
-.up{color:var(--green)}.dn{color:var(--red)}
+@st.cache_data(ttl=14400)
+def get_ohlcv(t, p="6mo"):
+    for _ in range(2):
+        try:
+            df=yf.download(t,period=p,interval="1d",progress=False,auto_adjust=True)
+            if len(df)>2: return df
+        except: pass
+    return pd.DataFrame()
 
-/* ── Stats ── */
-.stats-wrap{position:relative;z-index:10;background:rgba(10,10,16,.8);border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:40px 0;padding:36px 20px;backdrop-filter:blur(8px)}
-.stats{display:flex;flex-wrap:wrap;justify-content:center;gap:40px;max-width:800px;margin:0 auto}
-.stat{text-align:center}
-.stat-n{font-size:40px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:countUp .6s ease both;opacity:0}
-.stat-l{font-size:10px;color:#333350;text-transform:uppercase;letter-spacing:1.5px;margin-top:5px}
-@keyframes countUp{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@st.cache_data(ttl=14400)
+def get_top_picks(tickers, nifty_1m):
+    """Generate top swing trade picks with entry/target/SL/RR"""
+    picks=[]
+    CHUNK=50
+    for i in range(0,len(tickers),CHUNK):
+        chunk=list(tickers[i:i+CHUNK])
+        try:
+            raw=(yf.download(chunk[0],period="6mo",interval="1d",progress=False,auto_adjust=True)
+                 if len(chunk)==1
+                 else yf.download(chunk,period="6mo",interval="1d",progress=False,auto_adjust=True,group_by="ticker"))
+            for t in chunk:
+                try:
+                    if len(chunk)==1:
+                        close=raw['Close'].squeeze().dropna()
+                        high =raw['High'].squeeze().dropna()
+                        low  =raw['Low'].squeeze().dropna()
+                        vol  =raw['Volume'].squeeze().dropna()
+                    else:
+                        close=raw[t]['Close'].squeeze().dropna()
+                        high =raw[t]['High'].squeeze().dropna()
+                        low  =raw[t]['Low'].squeeze().dropna()
+                        vol  =raw[t]['Volume'].squeeze().dropna()
+                    if len(close)<50: continue
 
-/* ── Features ── */
-.feats-wrap{position:relative;z-index:10;padding:0 20px 50px;max-width:1040px;margin:0 auto}
-.feats-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#33334a;margin-bottom:20px;display:flex;align-items:center;gap:12px}
-.feats-title::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--border),transparent)}
-.feats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-.feat{background:rgba(13,13,20,.85);border:1px solid #1e1e2c;border-radius:12px;padding:20px;backdrop-filter:blur(6px);transition:border-color .3s,transform .3s,box-shadow .3s;animation:fadeUp .5s ease both;opacity:0;position:relative;overflow:hidden}
-.feat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,.4),transparent);transform:scaleX(0);transition:transform .4s}
-.feat:hover{border-color:#2e2e46;transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.5)}
-.feat:hover::before{transform:scaleX(1)}
-.fi{font-size:24px;margin-bottom:10px;display:block;transition:transform .3s}
-.feat:hover .fi{transform:scale(1.15)}
-.ft{font-size:13px;font-weight:700;color:#d0d0e8;margin-bottom:6px}
-.fd{font-size:11px;color:#3a3a56;line-height:1.65}
+                    price =float(close.iloc[-1])
+                    ema20 =float(close.ewm(span=20).mean().iloc[-1])
+                    ema50 =float(close.ewm(span=50).mean().iloc[-1])
+                    ema200=float(close.ewm(span=200).mean().iloc[-1])
+                    atr   =float((high-low).rolling(14).mean().iloc[-1])
 
-/* ── Ad slot ── */
-.ad-wrap{position:relative;z-index:10;padding:0 20px;max-width:1040px;margin:0 auto 20px}
-.ad-slot{background:rgba(10,10,16,.6);border:1px dashed #1e1e2c;border-radius:8px;height:72px;display:flex;align-items:center;justify-content:center;color:#1e1e2c;font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
+                    delta=close.diff()
+                    gain=delta.clip(lower=0).rolling(14).mean()
+                    loss=-delta.clip(upper=0).rolling(14).mean()
+                    rsi=float(100-(100/(1+gain.iloc[-1]/(loss.iloc[-1]+1e-9))))
 
-/* ── Nav ── */
-.news-nav{position:relative;z-index:10;background:rgba(10,10,16,.9);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:5px;height:46px;flex-wrap:wrap;overflow:hidden;backdrop-filter:blur(8px)}
-.nf{background:transparent;border:1px solid transparent;color:#33334a;font-family:inherit;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:500;transition:all .2s}
-.nf:hover{border-color:#2a2a3e;color:#9090b0}
-.nf.active{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.1);color:var(--blue)}
-.ref-btn{margin-left:auto;background:transparent;border:1px solid rgba(0,217,126,.2);color:var(--green);font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;font-weight:500;transition:all .2s}
-.ref-btn:hover{background:rgba(0,217,126,.06)}
-.ref-btn:disabled{opacity:.35;cursor:not-allowed}
-.spin{display:inline-block;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+                    w52h=float(close.rolling(min(252,len(close))).max().iloc[-1])
+                    pfh=round((price/w52h-1)*100,1)
 
-/* ── News ── */
-.news-wrap{position:relative;z-index:10;padding:20px 20px 60px;max-width:1040px;margin:0 auto}
-.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
-.news-card{background:rgba(13,13,20,.9);border:1px solid #1e1e2c;border-radius:11px;padding:15px;display:flex;flex-direction:column;gap:8px;backdrop-filter:blur(6px);transition:border-color .3s,transform .3s,box-shadow .3s;animation:fadeUp .5s ease both;opacity:0;cursor:default;position:relative;overflow:hidden}
-.news-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--acc,#3b82f6);transform:scaleX(.3);transform-origin:left;transition:transform .4s}
-.news-card:hover{border-color:#2a2a40;transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.5)}
-.news-card:hover::before{transform:scaleX(1)}
-.nc-top{display:flex;justify-content:space-between}
-.nc-src{font-size:9px;color:#2a2a42;text-transform:uppercase;letter-spacing:.5px}
-.nc-time{font-size:9px;color:#22223a}
-.nc-hl{font-size:13px;font-weight:700;color:#d8d8f0;line-height:1.35}
-.nc-ft{display:flex;align-items:center;gap:6px;margin-top:2px}
-.nc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:3px}
-.nc-link{font-size:10px;color:var(--blue);text-decoration:none;margin-left:auto;opacity:0;transition:opacity .2s}
-.news-card:hover .nc-link{opacity:1}
-.shim{background:rgba(13,13,20,.9);border:1px solid #1e1e2c;border-radius:11px;padding:15px;min-height:120px}
-.sl{height:9px;border-radius:4px;margin-bottom:8px;background:linear-gradient(90deg,#111118 25%,#17171f 50%,#111118 75%);background-size:200%;animation:shim 1.5s infinite}
-.sl.s{width:36%}.sl.m{width:58%}
-@keyframes shim{to{background-position:-200% 0}}
-.err{grid-column:1/-1;background:rgba(18,6,6,.8);border:1px solid rgba(255,69,96,.15);border-radius:11px;padding:24px;text-align:center;font-size:12px;color:#ff8095}
-.err button{margin-top:10px;background:transparent;border:1px solid rgba(255,69,96,.3);color:var(--red);padding:5px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px}
+                    va=float(vol.rolling(20).mean().iloc[-1])
+                    vs=round(float(vol.iloc[-1])/va,1) if va>0 else 0
 
-/* ── CTA ── */
-.cta-wrap{position:relative;z-index:10;padding:20px 20px 60px;max-width:600px;margin:0 auto;text-align:center}
-.cta-box{background:rgba(13,8,22,.85);border:1px solid rgba(139,92,246,.2);border-radius:16px;padding:36px;backdrop-filter:blur(10px);transition:border-color .3s,box-shadow .3s}
-.cta-box:hover{border-color:rgba(139,92,246,.45);box-shadow:0 12px 40px rgba(109,40,217,.2)}
-.cta-title{font-size:22px;font-weight:800;color:#e0e0f8;margin-bottom:8px}
-.cta-sub{font-size:13px;color:#4a4a66;margin-bottom:20px;line-height:1.6}
+                    s1m=float((close.iloc[-1]/close.iloc[max(-21,-len(close))]-1)*100)
+                    rs=round(s1m-nifty_1m,1)
 
-/* ── Footer ── */
-.footer{position:relative;z-index:10;border-top:1px solid var(--border);padding:20px;text-align:center;font-size:10px;color:#22223a;letter-spacing:.5px}
-.footer a{color:#22223a;text-decoration:none}
-</style>
-</head>
-<body>
+                    stage2=price>ema20>ema50>ema200
+                    vcp=sum([stage2,pfh>-10,vs>=1.5,rs>0])
+                    sc=round(min(
+                        min(max((rsi-40)/30*25,0),25)+min(max(rs/10*20,0),20)+
+                        min(max((vs-1)/2*20,0),20)+vcp/4*25+min(max((10+pfh)/10*10,0),10),100))
 
-<canvas id="bg-canvas"></canvas>
+                    if sc<55 or not stage2: continue
 
-<!-- Ticker -->
-<div class="ticker">
-  <div class="ticker-track" id="ticker"></div>
-</div>
+                    # Entry / Target / SL calculation
+                    entry     = round(price * 1.001, 1)          # slight above current
+                    sl        = round(max(ema20 * 0.99, price - atr * 1.5), 1)
+                    target1   = round(price + atr * 2, 1)         # 1st target
+                    target2   = round(price + atr * 3.5, 1)       # 2nd target
+                    risk      = round(entry - sl, 1)
+                    reward    = round(target1 - entry, 1)
+                    rr        = round(reward / risk, 1) if risk > 0 else 0
 
-<!-- Hero -->
-<section class="hero">
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
-  <div class="orb orb3"></div>
-  <div class="grid-lines"></div>
+                    if rr < 1.5: continue  # only good RR setups
 
-  <div class="logo-wrap">
-    <img class="logo-img" src="https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png" alt="MF" onerror="this.style.display='none'">
-    <div class="logo-text">MOMENTUM<br><span class="logo-grd">FRENZY</span></div>
-  </div>
+                    setup=("Breakout" if pfh>-3 and vs>=1.5 else
+                           "Pullback" if 40<=rsi<=55 else
+                           "Vol Surge" if vs>=2 else "Trend")
 
-  <div class="live-badge"><span class="live-dot"></span> Live Indian Markets</div>
+                    picks.append({
+                        "Stock":t.replace(".NS",""),"Price":round(price,1),
+                        "Setup":setup,"Score":sc,"RSI":round(rsi,1),
+                        "VolSurge":vs,"RS":rs,"52W%":pfh,
+                        "Entry":entry,"Target1":target1,"Target2":target2,
+                        "SL":sl,"RR":rr,"ATR":round(atr,1)
+                    })
+                except: pass
+        except: pass
+    return sorted(picks,key=lambda x:x["Score"],reverse=True)[:10]
 
-  <h1 class="hero-title">
-    <span class="line1">Find your next trade</span>
-    <span class="line2">before the market moves</span>
-  </h1>
-  <p class="hero-sub">Professional momentum scanner for NSE swing traders. Sector rotation, breakout radar and daily picks — all free.</p>
-  <div class="hero-btns">
-    <button class="btn-primary" onclick="window.open('https://momentumfrenzy.online')">⚡ Open Terminal — Free</button>
-    <button class="btn-insta" onclick="window.open('https://instagram.com/momentumfrenzy')">📸 @momentumfrenzy</button>
-  </div>
+@st.cache_data(ttl=14400)
+def batch_scan(tickers, nifty_1m):
+    all_rows=[]; CHUNK=50
+    for i in range(0,len(tickers),CHUNK):
+        chunk=list(tickers[i:i+CHUNK])
+        try:
+            raw=(yf.download(chunk[0],period="6mo",interval="1d",progress=False,auto_adjust=True)
+                 if len(chunk)==1
+                 else yf.download(chunk,period="6mo",interval="1d",progress=False,auto_adjust=True,group_by="ticker"))
+            for t in chunk:
+                try:
+                    if len(chunk)==1:
+                        close=raw['Close'].squeeze().dropna(); vol=raw['Volume'].squeeze().dropna()
+                    else:
+                        close=raw[t]['Close'].squeeze().dropna(); vol=raw[t]['Volume'].squeeze().dropna()
+                    if len(close)<50: continue
+                    ema20=float(close.ewm(span=20).mean().iloc[-1])
+                    ema50=float(close.ewm(span=50).mean().iloc[-1])
+                    ema200=float(close.ewm(span=200).mean().iloc[-1])
+                    price=float(close.iloc[-1])
+                    delta=close.diff()
+                    gain=delta.clip(lower=0).rolling(14).mean()
+                    loss=-delta.clip(upper=0).rolling(14).mean()
+                    rsi=float(100-(100/(1+gain.iloc[-1]/(loss.iloc[-1]+1e-9))))
+                    w52h=float(close.rolling(min(252,len(close))).max().iloc[-1])
+                    pfh=round((price/w52h-1)*100,1)
+                    va=float(vol.rolling(20).mean().iloc[-1])
+                    vs=round(float(vol.iloc[-1])/va,1) if va>0 else 0
+                    s1m=float((close.iloc[-1]/close.iloc[max(-21,-len(close))]-1)*100)
+                    rs=round(s1m-nifty_1m,1)
+                    stage2=price>ema20>ema50>ema200
+                    vcp=sum([stage2,pfh>-10,vs>=1.5,rs>0])
+                    sc=round(min(
+                        min(max((rsi-40)/30*25,0),25)+min(max(rs/10*20,0),20)+
+                        min(max((vs-1)/2*20,0),20)+vcp/4*25+min(max((10+pfh)/10*10,0),10),100))
+                    sig="BUY" if sc>=65 and stage2 else ("WATCH" if sc>=45 else "AVOID")
+                    setup=("Breakout" if stage2 and pfh>-3 and vs>=1.5 else
+                           "Pullback" if stage2 and 40<=rsi<=55 else
+                           "Oversold" if rsi<35 else
+                           "Vol Surge" if stage2 and vs>=2 else
+                           "Trend" if stage2 else "Base")
+                    risk_r=["Low","Medium","High"][min(sum([vs>3,pfh<-20,rsi>75]),2)]
+                    all_rows.append({"Stock":t.replace(".NS",""),"Price":round(price,1),
+                        "Setup":setup,"Score":sc,"Signal":sig,"RSI":round(rsi,1),
+                        "RS":rs,"VolSurge":vs,"52W%":pfh,"Risk":risk_r,
+                        "Stage2":"✅" if stage2 else "❌"})
+                except: pass
+        except: pass
+    if not all_rows: return pd.DataFrame()
+    return pd.DataFrame(all_rows).sort_values("Score",ascending=False).reset_index(drop=True)
 
-  <div class="scroll-ind">
-    <span>Scroll</span>
-    <div class="scroll-arrow"></div>
-  </div>
-</section>
+@st.cache_data(ttl=7200)
+def get_sector_vol_punch(sectors):
+    rows=[]
+    for name,ticker in sectors.items():
+        try:
+            df=yf.download(ticker,period="3mo",interval="1d",progress=False,auto_adjust=True)
+            if len(df)<20: continue
+            vol=df['Volume'].squeeze().dropna()
+            avg20=float(vol.rolling(20).mean().iloc[-1])
+            today=float(vol.iloc[-1])
+            punch=round(today/avg20,2) if avg20>0 else 1.0
+            avg5=float(vol.rolling(5).mean().iloc[-1])
+            punch5=round(avg5/avg20,2) if avg20>0 else 1.0
+            close=df['Close'].squeeze().dropna()
+            pct=float((close.iloc[-1]/close.iloc[-2]-1)*100) if len(close)>=2 else 0
+            recent_vol=vol.iloc[-30:]
+            recent_avg=float(vol.iloc[-50:-30].mean()) if len(vol)>=50 else avg20
+            vol_ratios=(recent_vol/recent_avg).round(2).tolist()
+            dates=[str(d.date()) for d in recent_vol.index]
+            rows.append({"Sector":name,"Punch":punch,"Punch5":punch5,
+                         "PctToday":round(pct,2),"Dates":dates,"VolRatios":vol_ratios})
+        except: pass
+    return sorted(rows,key=lambda x:x["Punch"],reverse=True)
 
-<!-- Market strip -->
-<div class="mkt-wrap">
-  <div class="mkt-strip" id="mkt-strip"></div>
-</div>
 
-<!-- Stats -->
-<div class="stats-wrap">
-  <div class="stats">
-    <div class="stat"><div class="stat-n" style="animation-delay:.1s">500+</div><div class="stat-l">Stocks Scanned</div></div>
-    <div class="stat"><div class="stat-n" style="animation-delay:.2s">14</div><div class="stat-l">Sectors Tracked</div></div>
-    <div class="stat"><div class="stat-n" style="animation-delay:.3s">Free</div><div class="stat-l">Always</div></div>
-    <div class="stat"><div class="stat-n" style="animation-delay:.4s">2×</div><div class="stat-l">Daily Alerts</div></div>
-  </div>
-</div>
+NIFTY500=[
+    "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS","HINDUNILVR.NS",
+    "SBIN.NS","BHARTIARTL.NS","KOTAKBANK.NS","LT.NS","AXISBANK.NS","ITC.NS",
+    "BAJFINANCE.NS","ASIANPAINT.NS","MARUTI.NS","SUNPHARMA.NS","TITAN.NS",
+    "NESTLEIND.NS","WIPRO.NS","ULTRACEMCO.NS","TECHM.NS","HCLTECH.NS","ONGC.NS",
+    "NTPC.NS","POWERGRID.NS","COALINDIA.NS","BAJAJFINSV.NS","DIVISLAB.NS",
+    "DRREDDY.NS","ADANIENT.NS","ADANIPORTS.NS","AMBUJACEM.NS","APOLLOHOSP.NS",
+    "BAJAJ-AUTO.NS","BANKBARODA.NS","BEL.NS","BPCL.NS","BRITANNIA.NS","CANBK.NS",
+    "CHOLAFIN.NS","CIPLA.NS","DABUR.NS","DLF.NS","DIXON.NS","EICHERMOT.NS",
+    "GAIL.NS","GODREJCP.NS","GRASIM.NS","HAVELLS.NS","HEROMOTOCO.NS","HINDALCO.NS",
+    "HINDPETRO.NS","INDUSINDBK.NS","IOC.NS","IRCTC.NS","JSWSTEEL.NS","LTIM.NS",
+    "LUPIN.NS","M&M.NS","MOTHERSON.NS","MUTHOOTFIN.NS","NAUKRI.NS","PIDILITIND.NS",
+    "PNB.NS","SAIL.NS","SHREECEM.NS","SIEMENS.NS","SRF.NS","TATAPOWER.NS",
+    "TATASTEEL.NS","TORNTPHARM.NS","TRENT.NS","VEDL.NS","VOLTAS.NS","ZOMATO.NS",
+    "ABB.NS","ABCAPITAL.NS","ACC.NS","APLAPOLLO.NS","AUBANK.NS","AUROPHARMA.NS",
+    "BALKRISIND.NS","BANDHANBNK.NS","BERGEPAINT.NS","BIOCON.NS","BOSCHLTD.NS",
+    "COFORGE.NS","CROMPTON.NS","CUMMINSIND.NS","DALBHARAT.NS","DEEPAKNTR.NS",
+    "ESCORTS.NS","EXIDEIND.NS","FEDERALBNK.NS","FORTIS.NS","GLENMARK.NS",
+    "GMRINFRA.NS","HAL.NS","HDFCAMC.NS","HDFCLIFE.NS","IDFCFIRSTB.NS",
+    "IEX.NS","INDIANB.NS","INDHOTEL.NS","INDUSTOWER.NS","IRFC.NS","JKCEMENT.NS",
+    "JSWENERGY.NS","JUBLFOOD.NS","KEI.NS","LALPATHLAB.NS","LICHSGFIN.NS",
+    "LICI.NS","MANAPPURAM.NS","MARICO.NS","MAXHEALTH.NS","MCX.NS","MPHASIS.NS",
+    "MRF.NS","NMDC.NS","OBEROIRLTY.NS","OIL.NS","PAGEIND.NS","PERSISTENT.NS",
+    "PETRONET.NS","PHOENIX.NS","POLYCAB.NS","PRESTIGE.NS","PVRINOX.NS",
+    "RAMCOCEM.NS","RVNL.NS","RECLTD.NS","SBICARD.NS","SBILIFE.NS","SOBHA.NS",
+    "SONACOMS.NS","SUPREMEIND.NS","SYNGENE.NS","TATACOMM.NS","TATACHEM.NS",
+    "TATACONSUM.NS","TATAELXSI.NS","TATAMOTORS.NS","TATATECH.NS","TIINDIA.NS",
+    "TORNTPOWER.NS","TRIDENT.NS","UPL.NS","UTIAMC.NS","VGUARD.NS","ZYDUSLIFE.NS"
+]
 
-<!-- Features -->
-<div class="feats-wrap">
-  <div class="feats-title">What you get</div>
-  <div class="feats-grid" id="feats-grid"></div>
-</div>
-
-<!-- Ad -->
-<div class="ad-wrap"><div class="ad-slot">Advertisement</div></div>
-
-<!-- Nav -->
-<div class="news-nav" id="news-nav"></div>
-
-<!-- News -->
-<div class="news-wrap">
-  <div class="news-grid" id="news-grid"></div>
-</div>
-
-<!-- Ad -->
-<div class="ad-wrap"><div class="ad-slot">Advertisement</div></div>
-
-<!-- CTA -->
-<div class="cta-wrap">
-  <div class="cta-box">
-    <div class="cta-title">Follow @momentumfrenzy</div>
-    <div class="cta-sub">Daily trading ideas, breakout alerts and market insights on Instagram. Join 10,000+ traders.</div>
-    <button class="btn-insta" onclick="window.open('https://instagram.com/momentumfrenzy')">Follow Now →</button>
-  </div>
-</div>
-
-<!-- Footer -->
-<div class="footer">© 2025 MOMENTUMFRENZY · For informational purposes only. Not SEBI-registered investment advice. · <a href="https://instagram.com/momentumfrenzy" target="_blank">@momentumfrenzy</a></div>
-
-<script>
-// ── Animated canvas background ──────────────────────────────────────────────
-const canvas = document.getElementById('bg-canvas');
-const ctx = canvas.getContext('2d');
-let W, H, particles = [], lines = [];
-
-function resize(){
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener('resize', resize);
-
-class Particle {
-  constructor(){this.reset()}
-  reset(){
-    this.x = Math.random()*W; this.y = Math.random()*H;
-    this.vx = (Math.random()-.5)*.35; this.vy = (Math.random()-.5)*.35;
-    this.r = Math.random()*1.5+.5;
-    const c = [[59,130,246],[139,92,246],[0,217,126]][Math.floor(Math.random()*3)];
-    this.color = c; this.alpha = Math.random()*.6+.2;
-  }
-  update(){
-    this.x += this.vx; this.y += this.vy;
-    if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset();
-  }
-  draw(){
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-    ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
-    ctx.fill();
-  }
-}
-
-for(let i=0;i<120;i++) particles.push(new Particle());
-
-function drawLines(){
-  const maxDist = 100;
-  for(let i=0;i<particles.length;i++){
-    for(let j=i+1;j<particles.length;j++){
-      const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
-      const dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<maxDist){
-        const a=(1-dist/maxDist)*.15;
-        ctx.beginPath();
-        ctx.moveTo(particles[i].x,particles[i].y);
-        ctx.lineTo(particles[j].x,particles[j].y);
-        ctx.strokeStyle=`rgba(59,130,246,${a})`;
-        ctx.lineWidth=.5;
-        ctx.stroke();
-      }
-    }
-  }
+SECTORS={
+    "IT":"^CNXIT","Pvt Bank":"^CNXPVTBANK","PSU Bank":"^CNXPSUBANK",
+    "Auto":"^CNXAUTO","Pharma":"^CNXPHARMA","FMCG":"^CNXFMCG",
+    "Metal":"^CNXMETAL","Energy":"^CNXENERGY","Realty":"^CNXREALTY",
+    "Infra":"^CNXINFRA","Cons Dur":"^CNXCONSUM","PSE":"^CNXPSE",
+    "MNC":"^CNXMNC","Media":"^CNXMEDIA"
 }
 
-// Candlestick animation
-const candles = [];
-for(let i=0;i<20;i++){
-  candles.push({
-    x: 60+i*60, baseY: H*.6,
-    h: 30+Math.random()*120,
-    w: 18, up: Math.random()>.5,
-    wick: 15+Math.random()*40,
-    alpha: .04+Math.random()*.06,
-    speed: .3+Math.random()*.5, t: Math.random()*Math.PI*2
-  });
-}
 
-function drawCandles(){
-  candles.forEach(c=>{
-    c.t += .008*c.speed;
-    const y = c.baseY + Math.sin(c.t)*20;
-    const color = c.up ? '0,217,126' : '255,69,96';
-    ctx.fillStyle = `rgba(${color},${c.alpha})`;
-    ctx.fillRect(c.x-c.w/2, y-c.h/2, c.w, c.h);
-    ctx.strokeStyle = `rgba(${color},${c.alpha})`;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(c.x, y-c.h/2-c.wick);
-    ctx.lineTo(c.x, y+c.h/2+c.wick);
-    ctx.stroke();
-  });
-}
+# ── Market Data ───────────────────────────────────────────────────────────────
+with st.spinner(""):
+    nifty_c=get_close("^NSEI","1y")
+    bank_c=get_close("^NSEBANK")
+    vix_c=get_close("^INDIAVIX","1mo")
 
-function animate(){
-  ctx.clearRect(0,0,W,H);
-  drawCandles();
-  particles.forEach(p=>{p.update();p.draw();});
-  drawLines();
-  requestAnimationFrame(animate);
-}
-animate();
+if len(nifty_c)<2 or len(bank_c)<2:
+    st.error("⚠️ Data unavailable. Refresh in 1-2 minutes."); st.stop()
+
+nl=float(nifty_c.iloc[-1]); np_=float(nifty_c.iloc[-2]); nchg=(nl/np_-1)*100
+bl=float(bank_c.iloc[-1]); bp=float(bank_c.iloc[-2]); bchg=(bl/bp-1)*100
+vl=float(vix_c.iloc[-1]) if len(vix_c)>1 else 0
+vc_=float(vix_c.iloc[-2]) if len(vix_c)>1 else 0
+vchg=(vl/vc_-1)*100 if vc_>0 else 0
+ma200=float(nifty_c.rolling(min(200,len(nifty_c))).mean().iloc[-1])
+ma50=float(nifty_c.rolling(min(50,len(nifty_c))).mean().iloc[-1])
+state="BULL" if nl>ma200 else "BEAR"
+sc_={"BULL":"#00e676","BEAR":"#ff5252"}[state]
+nifty_1m=float((nifty_c.iloc[-1]/nifty_c.iloc[max(-21,-len(nifty_c))]-1)*100)
+nifty_1w=float((nifty_c.iloc[-1]/nifty_c.iloc[max(-5,-len(nifty_c))]-1)*100)
+
+# Market Mood Score
+mood_score=0
+mood_score += 30 if nl>ma200 else 0
+mood_score += 20 if nl>ma50 else 0
+mood_score += 15 if nifty_1m>0 else 0
+mood_score += 15 if nifty_1w>0 else 0
+mood_score += 10 if nchg>0 else 0
+mood_score += 10 if vl<15 else (5 if vl<20 else 0)
+
+if mood_score>=70:   mood,mood_c,mood_e="BULLISH","#00e676","🟢"
+elif mood_score>=45: mood,mood_c,mood_e="NEUTRAL","#ffaa00","🟡"
+else:                mood,mood_c,mood_e="BEARISH","#ff5252","🔴"
 
 
-// ── Ticker ──────────────────────────────────────────────────────────────────
-const INDICES=[
-  {n:'NIFTY 50',v:'24,749',c:'+0.94%',up:true},{n:'BANK NIFTY',v:'53,210',c:'+1.21%',up:true},
-  {n:'VIX',v:'12.84',c:'-5.2%',up:false},{n:'SENSEX',v:'81,224',c:'+0.87%',up:true},
-  {n:'NIFTY IT',v:'35,841',c:'-0.38%',up:false},{n:'USD/INR',v:'83.48',c:'-0.14%',up:false},
-  {n:'MIDCAP',v:'54,103',c:'+0.72%',up:true},{n:'GOLD',v:'₹71,240',c:'+0.31%',up:true},
-  {n:'CRUDE',v:'$78.42',c:'-0.82%',up:false},{n:'NIFTY MID',v:'54,103',c:'+0.72%',up:true},
-];
-const tickerEl=document.getElementById('ticker');
-[...INDICES,...INDICES].forEach(x=>{
-  tickerEl.innerHTML+=`<span class="ti"><span class="tn">${x.n}</span><span class="tv">${x.v}</span><span class="${x.up?'tu':'td'}">${x.c}</span></span>`;
-});
+# ── PULSE BAR ─────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="pulse-bar">
+  <div class="pulse-item"><span class="pulse-label">Nifty 50</span>
+    <span class="pulse-value {cv(nchg)}">{nl:,.0f} {ar(nchg)}{abs(nchg):.1f}%</span></div>
+  <div class="pulse-item"><span class="pulse-label">BankNifty</span>
+    <span class="pulse-value {cv(bchg)}">{bl:,.0f} {ar(bchg)}{abs(bchg):.1f}%</span></div>
+  <div class="pulse-item"><span class="pulse-label">VIX</span>
+    <span class="pulse-value {cv(-vchg)}">{vl:.1f}</span></div>
+  <div class="pulse-item"><span class="pulse-label">MA200</span>
+    <span class="pulse-value">{ma200:,.0f}</span></div>
+  <div class="pulse-item"><span class="pulse-label">Regime</span>
+    <span class="pulse-value" style="color:{sc_};">{state}</span></div>
+  <div class="pulse-item"><span class="pulse-label">Mood</span>
+    <span class="pulse-value" style="color:{mood_c};">{mood_e} {mood}</span></div>
+  <div class="pulse-item" style="margin-left:auto"><span class="pulse-label">Updated</span>
+    <span class="pulse-value" style="font-size:10px;color:#444;">{datetime.now().strftime('%d %b %H:%M')}</span></div>
+</div>""", unsafe_allow_html=True)
+
+# Header
+hc1,hc2,hc3=st.columns([1,8,2])
+with hc1: st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png",width=55)
+with hc2:
+    st.markdown("<h2 style='color:#00e676;margin:8px 0 2px;font-size:18px;letter-spacing:.04em;'>⚡ MOMENTUM FRENZY TERMINAL</h2>",unsafe_allow_html=True)
+    st.markdown("<p style='color:#444;font-size:11px;margin:0;'>Indian Markets · Swing Trading Scanner · Free</p>",unsafe_allow_html=True)
+with hc3:
+    st.markdown(f"""
+    <div style='text-align:right;padding-top:8px;'>
+      <a href='https://instagram.com/momentumfrenzy' target='_blank'
+         style='color:#00e676;font-size:12px;text-decoration:none;border:1px solid #00e67655;padding:4px 10px;border-radius:4px;'>
+        📸 @momentumfrenzy
+      </a>
+    </div>""", unsafe_allow_html=True)
 
 
-// ── Market strip ─────────────────────────────────────────────────────────────
-const MKT=[
-  {n:'NIFTY 50',v:'24,749',c:'+0.94%',up:true},{n:'BANK NIFTY',v:'53,210',c:'+1.21%',up:true},
-  {n:'VIX',v:'12.84',c:'-5.2%',up:false},{n:'USD/INR',v:'83.48',c:'-0.14%',up:false},
-  {n:'NIFTY IT',v:'35,841',c:'-0.38%',up:false},{n:'MIDCAP',v:'54,103',c:'+0.72%',up:true},
-];
-const mktEl=document.getElementById('mkt-strip');
-MKT.forEach((m,i)=>{
-  mktEl.innerHTML+=`<div class="mkt-card" style="animation-delay:${i*.08}s">
-    <div class="mn">${m.n}</div><div class="mv">${m.v}</div>
-    <div class="mc ${m.up?'up':'dn'}">${m.c}</div></div>`;
-});
+# ── TABS ──────────────────────────────────────────────────────────────────────
+tab1,tab2,tab3=st.tabs(["🎯 Today's Picks & Scanner","📈 Charts","📊 Sector Intelligence"])
 
 
-// ── Features ─────────────────────────────────────────────────────────────────
-const FEATS=[
-  {i:'🎯',t:"Today's top picks",d:'Entry, target, stop-loss and risk:reward — ready every morning.'},
-  {i:'📊',t:'Sector intelligence',d:'4-Quadrant rotation showing which sectors lead, improve or lag.'},
-  {i:'💥',t:'Volume punch radar',d:'Catch institutional activity before the crowd notices.'},
-  {i:'📈',t:'Professional charts',d:'Candlestick + EMA 20/50/200 for any Nifty 500 stock.'},
-  {i:'🔍',t:'Nifty 500 scanner',d:'Momentum Score 0–100. BUY, WATCH, AVOID signals instantly.'},
-  {i:'📲',t:'Telegram alerts',d:'Auto morning and evening alerts with top picks every market day.'},
-];
-const featsEl=document.getElementById('feats-grid');
-FEATS.forEach((f,i)=>{
-  featsEl.innerHTML+=`<div class="feat" style="animation-delay:${i*.08}s">
-    <span class="fi">${f.i}</span><div class="ft">${f.t}</div><div class="fd">${f.d}</div></div>`;
-});
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — PICKS & SCANNER
+# ══════════════════════════════════════════════════════════════════════════════
+with tab1:
 
-
-// ── News ──────────────────────────────────────────────────────────────────────
-const RAPIDAPI_KEY='389cd79c39msh1f83b8b416e31c1p151ee2jsnb635fc398a55';
-const CATS=[
-  {id:'all',label:'All News'},
-  {id:'nifty',label:'Nifty Stocks',q:'NSE Nifty India stocks 2026'},
-  {id:'macro',label:'Macro India',q:'India economy RBI policy 2026'},
-  {id:'ipo',label:'IPO / Results',q:'India IPO earnings results 2026'},
-  {id:'fii',label:'FII / DII',q:'FII DII India foreign investment 2026'},
-];
-const TAGS={0:'NIFTY',1:'MACRO',2:'IPO',3:'FII/DII'};
-const CAT_MAP={0:'nifty',1:'macro',2:'ipo',3:'fii'};
-const ACCENTS={nifty:'#3b82f6',macro:'#00d97e',ipo:'#f59e0b',fii:'#8b5cf6'};
-let currentFilter='all', allNews=[];
-
-function timeAgo(d){
-  if(!d)return'Recently';
-  try{const m=Math.floor((Date.now()-new Date(d))/60000);
-    if(m<1)return'Just now';if(m<60)return m+'m ago';
-    if(m<1440)return Math.floor(m/60)+'h ago';return Math.floor(m/1440)+'d ago';}
-  catch{return'Recently';}
-}
-function extractSrc(url){
-  if(!url)return'News';
-  try{const h=new URL(url).hostname.replace('www.','');
-    if(h.includes('economictimes'))return'Economic Times';
-    if(h.includes('businessstandard'))return'Business Standard';
-    if(h.includes('livemint')||h.includes('mint'))return'Mint';
-    if(h.includes('moneycontrol'))return'Moneycontrol';
-    if(h.includes('bloomberg'))return'Bloomberg';
-    if(h.includes('reuters'))return'Reuters';
-    if(h.includes('ndtv'))return'NDTV';
-    return h.split('.')[0].toUpperCase();}
-  catch{return'News';}
-}
-
-function buildNav(){
-  const navEl=document.getElementById('news-nav');
-  navEl.innerHTML='';
-  CATS.forEach(c=>{
-    const btn=document.createElement('button');
-    btn.className='nf'+(currentFilter===c.id?' active':'');
-    btn.textContent=c.label;
-    btn.onclick=()=>{currentFilter=c.id;fetchNews();};
-    navEl.appendChild(btn);
-  });
-  const ref=document.createElement('button');
-  ref.className='ref-btn';ref.id='ref-btn';ref.innerHTML='⟳ Refresh';
-  ref.onclick=()=>fetchNews();
-  navEl.appendChild(ref);
-}
-
-function showShimmers(){
-  const g=document.getElementById('news-grid');
-  g.innerHTML=Array.from({length:6}).map(()=>`<div class="shim"><div class="sl s"></div><div class="sl"></div><div class="sl m"></div></div>`).join('');
-}
-
-function renderNews(news){
-  const g=document.getElementById('news-grid');
-  if(!news.length){g.innerHTML='<div class="err">No news found. Click Refresh.</div>';return;}
-  g.innerHTML=news.map((item,i)=>{
-    const acc=ACCENTS[item.category]||'#3b82f6';
-    return `<article class="news-card" style="--acc:${acc};animation-delay:${i*45}ms">
-      <div class="nc-top"><span class="nc-src">${extractSrc(item.url)}</span><span class="nc-time">${timeAgo(item.date||item.published_date)}</span></div>
-      <div class="nc-hl">${item.title||''}</div>
-      <div class="nc-ft">
-        <span class="nc-tag" style="background:${acc}18;color:${acc};border:1px solid ${acc}30">${item.tag||'MARKETS'}</span>
-        ${item.url?`<a class="nc-link" href="${item.url}" target="_blank" rel="noopener">Read →</a>`:''}
+    # ── Market Mood Banner ────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div style='background:linear-gradient(90deg,{mood_c}11,#0a0a0f);border:1px solid {mood_c}33;
+      border-radius:10px;padding:14px 20px;margin:12px 0;display:flex;align-items:center;gap:20px;flex-wrap:wrap;'>
+      <div>
+        <div style='font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.1em;'>Market Mood Today</div>
+        <div style='font-size:28px;font-weight:800;color:{mood_c};'>{mood_e} {mood}</div>
+        <div style='font-size:12px;color:#666;margin-top:2px;'>Score: {mood_score}/100</div>
       </div>
-    </article>`;
-  }).join('');
-}
+      <div style='flex:1;min-width:200px;'>
+        <div style='background:#1e1e3a;height:8px;border-radius:4px;margin-bottom:8px;'>
+          <div style='background:{mood_c};height:8px;border-radius:4px;width:{mood_score}%;'></div>
+        </div>
+        <div style='font-size:12px;color:#888;'>
+          {"✅ Above MA200 · " if nl>ma200 else "❌ Below MA200 · "}
+          {"✅ Above MA50 · " if nl>ma50 else "❌ Below MA50 · "}
+          {"✅ VIX low" if vl<15 else "⚠️ VIX elevated" if vl<20 else "🔴 VIX high"}
+        </div>
+        <div style='font-size:11px;color:#555;margin-top:4px;'>
+          {"💡 Good day to look for BUY setups. Momentum is on your side." if mood=="BULLISH" else
+           "💡 Selective trades only. Wait for clear setups before entering." if mood=="NEUTRAL" else
+           "💡 Caution. Avoid fresh longs. Focus on capital protection."}
+        </div>
+      </div>
+    </div>""", unsafe_allow_html=True)
 
-async function fetchNews(){
-  const btn=document.getElementById('ref-btn');
-  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin">⟳</span> Loading';}
-  showShimmers();
+    # ── AD SLOT 1 ─────────────────────────────────────────────────────────────
+    st.markdown("<div class='ad-slot'>[ Advertisement ]</div>", unsafe_allow_html=True)
 
-  const queries=currentFilter==='all'
-    ?['NSE Nifty India stock market 2026','India economy RBI policy news 2026','India IPO earnings 2026','FII DII India investment 2026']
-    :[CATS.find(c=>c.id===currentFilter)?.q||'India stock market 2026'];
+    # ── TODAY'S TOP PICKS ─────────────────────────────────────────────────────
+    st.markdown("<div class='sh'>🎯 Today's Top Swing Trade Picks</div>", unsafe_allow_html=True)
 
-  try{
-    const results=await Promise.allSettled(queries.map((q,i)=>
-      fetch(`https://real-time-web-search.p.rapidapi.com/search?q=${encodeURIComponent(q)}&limit=6`,{
-        headers:{'X-RapidAPI-Key':RAPIDAPI_KEY,'X-RapidAPI-Host':'real-time-web-search.p.rapidapi.com'}
-      }).then(r=>r.json()).then(d=>({data:d.data||[],idx:i}))
-    ));
-    allNews=[];
-    results.forEach(r=>{
-      if(r.status==='fulfilled'&&r.value.data){
-        allNews=[...allNews,...r.value.data.map(x=>({...x,tag:TAGS[r.value.idx]||'MARKETS',category:CAT_MAP[r.value.idx]||'nifty'}))];
-      }
-    });
-    if(!allNews.length){
-      document.getElementById('news-grid').innerHTML=`<div class="err">⚠️ Could not fetch live news. Rate limit reached.<br><button onclick="fetchNews()">Try Again</button></div>`;
-    }else{
-      const filtered=currentFilter==='all'?allNews:allNews.filter(n=>n.category===currentFilter);
-      renderNews(filtered);
-    }
-  }catch(ex){
-    document.getElementById('news-grid').innerHTML=`<div class="err">⚠️ Network error: ${ex.message}<br><button onclick="fetchNews()">Try Again</button></div>`;
-  }finally{
-    if(btn){btn.disabled=false;btn.innerHTML='⟳ Refresh';}
-    buildNav();
-  }
-}
+    with st.spinner("⚡ Finding today's best setups…"):
+        picks = get_top_picks(tuple(NIFTY500[:100]), nifty_1m)
 
-// ── Intersection observer for scroll animations ─────────────────────────────
-const observer=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)';}});
-},{threshold:.1});
+    if picks:
+        # Top 3 featured picks
+        featured = picks[:3]
+        pc1,pc2,pc3 = st.columns(3)
+        for col,(i,pk) in zip([pc1,pc2,pc3],enumerate(featured)):
+            rr_color = "#00e676" if pk["RR"]>=2 else "#ffaa00" if pk["RR"]>=1.5 else "#ff5252"
+            setup_emoji = {"Breakout":"🚀","Pullback":"📉","Vol Surge":"💥","Trend":"📈"}.get(pk["Setup"],"📊")
+            with col:
+                st.markdown(f"""
+                <div style='background:#0f0f1a;border:1px solid #00e67633;border-radius:12px;padding:16px;'>
+                  <div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;'>
+                    <div>
+                      <div style='font-size:18px;font-weight:800;color:#e0e0e0;'>{pk["Stock"]}</div>
+                      <div style='font-size:11px;color:#888;'>{setup_emoji} {pk["Setup"]} · Score: {pk["Score"]}/100</div>
+                    </div>
+                    <div style='background:#00380a;color:#00e676;font-size:11px;font-weight:700;
+                      padding:3px 8px;border-radius:4px;border:1px solid #00e67655;'>BUY</div>
+                  </div>
+                  <div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;'>
+                    <div style='background:#0a0a0f;border-radius:6px;padding:8px;text-align:center;'>
+                      <div style='font-size:9px;color:#555;text-transform:uppercase;'>Entry</div>
+                      <div style='font-size:14px;font-weight:700;color:#e0e0e0;'>₹{pk["Entry"]}</div>
+                    </div>
+                    <div style='background:#0a0a0f;border-radius:6px;padding:8px;text-align:center;'>
+                      <div style='font-size:9px;color:#555;text-transform:uppercase;'>Stop Loss</div>
+                      <div style='font-size:14px;font-weight:700;color:#ff5252;'>₹{pk["SL"]}</div>
+                    </div>
+                    <div style='background:#0a0a0f;border-radius:6px;padding:8px;text-align:center;'>
+                      <div style='font-size:9px;color:#555;text-transform:uppercase;'>Target 1</div>
+                      <div style='font-size:14px;font-weight:700;color:#00e676;'>₹{pk["Target1"]}</div>
+                    </div>
+                    <div style='background:#0a0a0f;border-radius:6px;padding:8px;text-align:center;'>
+                      <div style='font-size:9px;color:#555;text-transform:uppercase;'>Target 2</div>
+                      <div style='font-size:14px;font-weight:700;color:#aaff00;'>₹{pk["Target2"]}</div>
+                    </div>
+                  </div>
+                  <div style='display:flex;justify-content:space-between;padding:8px 0;
+                    border-top:1px solid #1e1e3a;font-size:12px;'>
+                    <span style='color:#888;'>Risk:Reward</span>
+                    <span style='color:{rr_color};font-weight:700;'>1 : {pk["RR"]}</span>
+                  </div>
+                  <div style='display:flex;justify-content:space-between;font-size:11px;color:#555;'>
+                    <span>RSI: {pk["RSI"]}</span>
+                    <span>Vol: {pk["VolSurge"]}x</span>
+                    <span>RS: {pk["RS"]:+.1f}%</span>
+                  </div>
+                </div>""", unsafe_allow_html=True)
 
-document.querySelectorAll('.feat,.mkt-card,.stat-n').forEach(el=>{
-  el.style.opacity='0';
-  el.style.transform='translateY(16px)';
-  el.style.transition='opacity .5s ease, transform .5s ease';
-  observer.observe(el);
-});
+        # More picks table
+        if len(picks)>3:
+            st.markdown("<div class='sh' style='margin-top:16px;'>📋 More Setups</div>", unsafe_allow_html=True)
+            more_df=pd.DataFrame(picks[3:]).rename(columns={
+                "Stock":"Stock","Price":"CMP","Setup":"Setup","Score":"Score",
+                "Entry":"Entry ₹","SL":"SL ₹","Target1":"T1 ₹","Target2":"T2 ₹","RR":"R:R"
+            })[["Stock","CMP","Setup","Score","Entry ₹","SL ₹","T1 ₹","T2 ₹","R:R","RSI","VolSurge"]]
+            st.dataframe(more_df.style.map(style_sc,subset=["Score"])
+                .format({"CMP":"{:.1f}","Entry ₹":"{:.1f}","SL ₹":"{:.1f}","T1 ₹":"{:.1f}","T2 ₹":"{:.1f}","R:R":"{:.1f}","RSI":"{:.1f}","VolSurge":"{:.1f}x"}),
+                use_container_width=True, height=280)
+    else:
+        st.info("No high-quality setups found today. Market may be in consolidation — wait for better opportunities.")
 
-buildNav();
-fetchNews();
-</script>
-</body>
-</html>
+    st.markdown("<p style='font-size:10px;color:#333;text-align:right;margin-top:4px;'>⚠️ Educational only. Not financial advice. Do your own research.</p>", unsafe_allow_html=True)
+
+    # ── AD SLOT 2 ─────────────────────────────────────────────────────────────
+    st.markdown("<div class='ad-slot'>[ Advertisement ]</div>", unsafe_allow_html=True)
+
+    # ── FULL SCANNER ─────────────────────────────────────────────────────────
+    st.markdown("<div class='sh'>🔍 Full Momentum Scanner</div>", unsafe_allow_html=True)
+
+    fc1,fc2,fc3,fc4=st.columns(4)
+    with fc1: sf=st.selectbox("Signal",["All","BUY","WATCH","AVOID"])
+    with fc2: rf=st.selectbox("Risk",["All","Low","Medium","High"])
+    with fc3: setupf=st.selectbox("Setup",["All","Breakout","Pullback","Vol Surge","Trend","Oversold","Base"])
+    with fc4: tn=st.selectbox("Universe",["Top 50","Top 100","Top 150"],index=0)
+
+    tm={"Top 50":50,"Top 100":100,"Top 150":150}
+    with st.spinner(f"Scanning {tm[tn]} stocks…"):
+        scan_df=batch_scan(tuple(NIFTY500[:tm[tn]]),nifty_1m)
+
+    if len(scan_df)>0:
+        filt=scan_df.copy()
+        if sf!="All": filt=filt[filt["Signal"]==sf]
+        if rf!="All": filt=filt[filt["Risk"]==rf]
+        if setupf!="All": filt=filt[filt["Setup"]==setupf]
+        st.dataframe(filt.style.map(style_sig,subset=["Signal"]).map(style_sc,subset=["Score"])
+            .format({"Price":"{:.1f}","RSI":"{:.1f}","RS":"{:+.1f}","VolSurge":"{:.1f}x","52W%":"{:.1f}%","Score":"{:.0f}"}),
+            use_container_width=True, height=360)
+        st.caption(f"Showing {len(filt)} of {len(scan_df)} stocks · Data: Yahoo Finance · Cached 4hrs")
+    else:
+        st.warning("No data. Try refreshing.")
+
+    # ── AD SLOT 3 ─────────────────────────────────────────────────────────────
+    st.markdown("<div class='ad-slot'>[ Advertisement ]</div>", unsafe_allow_html=True)
+
+    # ── INSTAGRAM CTA ────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div style='background:linear-gradient(135deg,#0f0f1a,#1a0f2a);border:1px solid #00e67633;
+      border-radius:12px;padding:20px;text-align:center;margin:16px 0;'>
+      <div style='font-size:20px;margin-bottom:8px;'>📸</div>
+      <div style='font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:6px;'>Follow @momentumfrenzy on Instagram</div>
+      <div style='font-size:13px;color:#666;margin-bottom:12px;'>Daily trading ideas, breakout alerts and market analysis</div>
+      <a href='https://instagram.com/momentumfrenzy' target='_blank'
+         style='background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;
+         padding:8px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;'>
+        Follow Now
+      </a>
+    </div>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — CHARTS
+# ══════════════════════════════════════════════════════════════════════════════
+with tab2:
+    st.markdown("<div class='sh'>📈 Stock Chart Viewer</div>", unsafe_allow_html=True)
+    cc1,cc2,cc3=st.columns([2,1,1])
+    with cc1: sel=st.selectbox("Stock",[t.replace(".NS","") for t in NIFTY500])
+    with cc2: per=st.selectbox("Period",["3mo","6mo","1y"])
+    with cc3: ctype=st.selectbox("Type",["Candles","Line"])
+
+    sdf=get_ohlcv(sel+".NS",per)
+    if len(sdf)>0:
+        sc2_=sdf['Close'].squeeze(); sv_=sdf['Volume'].squeeze()
+        fig2=make_subplots(rows=2,cols=1,shared_xaxes=True,row_heights=[0.75,0.25],vertical_spacing=0.03)
+        if ctype=="Candles":
+            fig2.add_trace(go.Candlestick(x=sdf.index,open=sdf['Open'].squeeze(),
+                high=sdf['High'].squeeze(),low=sdf['Low'].squeeze(),close=sc2_,name=sel,
+                increasing_line_color="#00e676",decreasing_line_color="#ff5252"),row=1,col=1)
+        else:
+            fig2.add_trace(go.Scatter(x=sdf.index,y=sc2_,name=sel,line=dict(color="#00e676",width=1.5)),row=1,col=1)
+        fig2.add_trace(go.Scatter(x=sdf.index,y=sc2_.ewm(span=20).mean(),name="EMA20",line=dict(color="#00e676",width=1.2)),row=1,col=1)
+        fig2.add_trace(go.Scatter(x=sdf.index,y=sc2_.ewm(span=50).mean(),name="EMA50",line=dict(color="#ffaa00",width=1.2)),row=1,col=1)
+        fig2.add_trace(go.Scatter(x=sdf.index,y=sc2_.ewm(span=200).mean(),name="EMA200",line=dict(color="#ff5252",width=1.2)),row=1,col=1)
+        vc2=["rgba(0,230,118,0.4)" if c>=o else "rgba(255,82,82,0.4)"
+             for c,o in zip(sdf['Close'].squeeze(),sdf['Open'].squeeze())]
+        fig2.add_trace(go.Bar(x=sdf.index,y=sv_,marker_color=vc2,showlegend=False),row=2,col=1)
+        fig2.update_layout(plot_bgcolor="#0a0a0f",paper_bgcolor="#0a0a0f",font_color="#888",height=500,
+            margin=dict(l=0,r=0,t=10,b=0),
+            xaxis=dict(gridcolor="#1a1a2e",rangeslider=dict(visible=False)),
+            xaxis2=dict(gridcolor="#1a1a2e"),yaxis=dict(gridcolor="#1a1a2e"),yaxis2=dict(gridcolor="#1a1a2e"),
+            legend=dict(bgcolor="#0f0f1a",bordercolor="#1e1e3a",font=dict(size=11)))
+        st.plotly_chart(fig2,use_container_width=True)
+
+        # Show pick data if available
+        if picks and sel in [p["Stock"] for p in picks]:
+            pk=[p for p in picks if p["Stock"]==sel][0]
+            m1,m2,m3,m4,m5,m6=st.columns(6)
+            m1.metric("Entry",f"₹{pk['Entry']}")
+            m2.metric("Target 1",f"₹{pk['Target1']}")
+            m3.metric("Target 2",f"₹{pk['Target2']}")
+            m4.metric("Stop Loss",f"₹{pk['SL']}")
+            m5.metric("R:R",f"1:{pk['RR']}")
+            m6.metric("Score",f"{pk['Score']}/100")
+
+    st.markdown("<div class='sh' style='margin-top:16px;'>🇮🇳 Nifty 50 — 1 Year</div>", unsafe_allow_html=True)
+    ndf=get_ohlcv("^NSEI","1y")
+    if len(ndf)>0:
+        nc_=ndf['Close'].squeeze()
+        fig3=go.Figure()
+        fig3.add_trace(go.Scatter(x=ndf.index,y=nc_,name="Nifty",
+            line=dict(color="#00e676",width=1.5),fill="tozeroy",fillcolor="rgba(0,230,118,0.07)"))
+        fig3.add_trace(go.Scatter(x=ndf.index,y=nc_.rolling(200).mean(),name="MA200",line=dict(color="#ff5252",dash="dash",width=1)))
+        fig3.add_trace(go.Scatter(x=ndf.index,y=nc_.rolling(50).mean(),name="MA50",line=dict(color="#ffaa00",dash="dot",width=1)))
+        fig3.update_layout(plot_bgcolor="#0a0a0f",paper_bgcolor="#0a0a0f",font_color="#888",height=300,
+            margin=dict(l=0,r=0,t=10,b=0),xaxis=dict(gridcolor="#1a1a2e"),yaxis=dict(gridcolor="#1a1a2e"),
+            legend=dict(bgcolor="#0f0f1a",bordercolor="#1e1e3a",font=dict(size=11)))
+        st.plotly_chart(fig3,use_container_width=True)
+
+    st.markdown("<div class='ad-slot'>[ Advertisement ]</div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3 — SECTOR INTELLIGENCE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab3:
+    st.markdown("<div class='sh'>📊 Sector Rotation — 4 Quadrant</div>", unsafe_allow_html=True)
+
+    with st.spinner("Loading sectors…"):
+        rows=[]
+        for name,ticker in SECTORS.items():
+            try:
+                close=get_close(ticker,"3mo")
+                if len(close)<20: continue
+                r1m=float((close.iloc[-1]/close.iloc[max(-21,-len(close))]-1)*100)
+                r3m=float((close.iloc[-1]/close.iloc[0]-1)*100)
+                rows.append({"Sector":name,"1M%":round(r1m,2),"3M%":round(r3m,2),"Score":round(r1m*.6+r3m*.4,2)})
+            except: pass
+
+    sector_df=pd.DataFrame(rows).sort_values("Score",ascending=False).reset_index(drop=True)
+    if len(sector_df)>0:
+        med1=sector_df["1M%"].median(); med3=sector_df["3M%"].median()
+        leading=sector_df[(sector_df["1M%"]>=med1)&(sector_df["3M%"]>=med3)]["Sector"].tolist()
+        improving=sector_df[(sector_df["1M%"]>=med1)&(sector_df["3M%"]<med3)]["Sector"].tolist()
+        weakening=sector_df[(sector_df["1M%"]<med1)&(sector_df["3M%"]>=med3)]["Sector"].tolist()
+        lagging=sector_df[(sector_df["1M%"]<med1)&(sector_df["3M%"]<med3)]["Sector"].tolist()
+
+        def qs(lst):
+            out=""
+            for s in lst:
+                r=sector_df[sector_df["Sector"]==s].iloc[0]
+                out+=f'<span class="quad-stock">{s} <b>{r["1M%"]:+.1f}%</b></span>'
+            return out or "<span style='color:#444'>—</span>"
+
+        ql,qr=st.columns([1.2,1])
+        with ql:
+            st.markdown(f"""<div class="quad-grid">
+              <div class="quad quad-leading"><div class="quad-title">🚀 Leading</div>{qs(leading)}</div>
+              <div class="quad quad-improving"><div class="quad-title">📈 Improving</div>{qs(improving)}</div>
+              <div class="quad quad-weakening"><div class="quad-title">⚠️ Weakening</div>{qs(weakening)}</div>
+              <div class="quad quad-lagging"><div class="quad-title">📉 Lagging</div>{qs(lagging)}</div>
+            </div>""",unsafe_allow_html=True)
+        with qr:
+            fig_s=go.Figure(go.Bar(x=sector_df["Sector"],y=sector_df["Score"],
+                marker_color=["#00e676" if s>0 else "#ff5252" for s in sector_df["Score"]],
+                text=[f"{s:+.1f}" for s in sector_df["Score"]],textposition="outside"))
+            fig_s.update_layout(plot_bgcolor="#0a0a0f",paper_bgcolor="#0a0a0f",font_color="#888",
+                height=280,margin=dict(l=0,r=0,t=10,b=0),
+                yaxis=dict(gridcolor="#1a1a2e"),xaxis=dict(gridcolor="#1a1a2e"))
+            st.plotly_chart(fig_s,use_container_width=True)
+
+    # Volume Punch
+    st.markdown("<div class='sh'>💥 Sector Volume Punch</div>", unsafe_allow_html=True)
+    with st.spinner("Analyzing volume…"):
+        vp=get_sector_vol_punch(SECTORS)
+
+    if vp:
+        vp1,vp2,vp3=st.columns(3)
+        for col,item in zip([vp1,vp2,vp3],vp[:3]):
+            bc="#ff5252" if item["Punch"]>=3 else "#ffaa00" if item["Punch"]>=2 else "#aaff00" if item["Punch"]>=1.5 else "#888"
+            pc2="#00e676" if item["PctToday"]>=0 else "#ff5252"
+            with col:
+                st.markdown(f"""
+                <div style='background:#0f0f1a;border:1px solid {bc}33;border-radius:10px;padding:14px;'>
+                  <div style='font-size:14px;font-weight:700;color:#e0e0e0;margin-bottom:4px;'>{item["Sector"]}</div>
+                  <div style='font-size:24px;font-weight:800;color:{bc};'>{item["Punch"]}x</div>
+                  <div style='font-size:11px;color:#888;'>Today: <span style='color:{pc2};font-weight:600;'>{item["PctToday"]:+.2f}%</span></div>
+                </div>""", unsafe_allow_html=True)
+
+        sec_names=[d["Sector"] for d in vp]
+        vol_ratios=[d["Punch"] for d in vp]
+        fig_vp=go.Figure()
+        fig_vp.add_trace(go.Bar(x=sec_names,y=vol_ratios,
+            marker_color=["#ff5252" if v>=3 else "#ffaa00" if v>=2 else "#aaff00" if v>=1.5 else "#333" for v in vol_ratios],
+            text=[f"{v:.1f}x" for v in vol_ratios],textposition="outside"))
+        fig_vp.add_hline(y=1.0,line_color="#555",line_dash="dot")
+        fig_vp.add_hline(y=2.0,line_color="rgba(255,170,0,0.4)",line_dash="dash")
+        fig_vp.update_layout(plot_bgcolor="#0a0a0f",paper_bgcolor="#0a0a0f",font_color="#888",
+            height=300,margin=dict(l=0,r=0,t=10,b=0),
+            xaxis=dict(gridcolor="#1a1a2e"),yaxis=dict(gridcolor="#1a1a2e",title="Vol Ratio vs 20D Avg"))
+        st.plotly_chart(fig_vp,use_container_width=True)
+
+        sel_sec=st.selectbox("Sector History",[d["Sector"] for d in vp])
+        sd=next((d for d in vp if d["Sector"]==sel_sec),None)
+        if sd and sd["VolRatios"]:
+            fig_h=go.Figure(go.Bar(
+                x=sd["Dates"],y=sd["VolRatios"],
+                marker_color=["#ff5252" if v>=3 else "#ffaa00" if v>=2 else "#00e676" if v>=1.5 else "#333" for v in sd["VolRatios"]]))
+            fig_h.add_hline(y=1.0,line_color="#555",line_dash="dot")
+            fig_h.update_layout(plot_bgcolor="#0a0a0f",paper_bgcolor="#0a0a0f",font_color="#888",
+                height=250,margin=dict(l=0,r=0,t=10,b=0),
+                xaxis=dict(gridcolor="#1a1a2e",tickangle=-45),yaxis=dict(gridcolor="#1a1a2e"))
+            st.plotly_chart(fig_h,use_container_width=True)
+
+    st.markdown("<div class='ad-slot'>[ Advertisement ]</div>", unsafe_allow_html=True)
+
+# Footer
+st.markdown(f"""
+<div style='text-align:center;padding:20px;border-top:1px solid #1e1e3a;margin-top:20px;'>
+  <p style='color:#333;font-size:11px;margin:0;'>
+    ⚠️ For educational purposes only. Not financial advice. Always DYOR.<br>
+    © 2025 Momentum Frenzy · <a href='https://instagram.com/momentumfrenzy' style='color:#00e676;'>@momentumfrenzy</a> ·
+    Data: Yahoo Finance · {datetime.now().strftime('%d %b %Y')}
+  </p>
+</div>""", unsafe_allow_html=True)
