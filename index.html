@@ -1,490 +1,500 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOMENTUMFRENZY — Indian Market Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Momentum Frenzy — Indian Market Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#060609;--bg2:#0d0d12;--bg3:#13131a;--border:#1e1e28;--border2:#2a2a38;--text:#e8e8f0;--muted:#6b6b80;--green:#00d97e;--red:#ff4560;--blue:#3b82f6;--gold:#f59e0b;--purple:#8b5cf6}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
-.ticker-wrap{background:#09090e;border-bottom:1px solid var(--border);height:34px;overflow:hidden;display:flex;align-items:center}
-.ticker-inner{display:flex;animation:tick 35s linear infinite;width:max-content}
-.ti-item{display:flex;align-items:center;gap:5px;padding:0 16px;font-size:11px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
-.ti-name{color:var(--muted)}.ti-val{color:var(--text);font-weight:500}
-.ti-up{color:var(--green)}.ti-dn{color:var(--red)}.ti-sep{color:#222;padding:0 4px}
-@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.hdr{padding:20px 0 0;border-bottom:1px solid var(--border);position:relative}
-.hdr-inner{max-width:1200px;margin:0 auto;padding:0 20px 18px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.hdr-logo{font-size:clamp(28px,5vw,48px);font-weight:800;letter-spacing:-1px;line-height:1}
-.hdr-logo span{background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hdr-sub{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
-.hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.live-badge{display:flex;align-items:center;gap:6px;background:#00d97e12;border:1px solid #00d97e30;padding:4px 10px;border-radius:20px;font-size:11px;color:var(--green);font-weight:500}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s ease-in-out infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-.hdr-time{font-size:10px;color:var(--muted)}
-.ad-wrap{max-width:1200px;margin:10px auto;padding:0 20px}
-.ad-slot{background:var(--bg2);border:1px dashed #1e1e28;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;color:#2a2a38;font-size:10px;letter-spacing:1px;text-transform:uppercase}
-.ad-banner{height:80px;width:100%}.ad-rect{width:300px;height:250px}
-.nav{background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-.nav-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:6px;height:48px;flex-wrap:wrap;overflow:hidden}
-.nf{background:transparent;border:1px solid transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500}
-.nf:hover{border-color:var(--border2);color:var(--text)}
-.nf.active{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.08);color:var(--blue)}
-.nf-insta{margin-left:auto;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);border:none;color:#fff;font-size:11px;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:600;font-family:'Inter',sans-serif}
-.ref-btn{background:transparent;border:1px solid #00d97e30;color:var(--green);font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-weight:500}
-.ref-btn:hover{background:#00d97e08}.ref-btn:disabled{opacity:.4;cursor:not-allowed}
+:root{--green:#00d97e;--red:#ff4560;--blue:#3b82f6;--purple:#8b5cf6;--gold:#f59e0b;--bg:#060609;--bg2:#0d0d14;--border:#1a1a26}
+body{background:var(--bg);color:#e0e0f0;font-family:'Inter',sans-serif;overflow-x:hidden}
+
+/* ── Animated canvas background ── */
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.45}
+
+/* ── Ticker ── */
+.ticker{position:relative;z-index:10;background:rgba(8,8,14,.95);border-bottom:1px solid var(--border);height:32px;overflow:hidden;display:flex;align-items:center}
+.ticker-track{display:flex;animation:scroll 45s linear infinite;width:max-content}
+.ti{display:flex;align-items:center;gap:6px;padding:0 18px;font-size:10px;font-family:'JetBrains Mono',monospace;white-space:nowrap;border-right:1px solid #1a1a26}
+.tn{color:#333350}.tv{color:#b0b0c8;font-weight:500}.tu{color:var(--green)}.td{color:var(--red)}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── Hero ── */
+.hero{position:relative;z-index:10;min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px 48px;overflow:hidden}
+
+/* Floating orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.12;animation:floatOrb 12s ease-in-out infinite;pointer-events:none}
+.orb1{width:500px;height:500px;background:var(--blue);top:-100px;left:-150px;animation-delay:0s}
+.orb2{width:400px;height:400px;background:var(--purple);top:50%;right:-120px;animation-delay:-4s}
+.orb3{width:350px;height:350px;background:var(--green);bottom:-80px;left:30%;animation-delay:-8s}
+@keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(.97)}}
+
+/* Grid lines */
+.grid-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)}
+
+.logo-wrap{display:flex;align-items:center;gap:14px;margin-bottom:24px;animation:fadeDown .7s ease both}
+.logo-img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.08);transition:transform .4s,box-shadow .4s}
+.logo-img:hover{transform:scale(1.1) rotate(3deg);box-shadow:0 0 32px rgba(59,130,246,.4)}
+.logo-text{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-2px;line-height:1}
+.logo-grd{background:linear-gradient(135deg,#3b82f6,#8b5cf6,#00d97e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;background-size:200%;animation:gradShift 5s ease infinite}
+@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.live-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(0,217,126,.08);border:1px solid rgba(0,217,126,.25);color:var(--green);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:5px 16px;border-radius:20px;margin-bottom:20px;animation:fadeDown .7s .1s ease both;opacity:0}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulseDot 1.8s ease-in-out infinite}
+@keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 8px var(--green)}50%{opacity:.3;box-shadow:0 0 2px var(--green)}}
+
+.hero-title{font-size:clamp(36px,7vw,72px);font-weight:900;line-height:1.08;letter-spacing:-2px;margin-bottom:18px;animation:fadeUp .8s .18s ease both;opacity:0}
+.hero-title .line1{display:block;color:#f0f0ff}
+.hero-title .line2{display:block;background:linear-gradient(90deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.hero-sub{font-size:clamp(14px,2.2vw,18px);color:#5a5a78;max-width:540px;margin:0 auto 36px;line-height:1.75;animation:fadeUp .8s .26s ease both;opacity:0}
+
+.hero-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;animation:fadeUp .8s .34s ease both;opacity:0}
+.btn-primary{position:relative;overflow:hidden;background:linear-gradient(135deg,#3b82f6,#6d28d9);color:#fff;border:none;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:transform .25s,box-shadow .25s}
+.btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15));opacity:0;transition:opacity .3s}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(59,130,246,.45)}
+.btn-primary:hover::after{opacity:1}
+.btn-primary:active{transform:translateY(-1px)}
+.btn-insta{background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;font-size:13px;font-weight:700;padding:14px 24px;border-radius:10px;cursor:pointer;font-family:inherit;transition:transform .25s,box-shadow .25s}
+.btn-insta:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(131,58,180,.4)}
+
+/* Scroll indicator */
+.scroll-ind{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;animation:fadeIn 1s .8s ease both;opacity:0}
+.scroll-ind span{font-size:9px;color:#333350;letter-spacing:2px;text-transform:uppercase}
+.scroll-arrow{width:20px;height:20px;border-right:2px solid #2a2a40;border-bottom:2px solid #2a2a40;transform:rotate(45deg);animation:bounce 1.6s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:rotate(45deg) translateY(0)}50%{transform:rotate(45deg) translateY(6px)}}
+
+/* ── Market strip ── */
+.mkt-wrap{position:relative;z-index:10;padding:0 20px;max-width:1040px;margin:-20px auto 0}
+.mkt-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.mkt-card{background:rgba(13,13,20,.9);border:1px solid #1e1e2c;border-radius:10px;padding:12px 14px;backdrop-filter:blur(10px);transition:border-color .3s,transform .3s,box-shadow .3s;cursor:default;animation:fadeUp .5s ease both;opacity:0}
+.mkt-card:hover{border-color:#2e2e46;transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.mn{font-size:9px;color:#33334a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.mv{font-size:15px;font-weight:700;color:#d0d0e8;margin-bottom:2px}
+.mc{font-size:11px;font-weight:600}
+.up{color:var(--green)}.dn{color:var(--red)}
+
+/* ── Stats ── */
+.stats-wrap{position:relative;z-index:10;background:rgba(10,10,16,.8);border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:40px 0;padding:36px 20px;backdrop-filter:blur(8px)}
+.stats{display:flex;flex-wrap:wrap;justify-content:center;gap:40px;max-width:800px;margin:0 auto}
+.stat{text-align:center}
+.stat-n{font-size:40px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:countUp .6s ease both;opacity:0}
+.stat-l{font-size:10px;color:#333350;text-transform:uppercase;letter-spacing:1.5px;margin-top:5px}
+@keyframes countUp{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+
+/* ── Features ── */
+.feats-wrap{position:relative;z-index:10;padding:0 20px 50px;max-width:1040px;margin:0 auto}
+.feats-title{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#33334a;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.feats-title::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--border),transparent)}
+.feats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.feat{background:rgba(13,13,20,.85);border:1px solid #1e1e2c;border-radius:12px;padding:20px;backdrop-filter:blur(6px);transition:border-color .3s,transform .3s,box-shadow .3s;animation:fadeUp .5s ease both;opacity:0;position:relative;overflow:hidden}
+.feat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,.4),transparent);transform:scaleX(0);transition:transform .4s}
+.feat:hover{border-color:#2e2e46;transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.5)}
+.feat:hover::before{transform:scaleX(1)}
+.fi{font-size:24px;margin-bottom:10px;display:block;transition:transform .3s}
+.feat:hover .fi{transform:scale(1.15)}
+.ft{font-size:13px;font-weight:700;color:#d0d0e8;margin-bottom:6px}
+.fd{font-size:11px;color:#3a3a56;line-height:1.65}
+
+/* ── Ad slot ── */
+.ad-wrap{position:relative;z-index:10;padding:0 20px;max-width:1040px;margin:0 auto 20px}
+.ad-slot{background:rgba(10,10,16,.6);border:1px dashed #1e1e2c;border-radius:8px;height:72px;display:flex;align-items:center;justify-content:center;color:#1e1e2c;font-size:10px;letter-spacing:1.5px;text-transform:uppercase}
+
+/* ── Nav ── */
+.news-nav{position:relative;z-index:10;background:rgba(10,10,16,.9);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:5px;height:46px;flex-wrap:wrap;overflow:hidden;backdrop-filter:blur(8px)}
+.nf{background:transparent;border:1px solid transparent;color:#33334a;font-family:inherit;font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:500;transition:all .2s}
+.nf:hover{border-color:#2a2a3e;color:#9090b0}
+.nf.active{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.1);color:var(--blue)}
+.ref-btn{margin-left:auto;background:transparent;border:1px solid rgba(0,217,126,.2);color:var(--green);font-size:11px;padding:4px 12px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;font-weight:500;transition:all .2s}
+.ref-btn:hover{background:rgba(0,217,126,.06)}
+.ref-btn:disabled{opacity:.35;cursor:not-allowed}
 .spin{display:inline-block;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.body-wrap{max-width:1200px;margin:0 auto;padding:16px 20px 60px;display:grid;grid-template-columns:1fr 280px;gap:20px}
-@media(max-width:860px){.body-wrap{grid-template-columns:1fr}.sidebar{display:none}}
-.main-col{min-width:0}
-.mkt-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px}
-.mkt-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-.mkt-name{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.mkt-val{font-size:14px;font-weight:700;color:var(--text)}.mkt-chg{font-size:11px;font-weight:600;margin-top:2px}
-.mkt-up{color:var(--green)}.mkt-dn{color:var(--red)}
-.fii-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;border-top:2px solid rgba(59,130,246,.3)}
-.fii-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.fii-title{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text)}
-.fii-date{font-size:10px;color:var(--muted)}
-.fii-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.fii-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-.fii-actor{font-size:16px;font-weight:800;letter-spacing:2px;margin-bottom:6px}
-.fii-box.fii-c .fii-actor{color:var(--blue)}.fii-box.dii-c .fii-actor{color:var(--gold)}
-.fii-row{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px}
-.fii-net{font-size:12px;font-weight:700;margin-top:6px}
-.g{color:var(--green)}.r{color:var(--red)}
-.stock-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px}
-.stock-row:last-child{border-bottom:none}
-.sn{font-weight:600;color:var(--text);min-width:70px}
-.sa{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700}
-.sa.fii-c{background:rgba(59,130,246,.12);color:var(--blue)}.sa.dii-c{background:rgba(245,158,11,.12);color:var(--gold)}
-.sact-b{color:var(--green);font-weight:700}.sact-s{color:var(--red);font-weight:700}
-.svol{color:var(--muted);margin-left:auto}.schg-u{color:var(--green)}.schg-d{color:var(--red)}
-.sec-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-.sector-bars{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-.sb-row{display:flex;align-items:center;gap:8px;font-size:10px}
-.sb-name{color:var(--muted);width:55px;flex-shrink:0}
-.sb-bar-wrap{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
-.sb-bar{height:100%;border-radius:3px;transition:width .4s}
-.sb-val{font-size:9px;color:var(--text);width:40px;text-align:right;font-family:'JetBrains Mono',monospace}
-.sec-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px}
-.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
-.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
-.news-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s,transform .2s;position:relative;overflow:hidden;cursor:default;animation:fadeUp .4s ease both}
-.news-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-accent,#3b82f6);opacity:.6}
-.news-card:hover{border-color:var(--border2);transform:translateY(-2px)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.nc-top{display:flex;justify-content:space-between;align-items:center}
-.nc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.nc-time{font-size:9px;color:var(--muted)}
-.nc-headline{font-size:14px;font-weight:700;color:#f0f0f8;line-height:1.35}
-.nc-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.impact-badge{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 7px;border-radius:3px}
-.ib-bull{background:rgba(0,217,126,.12);color:var(--green);border:1px solid rgba(0,217,126,.25)}
-.ib-bear{background:rgba(255,69,96,.12);color:var(--red);border:1px solid rgba(255,69,96,.25)}
-.ib-neu{background:rgba(245,158,11,.12);color:var(--gold);border:1px solid rgba(245,158,11,.25)}
-.nc-source{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.nc-body{border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:6px}
-.nc-summary{font-size:11px;color:#7a7a8e;line-height:1.65}
-.nc-why{font-size:10px;color:var(--muted);background:var(--bg3);border-left:2px solid var(--blue);padding:6px 8px;border-radius:0 5px 5px 0;line-height:1.5}
-.nc-why span{color:var(--blue);font-weight:600}
-.nc-link{font-size:10px;color:var(--blue);text-decoration:none;border-bottom:1px solid rgba(59,130,246,.3);align-self:flex-start;padding-bottom:1px}
-.nc-link:hover{border-color:var(--blue)}
-.nc-expand{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:4px 10px;border-radius:4px;cursor:pointer;align-self:flex-start;transition:all .12s;font-family:'Inter',sans-serif}
-.nc-expand:hover{border-color:var(--border2);color:var(--text)}
-.shim-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;min-height:150px}
-.shim-line{height:10px;border-radius:4px;background:linear-gradient(90deg,#111 25%,#191920 50%,#111 75%);background-size:200% 100%;animation:shim 1.4s infinite;margin-bottom:8px}
-.shim-line.s{width:40%}.shim-line.m{width:65%}
+
+/* ── News ── */
+.news-wrap{position:relative;z-index:10;padding:20px 20px 60px;max-width:1040px;margin:0 auto}
+.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.news-card{background:rgba(13,13,20,.9);border:1px solid #1e1e2c;border-radius:11px;padding:15px;display:flex;flex-direction:column;gap:8px;backdrop-filter:blur(6px);transition:border-color .3s,transform .3s,box-shadow .3s;animation:fadeUp .5s ease both;opacity:0;cursor:default;position:relative;overflow:hidden}
+.news-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--acc,#3b82f6);transform:scaleX(.3);transform-origin:left;transition:transform .4s}
+.news-card:hover{border-color:#2a2a40;transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.5)}
+.news-card:hover::before{transform:scaleX(1)}
+.nc-top{display:flex;justify-content:space-between}
+.nc-src{font-size:9px;color:#2a2a42;text-transform:uppercase;letter-spacing:.5px}
+.nc-time{font-size:9px;color:#22223a}
+.nc-hl{font-size:13px;font-weight:700;color:#d8d8f0;line-height:1.35}
+.nc-ft{display:flex;align-items:center;gap:6px;margin-top:2px}
+.nc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:3px}
+.nc-link{font-size:10px;color:var(--blue);text-decoration:none;margin-left:auto;opacity:0;transition:opacity .2s}
+.news-card:hover .nc-link{opacity:1}
+.shim{background:rgba(13,13,20,.9);border:1px solid #1e1e2c;border-radius:11px;padding:15px;min-height:120px}
+.sl{height:9px;border-radius:4px;margin-bottom:8px;background:linear-gradient(90deg,#111118 25%,#17171f 50%,#111118 75%);background-size:200%;animation:shim 1.5s infinite}
+.sl.s{width:36%}.sl.m{width:58%}
 @keyframes shim{to{background-position:-200% 0}}
-.sidebar{display:flex;flex-direction:column;gap:14px}
-.sb-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
-.sb-ttl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-.sb-row2{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px}
-.sb-row2:last-child{border-bottom:none}
-.sb-rn{color:var(--muted)}.sb-rv{font-weight:600;color:var(--text)}.sb-rc.u{color:var(--green)}.sb-rc.d{color:var(--red)}
-.empty-state{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--muted);font-size:13px}
-.footer{border-top:1px solid var(--border);padding:20px;text-align:center;font-size:10px;color:var(--muted);letter-spacing:.5px}
-.footer a{color:var(--muted)}
-.insta-cta{background:linear-gradient(135deg,#0f0f14,#18131f);border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:16px;text-align:center;margin-top:14px}
-.insta-cta-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
-.insta-cta-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
-.insta-btn{display:inline-block;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;padding:7px 20px;border-radius:5px;text-decoration:none;font-size:12px;font-weight:700;border:none;cursor:pointer}
-.src-badge{font-size:9px;background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.2);padding:1px 6px;border-radius:3px;font-weight:600}
+.err{grid-column:1/-1;background:rgba(18,6,6,.8);border:1px solid rgba(255,69,96,.15);border-radius:11px;padding:24px;text-align:center;font-size:12px;color:#ff8095}
+.err button{margin-top:10px;background:transparent;border:1px solid rgba(255,69,96,.3);color:var(--red);padding:5px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px}
+
+/* ── CTA ── */
+.cta-wrap{position:relative;z-index:10;padding:20px 20px 60px;max-width:600px;margin:0 auto;text-align:center}
+.cta-box{background:rgba(13,8,22,.85);border:1px solid rgba(139,92,246,.2);border-radius:16px;padding:36px;backdrop-filter:blur(10px);transition:border-color .3s,box-shadow .3s}
+.cta-box:hover{border-color:rgba(139,92,246,.45);box-shadow:0 12px 40px rgba(109,40,217,.2)}
+.cta-title{font-size:22px;font-weight:800;color:#e0e0f8;margin-bottom:8px}
+.cta-sub{font-size:13px;color:#4a4a66;margin-bottom:20px;line-height:1.6}
+
+/* ── Footer ── */
+.footer{position:relative;z-index:10;border-top:1px solid var(--border);padding:20px;text-align:center;font-size:10px;color:#22223a;letter-spacing:.5px}
+.footer a{color:#22223a;text-decoration:none}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- Ticker -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="grid-lines"></div>
+
+  <div class="logo-wrap">
+    <img class="logo-img" src="https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png" alt="MF" onerror="this.style.display='none'">
+    <div class="logo-text">MOMENTUM<br><span class="logo-grd">FRENZY</span></div>
+  </div>
+
+  <div class="live-badge"><span class="live-dot"></span> Live Indian Markets</div>
+
+  <h1 class="hero-title">
+    <span class="line1">Find your next trade</span>
+    <span class="line2">before the market moves</span>
+  </h1>
+  <p class="hero-sub">Professional momentum scanner for NSE swing traders. Sector rotation, breakout radar and daily picks — all free.</p>
+  <div class="hero-btns">
+    <button class="btn-primary" onclick="window.open('https://momentumfrenzy.online')">⚡ Open Terminal — Free</button>
+    <button class="btn-insta" onclick="window.open('https://instagram.com/momentumfrenzy')">📸 @momentumfrenzy</button>
+  </div>
+
+  <div class="scroll-ind">
+    <span>Scroll</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- Market strip -->
+<div class="mkt-wrap">
+  <div class="mkt-strip" id="mkt-strip"></div>
+</div>
+
+<!-- Stats -->
+<div class="stats-wrap">
+  <div class="stats">
+    <div class="stat"><div class="stat-n" style="animation-delay:.1s">500+</div><div class="stat-l">Stocks Scanned</div></div>
+    <div class="stat"><div class="stat-n" style="animation-delay:.2s">14</div><div class="stat-l">Sectors Tracked</div></div>
+    <div class="stat"><div class="stat-n" style="animation-delay:.3s">Free</div><div class="stat-l">Always</div></div>
+    <div class="stat"><div class="stat-n" style="animation-delay:.4s">2×</div><div class="stat-l">Daily Alerts</div></div>
+  </div>
+</div>
+
+<!-- Features -->
+<div class="feats-wrap">
+  <div class="feats-title">What you get</div>
+  <div class="feats-grid" id="feats-grid"></div>
+</div>
+
+<!-- Ad -->
+<div class="ad-wrap"><div class="ad-slot">Advertisement</div></div>
+
+<!-- Nav -->
+<div class="news-nav" id="news-nav"></div>
+
+<!-- News -->
+<div class="news-wrap">
+  <div class="news-grid" id="news-grid"></div>
+</div>
+
+<!-- Ad -->
+<div class="ad-wrap"><div class="ad-slot">Advertisement</div></div>
+
+<!-- CTA -->
+<div class="cta-wrap">
+  <div class="cta-box">
+    <div class="cta-title">Follow @momentumfrenzy</div>
+    <div class="cta-sub">Daily trading ideas, breakout alerts and market insights on Instagram. Join 10,000+ traders.</div>
+    <button class="btn-insta" onclick="window.open('https://instagram.com/momentumfrenzy')">Follow Now →</button>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">© 2025 MOMENTUMFRENZY · For informational purposes only. Not SEBI-registered investment advice. · <a href="https://instagram.com/momentumfrenzy" target="_blank">@momentumfrenzy</a></div>
+
 <script>
-const {useState,useEffect,useCallback}=React;
+// ── Animated canvas background ──────────────────────────────────────────────
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [], lines = [];
 
-const RAPIDAPI_KEY='389cd79c39msh1f83b8b416e31c1p151ee2jsnb635fc398a55';
-const RAPIDAPI_HOST='real-time-web-search.p.rapidapi.com';
-
-const INDICES=[
-  {name:"NIFTY 50",val:"24,749.85",chg:"+0.94%",up:true},
-  {name:"SENSEX",val:"81,224.68",chg:"+0.87%",up:true},
-  {name:"BANK NIFTY",val:"53,210.45",chg:"+1.21%",up:true},
-  {name:"NIFTY IT",val:"35,841.20",chg:"-0.38%",up:false},
-  {name:"NIFTY MID",val:"54,103.70",chg:"+0.72%",up:true},
-  {name:"USD/INR",val:"83.48",chg:"-0.14%",up:false},
-];
-const MKT_CARDS=[
-  {name:"NIFTY 50",val:"24,749",chg:"+0.94%",up:true},
-  {name:"BANK NIFTY",val:"53,210",chg:"+1.21%",up:true},
-  {name:"VIX",val:"12.84",chg:"-5.2%",up:false},
-  {name:"USD/INR",val:"83.48",chg:"-0.14%",up:false},
-  {name:"NIFTY IT",val:"35,841",chg:"-0.38%",up:false},
-  {name:"NIFTY MID",val:"54,103",chg:"+0.72%",up:true},
-];
-const FII={date:"30 May 2026",fii:{buy:16240.5,sell:13820.3,net:2420.2},dii:{buy:10540.8,sell:8920.4,net:1620.4},
-  sectors:[
-    {name:"Banking",fii:2210,max:3000},{name:"IT",fii:1840,max:3000},
-    {name:"Auto",fii:1120,max:3000},{name:"Energy",fii:890,max:3000},
-    {name:"Pharma",fii:340,max:3000},{name:"FMCG",fii:-180,max:3000},
-  ],
-  topBought:[
-    {n:"TCS",act:"FII",action:"BUY",vol:"21.4L",chg:"+2.1%"},
-    {n:"ICICI Bank",act:"DII",action:"BUY",vol:"26.8L",chg:"+1.7%"},
-    {n:"M&M",act:"DII",action:"BUY",vol:"11.2L",chg:"+3.4%"},
-    {n:"Reliance",act:"FII",action:"SELL",vol:"34.1L",chg:"-0.7%"},
-    {n:"HAL",act:"FII",action:"BUY",vol:"8.9L",chg:"+4.2%"},
-  ]
-};
-
-const TOPIC_QUERIES={
-  rbi:   {q:"RBI monetary policy India 2026",label:"RBI Policy",color:"#3b82f6",tag:"RBI"},
-  vc:    {q:"India startup funding VC IPO 2026",label:"VC / IPO",color:"#f59e0b",tag:"FUNDING"},
-  macro: {q:"global economy Fed interest rate oil price India",label:"Global Macro",color:"#00d97e",tag:"MACRO"},
-  tech:  {q:"India IT sector AI technology companies NSE",label:"Tech & IT",color:"#8b5cf6",tag:"TECH"},
-  ipo:   {q:"India IPO stock market listing NSE BSE 2026",label:"IPO",color:"#f59e0b",tag:"IPO"},
-  insider:{q:"India company insider promoter stake NSE corporate",label:"Corporate",color:"#ff6b35",tag:"INSIDER"},
-};
-
-const CATS=[
-  {id:"all",label:"All News"},
-  {id:"rbi",label:"RBI Policy"},
-  {id:"vc",label:"VC / Startups"},
-  {id:"macro",label:"Global Macro"},
-  {id:"tech",label:"Tech & IT"},
-  {id:"ipo",label:"IPO"},
-  {id:"insider",label:"Corporate"},
-];
-
-const REWRITE_PROMPT=`You are the financial news editor for MOMENTUMFRENZY — an Indian market intelligence platform.
-
-Given a list of raw news articles, rewrite each as a structured news item. Return ONLY a raw JSON array, no markdown, no backticks.
-
-For each article produce:
-{
-  "category": "rbi|vc|macro|tech|ipo|insider",
-  "headline": "Sharp, clear headline — max 12 words, professional tone",
-  "summary": "2 sentences of factual context from the article",
-  "impact": "BULLISH|BEARISH|NEUTRAL",
-  "impactReason": "One sentence: why this matters to NSE swing traders",
-  "source": "extracted publication name or domain",
-  "timeAgo": "recently",
-  "tag": "RBI|IPO|FUNDING|AI|MACRO|RESULTS|INSIDER|MERGER",
-  "url": "original article URL if available, else empty string"
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
 }
+resize();
+window.addEventListener('resize', resize);
 
-Keep professional tone. India-market focused. Use the actual article content provided.`;
-
-async function fetchRealNews(topicId){
-  const topic=TOPIC_QUERIES[topicId];
-  if(!topic) return [];
-  try{
-    const url=`https://${RAPIDAPI_HOST}/search-full?q=${encodeURIComponent(topic.q)}&num=4`;
-    const res=await fetch(url,{
-      method:'GET',
-      headers:{
-        'x-rapidapi-key': RAPIDAPI_KEY,
-        'x-rapidapi-host': RAPIDAPI_HOST
-      }
-    });
-    const data=await res.json();
-    const results=data.data||data.results||data.organic_results||[];
-    return results.slice(0,4).map(r=>({
-      title: r.title||r.snippet||'',
-      snippet: r.snippet||r.description||'',
-      url: r.url||r.link||'',
-      source: r.source||r.domain||new URL(r.url||r.link||'https://x.com').hostname.replace('www.',''),
-    }));
-  }catch(e){
-    console.error('RapidAPI fetch error',e);
-    return [];
+class Particle {
+  constructor(){this.reset()}
+  reset(){
+    this.x = Math.random()*W; this.y = Math.random()*H;
+    this.vx = (Math.random()-.5)*.35; this.vy = (Math.random()-.5)*.35;
+    this.r = Math.random()*1.5+.5;
+    const c = [[59,130,246],[139,92,246],[0,217,126]][Math.floor(Math.random()*3)];
+    this.color = c; this.alpha = Math.random()*.6+.2;
+  }
+  update(){
+    this.x += this.vx; this.y += this.vy;
+    if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset();
+  }
+  draw(){
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
+    ctx.fill();
   }
 }
 
-async function rewriteWithClaude(articles, topicId){
-  if(!articles.length) return [];
-  const topic=TOPIC_QUERIES[topicId];
-  const articlesText=articles.map((a,i)=>
-    `Article ${i+1}:\nTitle: ${a.title}\nSnippet: ${a.snippet}\nSource: ${a.source}\nURL: ${a.url}`
-  ).join('\n\n');
+for(let i=0;i<120;i++) particles.push(new Particle());
 
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        system:REWRITE_PROMPT,
-        messages:[{role:'user',content:`Category: ${topicId}\n\nRewrite these ${articles.length} articles:\n\n${articlesText}\n\nReturn JSON array only.`}]
-      })
-    });
-    const d=await res.json();
-    const txt=d.content?.find(b=>b.type==='text')?.text||'[]';
-    const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
-    return parsed.map(item=>({
-      ...item,
-      category: topicId,
-      color: topic.color,
-    }));
-  }catch(e){
-    console.error('Claude rewrite error',e);
-    return articles.map(a=>({
-      category:topicId,
-      headline:a.title,
-      summary:a.snippet,
-      impact:'NEUTRAL',
-      impactReason:'See full article for details.',
-      source:a.source,
-      timeAgo:'recently',
-      tag:topic.tag,
-      url:a.url,
-      color:topic.color,
-    }));
-  }
-}
-
-function Ticker(){
-  const items=[...INDICES,...INDICES];
-  return React.createElement('div',{className:'ticker-wrap'},
-    React.createElement('div',{className:'ticker-inner'},
-      items.map((x,i)=>React.createElement('span',{key:i,className:'ti-item'},
-        React.createElement('span',{className:'ti-name'},x.name),
-        React.createElement('span',{className:'ti-val'},x.val),
-        React.createElement('span',{className:`ti-${x.up?'up':'dn'}`},x.chg),
-        React.createElement('span',{className:'ti-sep'},'·')
-      ))
-    )
-  );
-}
-
-function AdBanner({cls}){
-  return React.createElement('div',{className:`ad-slot ${cls}`},
-    React.createElement('span',null,'Advertisement')
-  );
-}
-
-function NewsCard({item,idx}){
-  const [exp,setExp]=useState(false);
-  const accent=item.color||'#3b82f6';
-  const ib=item.impact==='BULLISH'?'ib-bull':item.impact==='BEARISH'?'ib-bear':'ib-neu';
-  const icon=item.impact==='BULLISH'?'▲ ':item.impact==='BEARISH'?'▼ ':'◆ ';
-  return React.createElement('article',{className:'news-card',style:{'--card-accent':accent,animationDelay:`${idx*60}ms`}},
-    React.createElement('div',{className:'nc-top'},
-      React.createElement('span',{className:'nc-tag',style:{color:accent}},item.tag),
-      React.createElement('span',{className:'nc-time'},item.timeAgo)
-    ),
-    React.createElement('h3',{className:'nc-headline'},item.headline),
-    React.createElement('div',{className:'nc-meta'},
-      React.createElement('span',{className:`impact-badge ${ib}`},icon+item.impact),
-      React.createElement('span',{className:'nc-source'},item.source),
-      React.createElement('span',{className:'src-badge'},'LIVE')
-    ),
-    exp&&React.createElement('div',{className:'nc-body'},
-      React.createElement('p',{className:'nc-summary'},item.summary),
-      React.createElement('div',{className:'nc-why'},
-        React.createElement('span',null,'Why it matters → '),item.impactReason
-      ),
-      item.url&&React.createElement('a',{className:'nc-link',href:item.url,target:'_blank',rel:'noopener'},'Read Full Article ↗')
-    ),
-    React.createElement('button',{className:'nc-expand',onClick:()=>setExp(v=>!v)},
-      exp?'Hide ↑':'Read more ↓'
-    )
-  );
-}
-
-function Shim({i}){
-  return React.createElement('div',{className:'shim-card',style:{animationDelay:`${i*50}ms`}},
-    React.createElement('div',{className:'shim-line s'}),
-    React.createElement('div',{className:'shim-line'}),
-    React.createElement('div',{className:'shim-line m'}),
-    React.createElement('div',{className:'shim-line s'})
-  );
-}
-
-function FIIPanel(){
-  const fn=FII.fii.net,dn=FII.dii.net;
-  return React.createElement('div',{className:'fii-panel'},
-    React.createElement('div',{className:'fii-hdr'},
-      React.createElement('span',{className:'fii-title'},'FII / DII Activity'),
-      React.createElement('span',{className:'fii-date'},FII.date)
-    ),
-    React.createElement('div',{className:'fii-grid'},
-      React.createElement('div',{className:'fii-box fii-c'},
-        React.createElement('div',{className:'fii-actor'},'FII'),
-        React.createElement('div',{className:'fii-row'},React.createElement('span',null,'Buy'),React.createElement('span',{className:'g'},'₹'+FII.fii.buy.toLocaleString('en-IN')+'Cr')),
-        React.createElement('div',{className:'fii-row'},React.createElement('span',null,'Sell'),React.createElement('span',{className:'r'},'₹'+FII.fii.sell.toLocaleString('en-IN')+'Cr')),
-        React.createElement('div',{className:'fii-net',style:{color:fn>=0?'var(--green)':'var(--red)'}},'Net '+(fn>=0?'+':'')+'₹'+fn.toLocaleString('en-IN')+'Cr')
-      ),
-      React.createElement('div',{className:'fii-box dii-c'},
-        React.createElement('div',{className:'fii-actor'},'DII'),
-        React.createElement('div',{className:'fii-row'},React.createElement('span',null,'Buy'),React.createElement('span',{className:'g'},'₹'+FII.dii.buy.toLocaleString('en-IN')+'Cr')),
-        React.createElement('div',{className:'fii-row'},React.createElement('span',null,'Sell'),React.createElement('span',{className:'r'},'₹'+FII.dii.sell.toLocaleString('en-IN')+'Cr')),
-        React.createElement('div',{className:'fii-net',style:{color:dn>=0?'var(--green)':'var(--red)'}},'Net '+(dn>=0?'+':'')+'₹'+dn.toLocaleString('en-IN')+'Cr')
-      )
-    ),
-    React.createElement('div',{className:'sec-lbl'},'Sector Flow (₹Cr)'),
-    React.createElement('div',{className:'sector-bars'},
-      FII.sectors.map((s,i)=>React.createElement('div',{key:i,className:'sb-row'},
-        React.createElement('span',{className:'sb-name'},s.name),
-        React.createElement('div',{className:'sb-bar-wrap'},
-          React.createElement('div',{className:'sb-bar',style:{width:Math.abs(s.fii)/s.max*100+'%',background:s.fii>=0?'var(--blue)':'var(--red)'}})
-        ),
-        React.createElement('span',{className:'sb-val',style:{color:s.fii>=0?'var(--blue)':'var(--red)'}},
-          (s.fii>=0?'+':'')+s.fii+'Cr'
-        )
-      ))
-    ),
-    React.createElement('div',{className:'sec-lbl'},'Most Active Today'),
-    FII.topBought.map((s,i)=>React.createElement('div',{key:i,className:'stock-row'},
-      React.createElement('span',{className:'sn'},s.n),
-      React.createElement('span',{className:`sa ${s.act==='FII'?'fii-c':'dii-c'}`},s.act),
-      React.createElement('span',{className:s.action==='BUY'?'sact-b':'sact-s'},s.action),
-      React.createElement('span',{className:'svol'},s.vol),
-      React.createElement('span',{className:s.chg.startsWith('+')?'schg-u':'schg-d'},s.chg)
-    ))
-  );
-}
-
-function App(){
-  const [news,setNews]=useState([]);
-  const [loading,setLoading]=useState(false);
-  const [filter,setFilter]=useState('all');
-  const [updated,setUpdated]=useState(null);
-  const [err,setErr]=useState(null);
-  const [status,setStatus]=useState('');
-
-  const fetchNews=useCallback(async()=>{
-    setLoading(true);setErr(null);setNews([]);
-    try{
-      const topicsToFetch=filter==='all'?Object.keys(TOPIC_QUERIES):[filter];
-      let allNews=[];
-      for(const topicId of topicsToFetch){
-        setStatus(`Fetching ${TOPIC_QUERIES[topicId].label} news...`);
-        const raw=await fetchRealNews(topicId);
-        if(raw.length){
-          setStatus(`Processing ${TOPIC_QUERIES[topicId].label}...`);
-          const rewritten=await rewriteWithClaude(raw,topicId);
-          allNews=[...allNews,...rewritten];
-          setNews([...allNews]);
-        }
+function drawLines(){
+  const maxDist = 100;
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<maxDist){
+        const a=(1-dist/maxDist)*.15;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x,particles[i].y);
+        ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.strokeStyle=`rgba(59,130,246,${a})`;
+        ctx.lineWidth=.5;
+        ctx.stroke();
       }
-      setUpdated(new Date());
-      setStatus('');
-    }catch(e){
-      setErr('Could not fetch news. Please try again.');
-    }finally{
-      setLoading(false);
-      setStatus('');
     }
-  },[filter]);
-
-  useEffect(()=>{fetchNews();},[fetchNews]);
-
-  const filtered=filter==='all'?news:news.filter(n=>n.category===filter);
-
-  return React.createElement(React.Fragment,null,
-    React.createElement(Ticker),
-    React.createElement('header',{className:'hdr'},
-      React.createElement('div',{className:'hdr-inner'},
-        React.createElement('div',null,
-          React.createElement('div',{className:'hdr-logo'},'MOMENTUM',React.createElement('span',null,'FRENZY')),
-          React.createElement('div',{className:'hdr-sub'},'Indian Market Intelligence · Live News')
-        ),
-        React.createElement('div',{className:'hdr-right'},
-          React.createElement('div',{className:'live-badge'},
-            React.createElement('span',{className:'live-dot'}),
-            'LIVE FEED'
-          ),
-          updated&&React.createElement('div',{className:'hdr-time'},'Updated '+updated.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+' IST')
-        )
-      )
-    ),
-    React.createElement('div',{className:'ad-wrap'},React.createElement(AdBanner,{cls:'ad-banner'})),
-    React.createElement('nav',{className:'nav'},
-      React.createElement('div',{className:'nav-inner'},
-        CATS.map(c=>React.createElement('button',{
-          key:c.id,className:`nf ${filter===c.id?'active':''}`,
-          onClick:()=>setFilter(c.id)
-        },c.label)),
-        React.createElement('button',{className:'ref-btn',onClick:fetchNews,disabled:loading},
-          React.createElement('span',{className:loading?'spin':null},'⟳'),
-          loading?(status||'Loading…'):'Refresh'
-        ),
-        React.createElement('button',{className:'nf-insta',onClick:()=>window.open('https://instagram.com/momentumfrenzy')},'📸 @momentumfrenzy')
-      )
-    ),
-    React.createElement('div',{className:'body-wrap'},
-      React.createElement('main',{className:'main-col'},
-        React.createElement('div',{className:'mkt-strip'},
-          MKT_CARDS.map((m,i)=>React.createElement('div',{key:i,className:'mkt-card'},
-            React.createElement('div',{className:'mkt-name'},m.name),
-            React.createElement('div',{className:'mkt-val'},m.val),
-            React.createElement('div',{className:`mkt-chg ${m.up?'mkt-up':'mkt-dn'}`},m.chg)
-          ))
-        ),
-        React.createElement(FIIPanel),
-        React.createElement('div',{style:{marginBottom:14}},React.createElement(AdBanner,{cls:'ad-banner'})),
-        React.createElement('div',{className:'sec-label'},'Live Market Intelligence'),
-        React.createElement('div',{className:'news-grid'},
-          loading&&!news.length
-            ?Array.from({length:6}).map((_,i)=>React.createElement(Shim,{key:i,i}))
-            :err
-              ?React.createElement('div',{className:'empty-state'},React.createElement('div',null,'⚠️  '),err)
-              :filtered.length===0
-                ?React.createElement('div',{className:'empty-state'},'Fetching live news... please wait.')
-                :filtered.map((item,i)=>React.createElement(NewsCard,{key:i,item,idx:i}))
-        ),
-        React.createElement('div',{style:{marginTop:20}},React.createElement(AdBanner,{cls:'ad-banner'})),
-        React.createElement('div',{className:'insta-cta'},
-          React.createElement('div',{className:'insta-cta-title'},'Follow @momentumfrenzy on Instagram'),
-          React.createElement('div',{className:'insta-cta-sub'},'Daily trading ideas, breakout alerts and market insights'),
-          React.createElement('a',{className:'insta-btn',href:'https://instagram.com/momentumfrenzy',target:'_blank'},'Follow Now →')
-        )
-      ),
-      React.createElement('aside',{className:'sidebar'},
-        React.createElement(AdBanner,{cls:'ad-rect'}),
-        React.createElement('div',{className:'sb-box'},
-          React.createElement('div',{className:'sb-ttl'},'Market Watch'),
-          INDICES.map((x,i)=>React.createElement('div',{key:i,className:'sb-row2'},
-            React.createElement('span',{className:'sb-rn'},x.name),
-            React.createElement('span',{className:'sb-rv'},x.val),
-            React.createElement('span',{className:`sb-rc ${x.up?'u':'d'}`},x.chg)
-          ))
-        ),
-        React.createElement(AdBanner,{cls:'ad-rect'})
-      )
-    ),
-    React.createElement('footer',{className:'footer'},
-      '© 2026 MOMENTUMFRENZY · For informational purposes only. Not SEBI-registered investment advice. · ',
-      React.createElement('a',{href:'#'},'Privacy'),' · ',
-      React.createElement('a',{href:'#'},'Terms'),' · ',
-      React.createElement('a',{href:'https://instagram.com/momentumfrenzy',target:'_blank'},'@momentumfrenzy')
-    )
-  );
+  }
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+// Candlestick animation
+const candles = [];
+for(let i=0;i<20;i++){
+  candles.push({
+    x: 60+i*60, baseY: H*.6,
+    h: 30+Math.random()*120,
+    w: 18, up: Math.random()>.5,
+    wick: 15+Math.random()*40,
+    alpha: .04+Math.random()*.06,
+    speed: .3+Math.random()*.5, t: Math.random()*Math.PI*2
+  });
+}
+
+function drawCandles(){
+  candles.forEach(c=>{
+    c.t += .008*c.speed;
+    const y = c.baseY + Math.sin(c.t)*20;
+    const color = c.up ? '0,217,126' : '255,69,96';
+    ctx.fillStyle = `rgba(${color},${c.alpha})`;
+    ctx.fillRect(c.x-c.w/2, y-c.h/2, c.w, c.h);
+    ctx.strokeStyle = `rgba(${color},${c.alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(c.x, y-c.h/2-c.wick);
+    ctx.lineTo(c.x, y+c.h/2+c.wick);
+    ctx.stroke();
+  });
+}
+
+function animate(){
+  ctx.clearRect(0,0,W,H);
+  drawCandles();
+  particles.forEach(p=>{p.update();p.draw();});
+  drawLines();
+  requestAnimationFrame(animate);
+}
+animate();
+
+
+// ── Ticker ──────────────────────────────────────────────────────────────────
+const INDICES=[
+  {n:'NIFTY 50',v:'24,749',c:'+0.94%',up:true},{n:'BANK NIFTY',v:'53,210',c:'+1.21%',up:true},
+  {n:'VIX',v:'12.84',c:'-5.2%',up:false},{n:'SENSEX',v:'81,224',c:'+0.87%',up:true},
+  {n:'NIFTY IT',v:'35,841',c:'-0.38%',up:false},{n:'USD/INR',v:'83.48',c:'-0.14%',up:false},
+  {n:'MIDCAP',v:'54,103',c:'+0.72%',up:true},{n:'GOLD',v:'₹71,240',c:'+0.31%',up:true},
+  {n:'CRUDE',v:'$78.42',c:'-0.82%',up:false},{n:'NIFTY MID',v:'54,103',c:'+0.72%',up:true},
+];
+const tickerEl=document.getElementById('ticker');
+[...INDICES,...INDICES].forEach(x=>{
+  tickerEl.innerHTML+=`<span class="ti"><span class="tn">${x.n}</span><span class="tv">${x.v}</span><span class="${x.up?'tu':'td'}">${x.c}</span></span>`;
+});
+
+
+// ── Market strip ─────────────────────────────────────────────────────────────
+const MKT=[
+  {n:'NIFTY 50',v:'24,749',c:'+0.94%',up:true},{n:'BANK NIFTY',v:'53,210',c:'+1.21%',up:true},
+  {n:'VIX',v:'12.84',c:'-5.2%',up:false},{n:'USD/INR',v:'83.48',c:'-0.14%',up:false},
+  {n:'NIFTY IT',v:'35,841',c:'-0.38%',up:false},{n:'MIDCAP',v:'54,103',c:'+0.72%',up:true},
+];
+const mktEl=document.getElementById('mkt-strip');
+MKT.forEach((m,i)=>{
+  mktEl.innerHTML+=`<div class="mkt-card" style="animation-delay:${i*.08}s">
+    <div class="mn">${m.n}</div><div class="mv">${m.v}</div>
+    <div class="mc ${m.up?'up':'dn'}">${m.c}</div></div>`;
+});
+
+
+// ── Features ─────────────────────────────────────────────────────────────────
+const FEATS=[
+  {i:'🎯',t:"Today's top picks",d:'Entry, target, stop-loss and risk:reward — ready every morning.'},
+  {i:'📊',t:'Sector intelligence',d:'4-Quadrant rotation showing which sectors lead, improve or lag.'},
+  {i:'💥',t:'Volume punch radar',d:'Catch institutional activity before the crowd notices.'},
+  {i:'📈',t:'Professional charts',d:'Candlestick + EMA 20/50/200 for any Nifty 500 stock.'},
+  {i:'🔍',t:'Nifty 500 scanner',d:'Momentum Score 0–100. BUY, WATCH, AVOID signals instantly.'},
+  {i:'📲',t:'Telegram alerts',d:'Auto morning and evening alerts with top picks every market day.'},
+];
+const featsEl=document.getElementById('feats-grid');
+FEATS.forEach((f,i)=>{
+  featsEl.innerHTML+=`<div class="feat" style="animation-delay:${i*.08}s">
+    <span class="fi">${f.i}</span><div class="ft">${f.t}</div><div class="fd">${f.d}</div></div>`;
+});
+
+
+// ── News ──────────────────────────────────────────────────────────────────────
+const RAPIDAPI_KEY='389cd79c39msh1f83b8b416e31c1p151ee2jsnb635fc398a55';
+const CATS=[
+  {id:'all',label:'All News'},
+  {id:'nifty',label:'Nifty Stocks',q:'NSE Nifty India stocks 2026'},
+  {id:'macro',label:'Macro India',q:'India economy RBI policy 2026'},
+  {id:'ipo',label:'IPO / Results',q:'India IPO earnings results 2026'},
+  {id:'fii',label:'FII / DII',q:'FII DII India foreign investment 2026'},
+];
+const TAGS={0:'NIFTY',1:'MACRO',2:'IPO',3:'FII/DII'};
+const CAT_MAP={0:'nifty',1:'macro',2:'ipo',3:'fii'};
+const ACCENTS={nifty:'#3b82f6',macro:'#00d97e',ipo:'#f59e0b',fii:'#8b5cf6'};
+let currentFilter='all', allNews=[];
+
+function timeAgo(d){
+  if(!d)return'Recently';
+  try{const m=Math.floor((Date.now()-new Date(d))/60000);
+    if(m<1)return'Just now';if(m<60)return m+'m ago';
+    if(m<1440)return Math.floor(m/60)+'h ago';return Math.floor(m/1440)+'d ago';}
+  catch{return'Recently';}
+}
+function extractSrc(url){
+  if(!url)return'News';
+  try{const h=new URL(url).hostname.replace('www.','');
+    if(h.includes('economictimes'))return'Economic Times';
+    if(h.includes('businessstandard'))return'Business Standard';
+    if(h.includes('livemint')||h.includes('mint'))return'Mint';
+    if(h.includes('moneycontrol'))return'Moneycontrol';
+    if(h.includes('bloomberg'))return'Bloomberg';
+    if(h.includes('reuters'))return'Reuters';
+    if(h.includes('ndtv'))return'NDTV';
+    return h.split('.')[0].toUpperCase();}
+  catch{return'News';}
+}
+
+function buildNav(){
+  const navEl=document.getElementById('news-nav');
+  navEl.innerHTML='';
+  CATS.forEach(c=>{
+    const btn=document.createElement('button');
+    btn.className='nf'+(currentFilter===c.id?' active':'');
+    btn.textContent=c.label;
+    btn.onclick=()=>{currentFilter=c.id;fetchNews();};
+    navEl.appendChild(btn);
+  });
+  const ref=document.createElement('button');
+  ref.className='ref-btn';ref.id='ref-btn';ref.innerHTML='⟳ Refresh';
+  ref.onclick=()=>fetchNews();
+  navEl.appendChild(ref);
+}
+
+function showShimmers(){
+  const g=document.getElementById('news-grid');
+  g.innerHTML=Array.from({length:6}).map(()=>`<div class="shim"><div class="sl s"></div><div class="sl"></div><div class="sl m"></div></div>`).join('');
+}
+
+function renderNews(news){
+  const g=document.getElementById('news-grid');
+  if(!news.length){g.innerHTML='<div class="err">No news found. Click Refresh.</div>';return;}
+  g.innerHTML=news.map((item,i)=>{
+    const acc=ACCENTS[item.category]||'#3b82f6';
+    return `<article class="news-card" style="--acc:${acc};animation-delay:${i*45}ms">
+      <div class="nc-top"><span class="nc-src">${extractSrc(item.url)}</span><span class="nc-time">${timeAgo(item.date||item.published_date)}</span></div>
+      <div class="nc-hl">${item.title||''}</div>
+      <div class="nc-ft">
+        <span class="nc-tag" style="background:${acc}18;color:${acc};border:1px solid ${acc}30">${item.tag||'MARKETS'}</span>
+        ${item.url?`<a class="nc-link" href="${item.url}" target="_blank" rel="noopener">Read →</a>`:''}
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function fetchNews(){
+  const btn=document.getElementById('ref-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin">⟳</span> Loading';}
+  showShimmers();
+
+  const queries=currentFilter==='all'
+    ?['NSE Nifty India stock market 2026','India economy RBI policy news 2026','India IPO earnings 2026','FII DII India investment 2026']
+    :[CATS.find(c=>c.id===currentFilter)?.q||'India stock market 2026'];
+
+  try{
+    const results=await Promise.allSettled(queries.map((q,i)=>
+      fetch(`https://real-time-web-search.p.rapidapi.com/search?q=${encodeURIComponent(q)}&limit=6`,{
+        headers:{'X-RapidAPI-Key':RAPIDAPI_KEY,'X-RapidAPI-Host':'real-time-web-search.p.rapidapi.com'}
+      }).then(r=>r.json()).then(d=>({data:d.data||[],idx:i}))
+    ));
+    allNews=[];
+    results.forEach(r=>{
+      if(r.status==='fulfilled'&&r.value.data){
+        allNews=[...allNews,...r.value.data.map(x=>({...x,tag:TAGS[r.value.idx]||'MARKETS',category:CAT_MAP[r.value.idx]||'nifty'}))];
+      }
+    });
+    if(!allNews.length){
+      document.getElementById('news-grid').innerHTML=`<div class="err">⚠️ Could not fetch live news. Rate limit reached.<br><button onclick="fetchNews()">Try Again</button></div>`;
+    }else{
+      const filtered=currentFilter==='all'?allNews:allNews.filter(n=>n.category===currentFilter);
+      renderNews(filtered);
+    }
+  }catch(ex){
+    document.getElementById('news-grid').innerHTML=`<div class="err">⚠️ Network error: ${ex.message}<br><button onclick="fetchNews()">Try Again</button></div>`;
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='⟳ Refresh';}
+    buildNav();
+  }
+}
+
+// ── Intersection observer for scroll animations ─────────────────────────────
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)';}});
+},{threshold:.1});
+
+document.querySelectorAll('.feat,.mkt-card,.stat-n').forEach(el=>{
+  el.style.opacity='0';
+  el.style.transform='translateY(16px)';
+  el.style.transition='opacity .5s ease, transform .5s ease';
+  observer.observe(el);
+});
+
+buildNav();
+fetchNews();
 </script>
 </body>
 </html>
