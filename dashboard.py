@@ -101,77 +101,52 @@ if st.session_state.page == "landing":
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
 <style>
 * { font-family: 'Inter', -apple-system, sans-serif !important; }
 .mono { font-family: 'JetBrains Mono', monospace !important; }
 .block-container { padding:0; max-width:100%; position: relative; overflow: hidden; }
 header[data-testid="stHeader"], #MainMenu, footer { display:none; }
-
-/* Ambient Floating Orbs */
 .bg-orb { position: absolute; border-radius: 50%; filter: blur(90px); z-index: 0; opacity: 0.4; animation: float 12s infinite alternate ease-in-out; }
 .orb-1 { width: 400px; height: 400px; background: #3B7DFB; top: -10%; left: 10%; }
 .orb-2 { width: 500px; height: 500px; background: #06B6D4; bottom: -20%; right: 5%; animation-delay: -5s; }
 @keyframes float { 0% { transform: translateY(0px) scale(1); } 100% { transform: translateY(50px) scale(1.1); } }
-
 .lp-nav { display:flex; align-items:center; justify-content:space-between; padding:16px 40px; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(7, 9, 26, 0.4); backdrop-filter:blur(20px); position:sticky; top:0; z-index:99; }
 .lp-logo { display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace !important; font-size:15px; font-weight:700; color:#F1F5F9; letter-spacing:-.01em; }
 .lp-logo-dot { width:8px; height:8px; border-radius:50%; background:#3B7DFB; box-shadow:0 0 10px #3B7DFB; }
 .lp-nav-tag { font-size:11px; color:#94A3B8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 10px; text-transform:uppercase; font-weight:600; background: rgba(255,255,255,0.03); }
-
 .lp-hero { min-height:85vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px; position: relative; z-index: 10; }
-
-/* The Glass Mirror Card */
-.glass-panel {
-    background: rgba(13, 17, 35, 0.3);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    padding: 60px 40px;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-    max-width: 900px;
-    margin: 0 auto;
-}
-
+.glass-panel { background: rgba(13, 17, 35, 0.3); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 60px 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1); max-width: 900px; margin: 0 auto; width: 100%; }
 .lp-eyebrow { display:inline-flex; align-items:center; gap:6px; background:rgba(59, 125, 251, 0.1); border:1px solid rgba(59, 125, 251, 0.3); border-radius:4px; padding:6px 14px; font-family:'JetBrains Mono',monospace !important; font-size:11px; color:#3B7DFB; font-weight:600; letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px; }
 .lp-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#3B7DFB; animation:blink 1.4s infinite; box-shadow: 0 0 8px #3B7DFB; }
 @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
 .lp-h1 { font-size:clamp(42px,6vw,72px); font-weight:800; line-height:1.1; letter-spacing:-.03em; color:#F1F5F9; margin:0 0 16px 0; }
 .lp-h1 span { color:transparent; background:linear-gradient(135deg,#3B7DFB,#06B6D4); -webkit-background-clip:text; background-clip:text; }
 .lp-sub { font-size:clamp(15px,1.8vw,19px); color:#94A3B8; max-width:540px; line-height:1.75; margin:0 auto 40px; }
-
-.lp-stats { display:flex; border:1px solid rgba(255,255,255,0.05); border-radius:12px; background:rgba(0,0,0,0.2); overflow:hidden; margin:40px auto 0; }
-.lp-stat { flex:1; padding:20px 24px; text-align:center; border-right:1px solid rgba(255,255,255,0.05); }
+.lp-stats { display:flex; flex-wrap: wrap; border:1px solid rgba(255,255,255,0.05); border-radius:12px; background:rgba(0,0,0,0.2); overflow:hidden; margin:40px auto 0; }
+.lp-stat { flex:1; min-width: 120px; padding:20px 10px; text-align:center; border-right:1px solid rgba(255,255,255,0.05); }
 .lp-stat:last-child { border-right:none; }
 .lp-stat-n { font-family:'JetBrains Mono',monospace !important; font-size:26px; font-weight:700; color:#06B6D4; text-shadow: 0 0 10px rgba(6,182,212,0.3); }
 .lp-stat-l { font-size:10px; color:#64748B; text-transform:uppercase; letter-spacing:.1em; margin-top:4px; }
 </style>
-
-<!-- Background Orbs -->
 <div class="bg-orb orb-1"></div>
 <div class="bg-orb orb-2"></div>
-
 <div class="lp-nav">
-    <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
-    <div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
+<div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
+<div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
 </div>
-
 <div class="lp-hero">
-    <div class="glass-panel">
-        <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
-        <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
-        <p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
-        
+<div class="glass-panel">
+<div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
+<h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
+<p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
 <div style="height: 30px;"></div>
-
-        <div class="lp-stats">
-            <div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Refresh</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
-        </div>
-    </div>
+<div class="lp-stats">
+<div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
+<div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
+<div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Refresh</div></div>
+<div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
+</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -223,19 +198,15 @@ if market_data is None:
 st.markdown("""
 <style>
 * { font-family: 'Inter', -apple-system, sans-serif !important; }
-
 .mono, .pick-stock, .pick-buy-badge, .pick-cell-val, .pick-cell-lbl, .sec-hdr-text, 
 .ticker-label, .ticker-val, .mood-value, .pick-rr, .pick-meta span, .sq-title, .sq-chip, .sec-stat-val {
     font-family: 'JetBrains Mono', monospace !important;
 }
-
 html, body { color:#CBD5E1; }
 .block-container { padding: 0 0 4rem 0; max-width: 100%; }
 header[data-testid="stHeader"], #MainMenu, footer { display: none; }
-
 @keyframes fadeSlideUp { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
 .animated-entry { animation: fadeSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
 .ticker-bar { background:rgba(7, 9, 26, 0.5); backdrop-filter: blur(16px); border-bottom:1px solid rgba(255, 255, 255, 0.05); padding:0 20px; display:flex; align-items:center; position:sticky; top:0; z-index:999; height:42px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
 .ticker-bar::-webkit-scrollbar { display: none; }
 .ticker-item { display:flex; align-items:center; gap:8px; padding:0 18px; border-right:1px solid rgba(255, 255, 255, 0.05); height:100%; }
@@ -247,16 +218,13 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .tv-blue { color:#3B7DFB !important; }
 .ticker-spacer { flex:1; }
 .ticker-time { font-size:10px; color:#475569; padding-left:16px; }
-
 .stTabs [data-baseweb="tab-list"] { background:transparent; border-bottom:1px solid rgba(255,255,255, 0.05); padding:0 20px; gap:8px; }
 .stTabs [data-baseweb="tab"] { background:transparent; color:#64748B; font-size:13px; font-weight:600; padding:12px 20px; border-bottom:2px solid transparent; }
 .stTabs [aria-selected="true"] { color:#06B6D4 !important; border-bottom-color:#06B6D4 !important; background:transparent !important; text-shadow: 0 0 10px rgba(6,182,212,0.3); }
 .stTabs [data-baseweb="tab-panel"] { padding: 16px 20px; }
-
 .sec-hdr { display:flex; align-items:center; gap:10px; padding:18px 0 12px 0; border-bottom:1px solid rgba(255,255,255, 0.05); margin-bottom:16px; }
 .sec-hdr-line { width:4px; height:18px; background:linear-gradient(180deg, #3B7DFB, #06B6D4); border-radius:2px; box-shadow: 0 0 8px rgba(6,182,212,0.5); }
 .sec-hdr-text { font-size:12px; font-weight:700; color:#E2E8F0; text-transform:uppercase; letter-spacing:.12em; }
-
 .mood-banner { display:flex; align-items:stretch; background:rgba(13, 17, 32, 0.4); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255, 0.05); border-radius:12px; overflow:hidden; margin:12px 0 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 .mood-side { width:5px; flex-shrink:0; }
 .mood-content { flex:1; padding:16px 20px; display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
@@ -268,8 +236,6 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .mood-score-num { font-size:11px; color:#94A3B8; }
 .mood-meta { font-size:11px; color:#64748B; line-height:1.8; }
 .mood-tip { font-size:12px; color:#94A3B8; margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.05); }
-
-/* Apply Glassmorphism to Pick Cards */
 .pick-card { background:rgba(13, 17, 35, 0.3); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border:1px solid rgba(255, 255, 255, 0.08); border-radius:16px; overflow:hidden; margin-bottom:16px; transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 .pick-card:hover { border-color:rgba(6, 182, 212, 0.5); transform: translateY(-5px); box-shadow: 0 15px 35px rgba(6, 182, 212, 0.15); }
 .pick-card-head { display:flex; align-items:center; justify-content:space-between; padding:16px; border-bottom:1px solid rgba(255, 255, 255, 0.05); background:rgba(0,0,0,0.2); }
@@ -284,9 +250,7 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .pick-foot { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid rgba(255, 255, 255, 0.05); background:rgba(0,0,0,0.2); }
 .pick-rr { font-size:11px; font-weight:700; }
 .pick-meta { display:flex; gap:10px; font-size:10px; color:#64748B; }
-
 .stDataFrame { border:1px solid rgba(255, 255, 255, 0.05); border-radius:12px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-
 .sq-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .sq-card { border-radius:12px; padding:16px; min-height:110px; background:rgba(13, 17, 35, 0.3); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
 .sq-card:hover { transform: translateY(-3px); }
@@ -300,11 +264,9 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .sq-weakening .sq-title { color:#FFB020; }
 .sq-lagging .sq-title { color:#FF4C4C; }
 .sq-chip { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:4px 9px; border-radius:6px; background:rgba(255,255,255,0.05); color:#CBD5E1; margin:3px; border:1px solid rgba(255,255,255,0.1); }
-
 .sec-stat-box { background:rgba(13, 17, 35, 0.3); backdrop-filter: blur(12px); border:1px solid rgba(255, 255, 255, 0.05); border-radius:12px; padding:16px; text-align:center; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
 .sec-stat-lbl { font-size:9px; color:#64748B; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
 .sec-stat-val { font-size:18px; font-weight:700; color:#F1F5F9; }
-
 .ig-cta { background:rgba(13, 17, 35, 0.3); backdrop-filter: blur(12px); border:1px solid rgba(255, 255, 255, 0.08); border-radius:16px; padding:24px; text-align:center; margin:20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 .ig-cta-title { font-size:15px; font-weight:700; color:#E2E8F0; margin-bottom:4px; }
 .ig-cta-sub { font-size:12px; color:#94A3B8; margin-bottom:14px; }
@@ -326,7 +288,6 @@ def style_sc(val):
     if val >= 65: return "color:#00D68F;font-weight:600;font-family:JetBrains Mono,monospace"
     if val >= 45: return "color:#FFB020;font-family:JetBrains Mono,monospace"
     return "color:#FF4C4C;font-family:JetBrains Mono,monospace"
-
 
 nl = market_data['nifty']
 nchg = market_data['nifty_chg']
@@ -372,7 +333,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── HEADER ──────────────────────────────────────────
 hc1, hc2 = st.columns([1, 10])
 with hc1:
     st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png", width=48)
@@ -389,7 +349,6 @@ with hc2:
 
 top_picks = scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records')
 
-# ── TABS ──────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["  🎯  Picks & Scanner  ", "  📊  Sector Intelligence  "])
 
 with tab1:
@@ -575,7 +534,6 @@ with tab2:
         .format({"Today %":"{:+.2f}%", "1M%":"{:+.2f}%", "3M%":"{:+.2f}%", "RSI":"{:.1f}", "From 52W High %":"{:.1f}%", "Vol Multiplier":"{:.2f}x", "Score":"{:.1f}"}),
         use_container_width=True, height=280
     )
-
 
 st.markdown(f"""
 <div style='text-align:center;padding:24px 20px;border-top:1px solid rgba(255,255,255, 0.05);margin-top:24px;'>
