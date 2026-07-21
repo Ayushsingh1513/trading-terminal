@@ -133,7 +133,6 @@ if st.session_state.page == "landing":
         <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
         <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
         <p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
-        
         <div class="lp-stats">
             <div class="lp-stat"><div class="lp-stat-n">84</div><div class="lp-stat-l">Stocks Scanned</div></div>
             <div class="lp-stat"><div class="lp-stat-n">13</div><div class="lp-stat-l">Sectors Tracked</div></div>
@@ -282,7 +281,6 @@ def style_sc(val):
     if val >= 45: return "color:#FFB020;font-family:JetBrains Mono,monospace"
     return "color:#FF4C4C;font-family:JetBrains Mono,monospace"
 
-# Reduced cache time to 15 minutes (900 seconds)
 @st.cache_data(ttl=900)
 def get_close(t, p="6mo"):
     for _ in range(2):
@@ -554,7 +552,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── HEADER & MANUAL TELEGRAM TRIGGER ──────────────────────────────────────────
+# ── HEADER ────────────────────────────────────────────────────────────────────
 hc1, hc2, hc3 = st.columns([1, 7, 3])
 with hc1:
     st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png", width=48)
@@ -570,13 +568,13 @@ with hc2:
     </div>""", unsafe_allow_html=True)
 with hc3:
     st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
-    if st.button("📢 Send Picks to Telegram Now", use_container_width=True):
+    if st.button("📢 Send Alert to Telegram Now", use_container_width=True):
         with st.spinner("Dispatching Telegram notification..."):
             top_picks = get_top_picks(tuple(NIFTY500), nifty_1m)
             if top_picks:
                 msg_body = format_opening_message(top_picks, mood, mood_score)
                 if send_tg_message(msg_body):
-                    st.success("✅ Picks sent to Telegram!")
+                    st.success("✅ Alert sent to Telegram!")
                 else:
                     st.error("❌ Failed to send Telegram message.")
 
@@ -633,13 +631,13 @@ with tab1:
     # ── AUTOMATED TELEGRAM SCHEDULE CHECK (9:45 AM IST & 3:30 PM IST) ──
     now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
     
-    # Morning Opening Message (Triggered at 9:45 AM IST)
+    # Morning Opening Message (Triggered at or after 9:45 AM IST)
     if now_ist.hour == 9 and now_ist.minute >= 45 and not st.session_state.tg_open_sent and picks:
         msg_body = format_opening_message(picks, mood, mood_score)
         if send_tg_message(msg_body):
             st.session_state.tg_open_sent = True
 
-    # Evening Closing Message (Triggered at 3:30 PM IST)
+    # Evening Closing Message (Triggered at or after 3:30 PM IST)
     if (now_ist.hour == 15 and now_ist.minute >= 30) or (now_ist.hour >= 16) and not st.session_state.tg_close_sent:
         msg_body = format_closing_message(picks, mood, mood_score, nl, nchg)
         if send_tg_message(msg_body):
