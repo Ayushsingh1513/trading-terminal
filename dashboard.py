@@ -98,83 +98,82 @@ market_data, scanner_df, sector_df = load_backend_data()
 # ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.page == "landing":
     st.markdown("""
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-    * { font-family: 'Inter', -apple-system, sans-serif !important; }
-    .mono { font-family: 'JetBrains Mono', monospace !important; }
-    .block-container { padding:0; max-width:100%; position: relative; overflow: hidden; }
-    header[data-testid="stHeader"], #MainMenu, footer { display:none; }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    /* Ambient Floating Orbs */
-    .bg-orb { position: absolute; border-radius: 50%; filter: blur(90px); z-index: 0; opacity: 0.4; animation: float 12s infinite alternate ease-in-out; }
-    .orb-1 { width: 400px; height: 400px; background: #3B7DFB; top: -10%; left: 10%; }
-    .orb-2 { width: 500px; height: 500px; background: #06B6D4; bottom: -20%; right: 5%; animation-delay: -5s; }
-    @keyframes float { 0% { transform: translateY(0px) scale(1); } 100% { transform: translateY(50px) scale(1.1); } }
+<style>
+* { font-family: 'Inter', -apple-system, sans-serif !important; }
+.mono { font-family: 'JetBrains Mono', monospace !important; }
+.block-container { padding:0; max-width:100%; position: relative; overflow: hidden; }
+header[data-testid="stHeader"], #MainMenu, footer { display:none; }
 
-    .lp-nav { display:flex; align-items:center; justify-content:space-between; padding:16px 40px; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(7, 9, 26, 0.4); backdrop-filter:blur(20px); position:sticky; top:0; z-index:99; }
-    .lp-logo { display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace !important; font-size:15px; font-weight:700; color:#F1F5F9; letter-spacing:-.01em; }
-    .lp-logo-dot { width:8px; height:8px; border-radius:50%; background:#3B7DFB; box-shadow:0 0 10px #3B7DFB; }
-    .lp-nav-tag { font-size:11px; color:#94A3B8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 10px; text-transform:uppercase; font-weight:600; background: rgba(255,255,255,0.03); }
-    
-    .lp-hero { min-height:85vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px; position: relative; z-index: 10; }
-    
-    /* The Glass Mirror Card */
-    .glass-panel {
-        background: rgba(13, 17, 35, 0.3);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 24px;
-        padding: 60px 40px;
-        box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-        max-width: 900px;
-        margin: 0 auto;
-    }
+/* Ambient Floating Orbs */
+.bg-orb { position: absolute; border-radius: 50%; filter: blur(90px); z-index: 0; opacity: 0.4; animation: float 12s infinite alternate ease-in-out; }
+.orb-1 { width: 400px; height: 400px; background: #3B7DFB; top: -10%; left: 10%; }
+.orb-2 { width: 500px; height: 500px; background: #06B6D4; bottom: -20%; right: 5%; animation-delay: -5s; }
+@keyframes float { 0% { transform: translateY(0px) scale(1); } 100% { transform: translateY(50px) scale(1.1); } }
 
-    .lp-eyebrow { display:inline-flex; align-items:center; gap:6px; background:rgba(59, 125, 251, 0.1); border:1px solid rgba(59, 125, 251, 0.3); border-radius:4px; padding:6px 14px; font-family:'JetBrains Mono',monospace !important; font-size:11px; color:#3B7DFB; font-weight:600; letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px; }
-    .lp-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#3B7DFB; animation:blink 1.4s infinite; box-shadow: 0 0 8px #3B7DFB; }
-    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
-    .lp-h1 { font-size:clamp(42px,6vw,72px); font-weight:800; line-height:1.1; letter-spacing:-.03em; color:#F1F5F9; margin:0 0 16px 0; }
-    .lp-h1 span { color:transparent; background:linear-gradient(135deg,#3B7DFB,#06B6D4); -webkit-background-clip:text; background-clip:text; }
-    .lp-sub { font-size:clamp(15px,1.8vw,19px); color:#94A3B8; max-width:540px; line-height:1.75; margin:0 auto 40px; }
-    
-    .lp-stats { display:flex; border:1px solid rgba(255,255,255,0.05); border-radius:12px; background:rgba(0,0,0,0.2); overflow:hidden; margin:40px auto 0; }
-    .lp-stat { flex:1; padding:20px 24px; text-align:center; border-right:1px solid rgba(255,255,255,0.05); }
-    .lp-stat:last-child { border-right:none; }
-    .lp-stat-n { font-family:'JetBrains Mono',monospace !important; font-size:26px; font-weight:700; color:#06B6D4; text-shadow: 0 0 10px rgba(6,182,212,0.3); }
-    .lp-stat-l { font-size:10px; color:#64748B; text-transform:uppercase; letter-spacing:.1em; margin-top:4px; }
-    </style>
+.lp-nav { display:flex; align-items:center; justify-content:space-between; padding:16px 40px; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(7, 9, 26, 0.4); backdrop-filter:blur(20px); position:sticky; top:0; z-index:99; }
+.lp-logo { display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace !important; font-size:15px; font-weight:700; color:#F1F5F9; letter-spacing:-.01em; }
+.lp-logo-dot { width:8px; height:8px; border-radius:50%; background:#3B7DFB; box-shadow:0 0 10px #3B7DFB; }
+.lp-nav-tag { font-size:11px; color:#94A3B8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 10px; text-transform:uppercase; font-weight:600; background: rgba(255,255,255,0.03); }
 
-    <!-- Background Orbs -->
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
+.lp-hero { min-height:85vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px; position: relative; z-index: 10; }
 
-    <div class="lp-nav">
-        <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
-        <div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
-    </div>
+/* The Glass Mirror Card */
+.glass-panel {
+    background: rgba(13, 17, 35, 0.3);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 60px 40px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+    max-width: 900px;
+    margin: 0 auto;
+}
 
-    <div class="lp-hero">
-        <div class="glass-panel">
-            <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
-            <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
-            <p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
-            
-            <!-- We leave an empty space here for the Streamlit button to inject into -->
-            <div id="btn-container" style="margin-bottom: 20px;"></div>
+.lp-eyebrow { display:inline-flex; align-items:center; gap:6px; background:rgba(59, 125, 251, 0.1); border:1px solid rgba(59, 125, 251, 0.3); border-radius:4px; padding:6px 14px; font-family:'JetBrains Mono',monospace !important; font-size:11px; color:#3B7DFB; font-weight:600; letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px; }
+.lp-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#3B7DFB; animation:blink 1.4s infinite; box-shadow: 0 0 8px #3B7DFB; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+.lp-h1 { font-size:clamp(42px,6vw,72px); font-weight:800; line-height:1.1; letter-spacing:-.03em; color:#F1F5F9; margin:0 0 16px 0; }
+.lp-h1 span { color:transparent; background:linear-gradient(135deg,#3B7DFB,#06B6D4); -webkit-background-clip:text; background-clip:text; }
+.lp-sub { font-size:clamp(15px,1.8vw,19px); color:#94A3B8; max-width:540px; line-height:1.75; margin:0 auto 40px; }
 
-            <div class="lp-stats">
-                <div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
-                <div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
-                <div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Refresh</div></div>
-                <div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
-            </div>
+.lp-stats { display:flex; border:1px solid rgba(255,255,255,0.05); border-radius:12px; background:rgba(0,0,0,0.2); overflow:hidden; margin:40px auto 0; }
+.lp-stat { flex:1; padding:20px 24px; text-align:center; border-right:1px solid rgba(255,255,255,0.05); }
+.lp-stat:last-child { border-right:none; }
+.lp-stat-n { font-family:'JetBrains Mono',monospace !important; font-size:26px; font-weight:700; color:#06B6D4; text-shadow: 0 0 10px rgba(6,182,212,0.3); }
+.lp-stat-l { font-size:10px; color:#64748B; text-transform:uppercase; letter-spacing:.1em; margin-top:4px; }
+</style>
+
+<!-- Background Orbs -->
+<div class="bg-orb orb-1"></div>
+<div class="bg-orb orb-2"></div>
+
+<div class="lp-nav">
+    <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
+    <div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
+</div>
+
+<div class="lp-hero">
+    <div class="glass-panel">
+        <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
+        <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
+        <p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
+        
+<div style="height: 30px;"></div>
+
+        <div class="lp-stats">
+            <div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Refresh</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
@@ -533,7 +532,7 @@ with tab2:
             c = "#00D68F" if r["1M%"]>=0 else "#FF4C4C"
             chips += f'<span class="sq-chip">{r["Sector"]} <b style="color:{c};">{r["1M%"]:+.1f}%</b></span>'
         return chips
-
+    
     ql, qr = st.columns([1.2, 1])
     with ql:
         st.markdown(f"""
