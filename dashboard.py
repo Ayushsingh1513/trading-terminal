@@ -277,17 +277,6 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 def tc(v):  return "tv-up" if v >= 0 else "tv-down"
 def ar(v):  return "▲" if v >= 0 else "▼"
 
-def style_sig(val):
-    if val == "BUY":   return "background:rgba(0, 214, 143, 0.1);color:#00D68F;font-weight:700;font-family:JetBrains Mono,monospace"
-    if val == "WATCH": return "background:rgba(255, 176, 32, 0.1);color:#FFB020;font-weight:700;font-family:JetBrains Mono,monospace"
-    if val == "AVOID": return "background:rgba(255, 76, 76, 0.1);color:#FF4C4C;font-weight:700;font-family:JetBrains Mono,monospace"
-    return ""
-
-def style_sc(val):
-    if val >= 65: return "color:#00D68F;font-weight:600;font-family:JetBrains Mono,monospace"
-    if val >= 45: return "color:#FFB020;font-family:JetBrains Mono,monospace"
-    return "color:#FF4C4C;font-family:JetBrains Mono,monospace"
-
 nl = market_data['nifty']
 nchg = market_data['nifty_chg']
 bl = market_data['bank']
@@ -434,7 +423,6 @@ with tab1:
                   </div>
                 </div>""", unsafe_allow_html=True)
                 
-                # Render the Free Live TradingView Chart Component
                 components.html(f"""
                 <div class="tradingview-widget-container" style="height:180px; width:100%; margin-top:-10px; border-radius:12px; overflow:hidden;">
                   <iframe scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=en&colorTheme=dark&symbol=NSE%3A{tv_ticker}&isTransparent=true&trendLineColor=%2306B6D4&underLineColor=rgba(6,182,212,0.15)" style="box-sizing: border-box; height: 100%; width: 100%;"></iframe>
@@ -454,17 +442,30 @@ with tab1:
     filt = scanner_df.copy()
     if tn == "Top 100": filt = filt.head(100)
     elif tn == "Top 250": filt = filt.head(250)
-    
     if sf != "All":     filt = filt[filt["Signal"] == sf]
     if rf != "All":     filt = filt[filt["Risk"]   == rf]
     if setupf != "All": filt = filt[filt["Setup"]  == setupf]
     
+    # --- NEW FEATURE: NATIVE PROGRESS BARS IN TABLE ---
     st.dataframe(
-        filt.style.map(style_sig, subset=["Signal"]).map(style_sc, subset=["Score"])
-        .format({"Price":"{:.1f}","RSI":"{:.1f}","RS":"{:+.1f}","VolSurge":"{:.1f}x","52W%":"{:.1f}%","Score":"{:.0f}"}),
-        use_container_width=True, height=360)
+        filt,
+        column_config={
+            "Price": st.column_config.NumberColumn(format="₹%.2f"),
+            "RSI": st.column_config.ProgressColumn(
+                "RSI", help="Relative Strength Index", format="%.1f", min_value=0, max_value=100
+            ),
+            "Score": st.column_config.ProgressColumn(
+                "Momentum Score", help="Algorithmic score out of 100", format="%f", min_value=0, max_value=100
+            ),
+            "VolSurge": st.column_config.NumberColumn("Volume Surge", format="%.2fx"),
+            "RS": st.column_config.NumberColumn("Relative Strength", format="%+.2f%%"),
+            "52W%": st.column_config.NumberColumn("From 52W High", format="%.2f%%"),
+        },
+        hide_index=True,
+        use_container_width=True, 
+        height=360
+    )
 
-    # --- NEW FEATURE: EXPORT TO CSV BUTTON ---
     csv_data = filt.to_csv(index=False).encode('utf-8')
     st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
     st.download_button(
@@ -484,7 +485,34 @@ with tab1:
 
 
 with tab2:
-    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation & Performance Engine (18 Major NSE Indices)</div></div>", unsafe_allow_html=True)
+    # --- NEW FEATURE: BLOOMBERG TREEMAP HEATMAP ---
+    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Market Heatmap (Size = Volume, Color = Momentum)</div></div>", unsafe_allow_html=True)
+    
+    fig_hm = go.Figure(go.Treemap(
+        labels=sector_df["Sector"],
+        parents=[""] * len(sector_df),
+        values=sector_df["VolPunch"],
+        marker=dict(
+            colors=sector_df["Score"],
+            colorscale=[[0, '#FF4C4C'], [0.4, '#FFB020'], [1, '#00D68F']],
+            cmin=0, cmax=100,
+            showscale=True,
+            colorbar=dict(title="Momentum Score", titlefont=dict(color="#94A3B8"), tickfont=dict(color="#64748B"))
+        ),
+        texttemplate="<b>%{label}</b><br>Score: %{color:.1f}<br>Vol: %{value:.1f}x",
+        textfont=dict(size=13, family="Inter", color="white")
+    ))
+    fig_hm.update_layout(
+        margin=dict(t=10, l=10, r=10, b=10), 
+        height=320, 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)"
+    )
+    st.plotly_chart(fig_hm, use_container_width=True)
+
+    st.markdown("<div style='height:24px;'></div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation Engine</div></div>", unsafe_allow_html=True)
 
     med1 = sector_df["1M%"].median()
     med3 = sector_df["3M%"].median()
@@ -549,10 +577,22 @@ with tab2:
     disp_sec = sector_df[["Sector", "Today%", "1M%", "3M%", "RSI", "52W%", "VolPunch", "Score"]].rename(
         columns={"Today%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"}
     )
+    
+    # Adding Progress bars to Sector Table as well
     st.dataframe(
-        disp_sec.style.map(style_sc, subset=["Score"])
-        .format({"Today %":"{:+.2f}%", "1M%":"{:+.2f}%", "3M%":"{:+.2f}%", "RSI":"{:.1f}", "From 52W High %":"{:.1f}%", "Vol Multiplier":"{:.2f}x", "Score":"{:.1f}"}),
-        use_container_width=True, height=280
+        disp_sec,
+        column_config={
+            "Today %": st.column_config.NumberColumn(format="%+.2f%%"),
+            "1M%": st.column_config.NumberColumn(format="%+.2f%%"),
+            "3M%": st.column_config.NumberColumn(format="%+.2f%%"),
+            "RSI": st.column_config.ProgressColumn("RSI", format="%.1f", min_value=0, max_value=100),
+            "From 52W High %": st.column_config.NumberColumn(format="%.1f%%"),
+            "Vol Multiplier": st.column_config.NumberColumn(format="%.2fx"),
+            "Score": st.column_config.ProgressColumn("Momentum Score", format="%.1f", min_value=0, max_value=100),
+        },
+        hide_index=True,
+        use_container_width=True, 
+        height=280
     )
 
 st.markdown(f"""
