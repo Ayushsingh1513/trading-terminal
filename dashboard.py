@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.graph_objects as go
 import json
@@ -159,7 +160,6 @@ header[data-testid="stHeader"], #MainMenu, footer { display:none; }
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # SEBI SHIELD POPUP
 # ══════════════════════════════════════════════════════════════════════════════
@@ -181,7 +181,6 @@ if st.session_state.page == "terminal" and not st.session_state.legal_accepted:
             st.session_state.legal_accepted = True
             st.rerun()
     st.stop()
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TERMINAL UI INITIALIZATION
@@ -394,6 +393,9 @@ with tab1:
         for col, pk in zip([pc1, pc2, pc3], top_picks[:3]):
             rr_c = "#00D68F" if pk["RR"] >= 2 else "#FFB020" if pk["RR"] >= 1.5 else "#FF4C4C"
             setup_map = {"Breakout": "🚀 Breakout", "Pullback": "↩ Pullback", "Vol Surge": "💥 Vol Surge", "Trend": "↗ Trend"}
+            # Clean up ticker for TradingView (strip .NS)
+            tv_ticker = str(pk["Stock"]).replace(".NS", "")
+            
             with col:
                 st.markdown(f"""
                 <div class="pick-card animated-entry">
@@ -431,6 +433,13 @@ with tab1:
                     </div>
                   </div>
                 </div>""", unsafe_allow_html=True)
+                
+                # Render the Free Live TradingView Chart Component
+                components.html(f"""
+                <div class="tradingview-widget-container" style="height:180px; width:100%; margin-top:-10px; border-radius:12px; overflow:hidden;">
+                  <iframe scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=en&colorTheme=dark&symbol=NSE%3A{tv_ticker}&isTransparent=true&trendLineColor=%2306B6D4&underLineColor=rgba(6,182,212,0.15)" style="box-sizing: border-box; height: 100%; width: 100%;"></iframe>
+                </div>
+                """, height=180)
     else:
         st.info("No strong 'BUY' setups currently detected. Market conditions may be choppy.")
 
@@ -454,6 +463,17 @@ with tab1:
         filt.style.map(style_sig, subset=["Signal"]).map(style_sc, subset=["Score"])
         .format({"Price":"{:.1f}","RSI":"{:.1f}","RS":"{:+.1f}","VolSurge":"{:.1f}x","52W%":"{:.1f}%","Score":"{:.0f}"}),
         use_container_width=True, height=360)
+
+    # --- NEW FEATURE: EXPORT TO CSV BUTTON ---
+    csv_data = filt.to_csv(index=False).encode('utf-8')
+    st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+    st.download_button(
+        label="⬇️ Export Data to CSV (Excel)",
+        data=csv_data,
+        file_name="momentum_scanner_live.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 
     st.markdown("""
     <div class="ig-cta animated-entry">
