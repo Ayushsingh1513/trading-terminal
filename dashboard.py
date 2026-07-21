@@ -382,7 +382,6 @@ with tab1:
         for col, pk in zip([pc1, pc2, pc3], top_picks[:3]):
             rr_c = "#00D68F" if pk["RR"] >= 2 else "#FFB020" if pk["RR"] >= 1.5 else "#FF4C4C"
             setup_map = {"Breakout": "🚀 Breakout", "Pullback": "↩ Pullback", "Vol Surge": "💥 Vol Surge", "Trend": "↗ Trend"}
-            # Clean up ticker for TradingView (strip .NS)
             tv_ticker = str(pk["Stock"]).replace(".NS", "")
             
             with col:
@@ -446,17 +445,18 @@ with tab1:
     if rf != "All":     filt = filt[filt["Risk"]   == rf]
     if setupf != "All": filt = filt[filt["Setup"]  == setupf]
     
-    # --- NEW FEATURE: NATIVE PROGRESS BARS IN TABLE ---
+    def style_sig(val):
+        if val == "BUY":   return "background:rgba(0, 214, 143, 0.1);color:#00D68F;font-weight:700;font-family:JetBrains Mono,monospace"
+        if val == "WATCH": return "background:rgba(255, 176, 32, 0.1);color:#FFB020;font-weight:700;font-family:JetBrains Mono,monospace"
+        if val == "AVOID": return "background:rgba(255, 76, 76, 0.1);color:#FF4C4C;font-weight:700;font-family:JetBrains Mono,monospace"
+        return ""
+    
     st.dataframe(
-        filt,
+        filt.style.map(style_sig, subset=["Signal"]),
         column_config={
             "Price": st.column_config.NumberColumn(format="₹%.2f"),
-            "RSI": st.column_config.ProgressColumn(
-                "RSI", help="Relative Strength Index", format="%.1f", min_value=0, max_value=100
-            ),
-            "Score": st.column_config.ProgressColumn(
-                "Momentum Score", help="Algorithmic score out of 100", format="%f", min_value=0, max_value=100
-            ),
+            "RSI": st.column_config.ProgressColumn("RSI", help="Relative Strength Index", format="%.1f", min_value=0, max_value=100),
+            "Score": st.column_config.ProgressColumn("Momentum Score", help="Algorithmic score out of 100", format="%f", min_value=0, max_value=100),
             "VolSurge": st.column_config.NumberColumn("Volume Surge", format="%.2fx"),
             "RS": st.column_config.NumberColumn("Relative Strength", format="%+.2f%%"),
             "52W%": st.column_config.NumberColumn("From 52W High", format="%.2f%%"),
@@ -497,7 +497,7 @@ with tab2:
             colorscale=[[0, '#FF4C4C'], [0.4, '#FFB020'], [1, '#00D68F']],
             cmin=0, cmax=100,
             showscale=True,
-            colorbar=dict(title="Momentum Score", titlefont=dict(color="#94A3B8"), tickfont=dict(color="#64748B"))
+            colorbar=dict(title=dict(text="Momentum Score", font=dict(color="#94A3B8")), tickfont=dict(color="#64748B"))
         ),
         texttemplate="<b>%{label}</b><br>Score: %{color:.1f}<br>Vol: %{value:.1f}x",
         textfont=dict(size=13, family="Inter", color="white")
@@ -578,7 +578,6 @@ with tab2:
         columns={"Today%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"}
     )
     
-    # Adding Progress bars to Sector Table as well
     st.dataframe(
         disp_sec,
         column_config={
