@@ -20,79 +20,261 @@ st.set_page_config(
 if "page" not in st.session_state:
     st.session_state.page = "landing"
 
-# ══════════════════════════════════════════════════════════════════════════════
-# LANDING PAGE
-# ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.page == "landing":
     st.markdown("""
     <style>
-    html,body,.stApp{background:#0a0a0f;color:#e0e0e0;font-family:'Inter',sans-serif;}
-    .block-container{padding:0;max-width:100%;}
-    header[data-testid="stHeader"]{display:none;}#MainMenu{display:none;}footer{display:none;}
-    .hero{min-height:100vh;background:radial-gradient(ellipse at 20% 50%,#0d1f0d 0%,#0a0a0f 60%);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;}
-    .badge{display:inline-block;background:#00380a;border:1px solid #00e676;color:#00e676;
-      font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
-      padding:6px 16px;border-radius:999px;margin-bottom:24px;}
-    .hero-title{font-size:clamp(36px,6vw,80px);font-weight:800;line-height:1.1;margin:0 0 16px 0;
-      background:linear-gradient(135deg,#ffffff 0%,#00e676 50%,#00aa55 100%);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-    .hero-sub{font-size:clamp(15px,2vw,20px);color:#888;max-width:580px;line-height:1.7;margin:0 auto 40px auto;}
-    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-      gap:16px;max-width:1000px;margin:60px auto 40px auto;padding:0 20px;}
-    .feat-card{background:#0f0f1a;border:1px solid #1e1e3a;border-radius:12px;padding:20px;}
-    .feat-card:hover{border-color:#00e676;}
-    .feat-icon{font-size:24px;margin-bottom:10px;}
-    .feat-title{font-size:14px;font-weight:700;color:#e0e0e0;margin-bottom:6px;}
-    .feat-desc{font-size:12px;color:#666;line-height:1.6;}
-    .stats-row{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;
-      padding:32px 20px;border-top:1px solid #1e1e3a;border-bottom:1px solid #1e1e3a;
-      margin:40px 0;background:#0f0f1a;}
-    .stat-num{font-size:32px;font-weight:800;color:#00e676;}
-    .stat-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.1em;}
-    .disclaimer{max-width:700px;margin:32px auto;padding:16px 20px;background:#0f0f1a;
-      border:1px solid #1e1e3a;border-radius:8px;font-size:11px;color:#555;text-align:center;}
-    .footer{text-align:center;padding:24px;border-top:1px solid #1e1e3a;color:#444;font-size:12px;}
-    </style>""", unsafe_allow_html=True)
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+    html,body,.stApp{background:#03030a;color:#e0e0f0;font-family:'Inter',sans-serif;}
+    .block-container{padding:0!important;max-width:100%!important;}
+    header[data-testid="stHeader"]{display:none!important;}
+    #MainMenu{display:none!important;}footer{display:none!important;}
+    .stButton>button{
+      background:linear-gradient(135deg,#3b82f6,#6d28d9)!important;
+      color:#fff!important;border:none!important;font-size:15px!important;font-weight:700!important;
+      padding:14px 32px!important;border-radius:12px!important;width:100%!important;
+      box-shadow:0 0 30px rgba(59,130,246,.4),0 0 60px rgba(59,130,246,.15)!important;
+      transition:transform .2s,box-shadow .2s!important;letter-spacing:.3px!important;
+    }
+    .stButton>button:hover{
+      transform:translateY(-3px)!important;
+      box-shadow:0 0 40px rgba(59,130,246,.6),0 0 80px rgba(59,130,246,.2)!important;
+    }
+    /* 3D Canvas bg */
+    #mf-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+    /* Ticker */
+    .tk{position:relative;z-index:100;background:rgba(3,3,10,.95);
+      border-bottom:1px solid rgba(59,130,246,.15);height:30px;overflow:hidden;display:flex;align-items:center}
+    .tk-inner{display:flex;animation:tkScroll 50s linear infinite;width:max-content}
+    .tk-item{display:flex;align-items:center;gap:5px;padding:0 16px;font-size:10px;
+      font-family:'JetBrains Mono',monospace;white-space:nowrap;border-right:1px solid rgba(59,130,246,.1)}
+    .tk-n{color:#2a2a4a}.tk-v{color:#8080a0;font-weight:500}
+    .tk-u{color:#00d97e}.tk-d{color:#ff4560}
+    @keyframes tkScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    /* Hero */
+    .lp-hero{position:relative;z-index:10;min-height:95vh;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;text-align:center;padding:60px 20px 50px}
+    /* 3D card effect */
+    .card-3d{
+      background:rgba(10,10,20,.7);
+      border:1px solid rgba(59,130,246,.2);
+      border-radius:20px;padding:40px 30px;
+      backdrop-filter:blur(20px);
+      box-shadow:
+        0 0 0 1px rgba(59,130,246,.1),
+        0 20px 60px rgba(0,0,0,.6),
+        0 0 120px rgba(59,130,246,.05),
+        inset 0 1px 0 rgba(255,255,255,.05);
+      transform:perspective(1000px) rotateX(2deg);
+      transition:transform .4s ease,box-shadow .4s ease;
+      max-width:700px;margin:0 auto;
+    }
+    .card-3d:hover{
+      transform:perspective(1000px) rotateX(0deg) translateY(-4px);
+      box-shadow:
+        0 0 0 1px rgba(59,130,246,.25),
+        0 30px 80px rgba(0,0,0,.7),
+        0 0 160px rgba(59,130,246,.1),
+        inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .lp-logo{width:80px;height:80px;border-radius:50%;object-fit:cover;
+      border:2px solid rgba(255,255,255,.08);margin-bottom:20px;
+      box-shadow:0 0 30px rgba(59,130,246,.4),0 0 60px rgba(59,130,246,.15);
+      animation:logoGlow 3s ease-in-out infinite;
+    }
+    @keyframes logoGlow{
+      0%,100%{box-shadow:0 0 30px rgba(59,130,246,.4),0 0 60px rgba(59,130,246,.15)}
+      50%{box-shadow:0 0 50px rgba(139,92,246,.6),0 0 100px rgba(139,92,246,.2)}
+    }
+    .lp-name{font-size:clamp(30px,5vw,52px);font-weight:900;letter-spacing:-2px;line-height:1;margin-bottom:6px}
+    .lp-grd{background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 50%,#00d97e 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      background-size:200%;animation:grdMove 4s ease infinite}
+    @keyframes grdMove{0%,100%{background-position:0%}50%{background-position:100%}}
+    .live-pill{display:inline-flex;align-items:center;gap:6px;
+      background:rgba(0,217,126,.08);border:1px solid rgba(0,217,126,.25);
+      color:#00d97e;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+      padding:5px 14px;border-radius:20px;margin:14px 0 18px;
+      animation:pillPulse 2.5s ease-in-out infinite}
+    @keyframes pillPulse{0%,100%{box-shadow:0 0 0 rgba(0,217,126,0)}50%{box-shadow:0 0 20px rgba(0,217,126,.2)}}
+    .live-d{width:6px;height:6px;border-radius:50%;background:#00d97e;animation:dotBlink 1.5s ease-in-out infinite}
+    @keyframes dotBlink{0%,100%{opacity:1;box-shadow:0 0 6px #00d97e}50%{opacity:.2;box-shadow:none}}
+    .lp-title{font-size:clamp(32px,6vw,64px);font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:14px}
+    .lp-t1{display:block;color:#f0f0ff;
+      text-shadow:0 0 80px rgba(59,130,246,.3)}
+    .lp-t2{display:block;background:linear-gradient(90deg,#3b82f6,#8b5cf6);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .lp-sub{font-size:clamp(13px,2vw,16px);color:#4a4a66;line-height:1.75;margin-bottom:28px}
+    /* Market strip 3D */
+    .mkt-3d{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;
+      padding:0 20px;max-width:1000px;margin:0 auto;position:relative;z-index:10}
+    .mk{background:rgba(10,10,20,.8);
+      border:1px solid rgba(59,130,246,.15);border-radius:12px;padding:12px 14px;
+      backdrop-filter:blur(12px);cursor:default;
+      box-shadow:0 4px 20px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
+      transition:transform .3s,box-shadow .3s,border-color .3s;
+      animation:mkIn .5s ease both;opacity:0}
+    .mk:hover{transform:translateY(-4px) perspective(400px) rotateX(4deg);
+      box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 30px rgba(59,130,246,.15),inset 0 1px 0 rgba(255,255,255,.06);
+      border-color:rgba(59,130,246,.35)}
+    @keyframes mkIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .mn{font-size:9px;color:#2a2a42;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .mv{font-size:14px;font-weight:700;color:#c0c0d8;margin-bottom:2px}
+    .mc-up{color:#00d97e;font-size:11px;font-weight:600}
+    .mc-dn{color:#ff4560;font-size:11px;font-weight:600}
+    /* Stats 3D */
+    .stats-3d{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;
+      padding:36px 20px;background:rgba(6,6,16,.9);
+      border-top:1px solid rgba(59,130,246,.1);border-bottom:1px solid rgba(59,130,246,.1);
+      margin:36px 0;position:relative;z-index:10;backdrop-filter:blur(8px)}
+    .st{background:rgba(10,10,22,.8);border:1px solid rgba(59,130,246,.15);border-radius:14px;
+      padding:20px 28px;text-align:center;min-width:120px;
+      box-shadow:0 8px 30px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
+      transition:transform .3s,box-shadow .3s;animation:stIn .5s ease both;opacity:0}
+    .st:hover{transform:translateY(-5px) perspective(400px) rotateX(5deg);
+      box-shadow:0 16px 50px rgba(0,0,0,.5),0 0 40px rgba(59,130,246,.12)}
+    @keyframes stIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .sn{font-size:36px;font-weight:900;background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+    .sl{font-size:9px;color:#2a2a42;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px}
+    /* Feature cards 3D */
+    .feats-3d{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;
+      padding:0 20px;max-width:1020px;margin:0 auto 50px;position:relative;z-index:10}
+    .fc{background:rgba(10,10,20,.75);
+      border:1px solid rgba(59,130,246,.12);border-radius:14px;padding:22px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
+      transition:transform .3s,box-shadow .3s,border-color .3s;
+      animation:fcIn .5s ease both;opacity:0;position:relative;overflow:hidden}
+    .fc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(59,130,246,.6),transparent);
+      transform:scaleX(0);transition:transform .4s}
+    .fc:hover{transform:translateY(-5px) perspective(500px) rotateX(3deg) rotateY(-1deg);
+      border-color:rgba(59,130,246,.3);
+      box-shadow:0 16px 50px rgba(0,0,0,.5),0 0 40px rgba(59,130,246,.1),inset 0 1px 0 rgba(255,255,255,.06)}
+    .fc:hover::before{transform:scaleX(1)}
+    @keyframes fcIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    .fi{font-size:24px;margin-bottom:10px;display:block;transition:transform .3s}
+    .fc:hover .fi{transform:scale(1.2) translateY(-2px)}
+    .ft{font-size:13px;font-weight:700;color:#d0d0e8;margin-bottom:6px}
+    .fd{font-size:11px;color:#2a2a42;line-height:1.65}
+    /* CTA */
+    .cta-3d{background:rgba(12,8,22,.85);
+      border:1px solid rgba(139,92,246,.2);border-radius:18px;padding:36px;
+      backdrop-filter:blur(14px);max-width:560px;margin:0 auto 50px;text-align:center;
+      position:relative;z-index:10;
+      box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 80px rgba(109,40,217,.08),inset 0 1px 0 rgba(255,255,255,.05);
+      transition:transform .3s,box-shadow .3s}
+    .cta-3d:hover{transform:translateY(-4px);
+      box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 100px rgba(109,40,217,.15),inset 0 1px 0 rgba(255,255,255,.07)}
+    .ct{font-size:20px;font-weight:800;color:#e8e8f8;margin-bottom:7px}
+    .cs{font-size:12px;color:#3a3a56;margin-bottom:16px;line-height:1.6}
+    /* Disc + footer */
+    .disc{max-width:680px;margin:0 auto 10px;padding:14px 20px;
+      background:rgba(6,6,14,.8);border:1px solid rgba(59,130,246,.08);
+      border-radius:8px;font-size:10px;color:#1e1e30;text-align:center;position:relative;z-index:10}
+    .ftr{position:relative;z-index:10;border-top:1px solid rgba(59,130,246,.08);
+      padding:18px;text-align:center;font-size:10px;color:#1a1a2a;letter-spacing:.5px}
+    .ftr a{color:#1a1a2a;text-decoration:none}
+    </style>
+    <canvas id="mf-canvas"></canvas>
+    <div class="tk">
+      <div class="tk-inner">
+        <span class="tk-item"><span class="tk-n">NIFTY</span><span class="tk-v">24,749</span><span class="tk-u">+0.94%</span></span>
+        <span class="tk-item"><span class="tk-n">BANKNIFTY</span><span class="tk-v">53,210</span><span class="tk-u">+1.21%</span></span>
+        <span class="tk-item"><span class="tk-n">VIX</span><span class="tk-v">12.84</span><span class="tk-d">-5.2%</span></span>
+        <span class="tk-item"><span class="tk-n">SENSEX</span><span class="tk-v">81,224</span><span class="tk-u">+0.87%</span></span>
+        <span class="tk-item"><span class="tk-n">IT</span><span class="tk-v">35,841</span><span class="tk-d">-0.38%</span></span>
+        <span class="tk-item"><span class="tk-n">USD/INR</span><span class="tk-v">83.48</span><span class="tk-d">-0.14%</span></span>
+        <span class="tk-item"><span class="tk-n">MIDCAP</span><span class="tk-v">54,103</span><span class="tk-u">+0.72%</span></span>
+        <span class="tk-item"><span class="tk-n">GOLD</span><span class="tk-v">71,240</span><span class="tk-u">+0.31%</span></span>
+        <span class="tk-item"><span class="tk-n">NIFTY</span><span class="tk-v">24,749</span><span class="tk-u">+0.94%</span></span>
+        <span class="tk-item"><span class="tk-n">BANKNIFTY</span><span class="tk-v">53,210</span><span class="tk-u">+1.21%</span></span>
+        <span class="tk-item"><span class="tk-n">VIX</span><span class="tk-v">12.84</span><span class="tk-d">-5.2%</span></span>
+        <span class="tk-item"><span class="tk-n">SENSEX</span><span class="tk-v">81,224</span><span class="tk-u">+0.87%</span></span>
+        <span class="tk-item"><span class="tk-n">IT</span><span class="tk-v">35,841</span><span class="tk-d">-0.38%</span></span>
+        <span class="tk-item"><span class="tk-n">USD/INR</span><span class="tk-v">83.48</span><span class="tk-d">-0.14%</span></span>
+        <span class="tk-item"><span class="tk-n">MIDCAP</span><span class="tk-v">54,103</span><span class="tk-u">+0.72%</span></span>
+        <span class="tk-item"><span class="tk-n">GOLD</span><span class="tk-v">71,240</span><span class="tk-u">+0.31%</span></span>
+      </div>
+    </div>
+    <section class="lp-hero">
+      <div class="card-3d">
+        <img class="lp-logo" src="https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png" onerror="this.style.display='none'">
+        <div class="lp-name">MOMENTUM<br><span class="lp-grd">FRENZY</span></div>
+        <div class="live-pill"><span class="live-d"></span>Live Indian Markets</div>
+        <h1 class="lp-title">
+          <span class="lp-t1">Find Your Next Trade</span>
+          <span class="lp-t2">Before the Market Moves</span>
+        </h1>
+        <p class="lp-sub">Professional momentum scanner for NSE swing traders.<br>Sector rotation · Breakout radar · Daily picks — all free.</p>
+      </div>
+    </section>
+    <div class="mkt-3d">
+      <div class="mk" style="animation-delay:.06s"><div class="mn">NIFTY 50</div><div class="mv">24,749</div><div class="mc-up">+0.94%</div></div>
+      <div class="mk" style="animation-delay:.12s"><div class="mn">BANK NIFTY</div><div class="mv">53,210</div><div class="mc-up">+1.21%</div></div>
+      <div class="mk" style="animation-delay:.18s"><div class="mn">VIX</div><div class="mv">12.84</div><div class="mc-dn">-5.2%</div></div>
+      <div class="mk" style="animation-delay:.24s"><div class="mn">USD/INR</div><div class="mv">83.48</div><div class="mc-dn">-0.14%</div></div>
+      <div class="mk" style="animation-delay:.30s"><div class="mn">NIFTY IT</div><div class="mv">35,841</div><div class="mc-dn">-0.38%</div></div>
+      <div class="mk" style="animation-delay:.36s"><div class="mn">MIDCAP</div><div class="mv">54,103</div><div class="mc-up">+0.72%</div></div>
+    </div>
+    <div class="stats-3d">
+      <div class="st" style="animation-delay:.08s"><div class="sn">500+</div><div class="sl">Stocks Scanned</div></div>
+      <div class="st" style="animation-delay:.16s"><div class="sn">14</div><div class="sl">Sectors Tracked</div></div>
+      <div class="st" style="animation-delay:.24s"><div class="sn">Free</div><div class="sl">Always</div></div>
+      <div class="st" style="animation-delay:.32s"><div class="sn">2x</div><div class="sl">Daily Alerts</div></div>
+    </div>
+    <div style="text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+      color:#1e1e2e;padding:0 20px 16px;position:relative;z-index:10">What you get</div>
+    <div class="feats-3d">
+      <div class="fc" style="animation-delay:.06s"><span class="fi">🎯</span><div class="ft">Today's top picks</div><div class="fd">Entry, target, stop-loss and risk:reward — ready every morning.</div></div>
+      <div class="fc" style="animation-delay:.12s"><span class="fi">📊</span><div class="ft">Sector intelligence</div><div class="fd">4-Quadrant rotation showing which sectors lead, improve or lag.</div></div>
+      <div class="fc" style="animation-delay:.18s"><span class="fi">💥</span><div class="ft">Volume punch radar</div><div class="fd">Catch institutional activity before the crowd notices.</div></div>
+      <div class="fc" style="animation-delay:.24s"><span class="fi">📈</span><div class="ft">Professional charts</div><div class="fd">Candlestick + EMA 20/50/200 for any Nifty 500 stock.</div></div>
+      <div class="fc" style="animation-delay:.30s"><span class="fi">🔍</span><div class="ft">Nifty 500 scanner</div><div class="fd">Momentum Score 0-100. BUY, WATCH, AVOID signals instantly.</div></div>
+      <div class="fc" style="animation-delay:.36s"><span class="fi">📲</span><div class="ft">Telegram alerts</div><div class="fd">Auto morning and evening alerts with top picks every market day.</div></div>
+    </div>
+    <script>
+    (function(){
+      const c=document.getElementById('mf-canvas');
+      if(!c)return;
+      const ctx=c.getContext('2d');
+      let W,H,pts=[],candles=[];
+      function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+      resize();window.addEventListener('resize',resize);
+      for(let i=0;i<80;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.2+.4,col:[[59,130,246],[139,92,246],[0,217,126]][Math.floor(Math.random()*3)],a:Math.random()*.5+.15});
+      for(let i=0;i<16;i++)candles.push({x:50+i*70,h:25+Math.random()*100,w:16,up:Math.random()>.5,wk:10+Math.random()*35,a:.03+Math.random()*.05,sp:.25+Math.random()*.4,t:Math.random()*Math.PI*2});
+      function draw(){
+        ctx.clearRect(0,0,W,H);
+        candles.forEach(cd=>{
+          cd.t+=.007*cd.sp;const y=H*.58+Math.sin(cd.t)*18;
+          const col=cd.up?'0,217,126':'255,69,96';
+          ctx.fillStyle=`rgba(${col},${cd.a})`;ctx.fillRect(cd.x-cd.w/2,y-cd.h/2,cd.w,cd.h);
+          ctx.strokeStyle=`rgba(${col},${cd.a})`;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(cd.x,y-cd.h/2-cd.wk);ctx.lineTo(cd.x,y+cd.h/2+cd.wk);ctx.stroke();
+        });
+        pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.col},${p.a})`;ctx.fill();});
+        for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<90){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle=`rgba(59,130,246,${(1-d/90)*.1})`;ctx.lineWidth=.4;ctx.stroke();}}
+        requestAnimationFrame(draw);
+      }
+      draw();
+      const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)';}},{threshold:.1}));
+      document.querySelectorAll('.mk,.fc,.st').forEach(el=>{el.style.transition='opacity .5s ease,transform .5s ease';obs.observe(el);});
+    })();
+    </script>
+    <div class="cta-3d">
+      <div class="ct">Follow @momentumfrenzy</div>
+      <div class="cs">Daily trading ideas, breakout alerts and market insights on Instagram.</div>
+      <a href="https://instagram.com/momentumfrenzy" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;">Follow Now →</a>
+    </div>
+    <div class="disc">⚠️ <b>Disclaimer:</b> For educational purposes only. Not financial advice. Consult a SEBI-registered advisor before investing.</div>
+    <div style="height:20px;position:relative;z-index:10"></div>
+    <div class="ftr">© 2025 Momentum Frenzy · Indian Markets · <a href="https://instagram.com/momentumfrenzy" target="_blank">@momentumfrenzy</a></div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="hero">
-      <img src="https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png"
-        style="width:160px;height:160px;object-fit:contain;margin-bottom:16px;border-radius:50%;box-shadow:0 0 40px rgba(0,230,118,0.3);" />
-      <div class="badge">⚡ Free · No Login · Indian Markets</div>
-      <h1 class="hero-title">Momentum Frenzy<br>Trading Terminal</h1>
-      <p class="hero-sub">Find today's top swing trading ideas in seconds. Momentum scanner, sector rotation, breakout alerts — built for Indian traders.</p>
-    </div>""", unsafe_allow_html=True)
-
-    c1,c2,c3=st.columns([1,1,1])
+    c1,c2,c3 = st.columns([1.2,1,1.2])
     with c2:
-        if st.button("⚡ Open Terminal — Free",use_container_width=True,type="primary"):
+        if st.button("⚡ Open Terminal — Free", use_container_width=True, type="primary"):
             st.session_state.page="terminal"; st.rerun()
-        st.markdown("<p style='text-align:center;color:#555;font-size:11px;margin-top:6px;'>Used by 500+ traders · Updated every 4 hours</p>",unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="stats-row">
-      <div style="text-align:center"><div class="stat-num">500+</div><div class="stat-label">Stocks Scanned</div></div>
-      <div style="text-align:center"><div class="stat-num">14</div><div class="stat-label">Sectors Tracked</div></div>
-      <div style="text-align:center"><div class="stat-num">Free</div><div class="stat-label">Always</div></div>
-      <div style="text-align:center"><div class="stat-num">2x</div><div class="stat-label">Daily Alerts</div></div>
-    </div>
-    <div class="features">
-      <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-title">Today's Top Picks</div><div class="feat-desc">Ready-to-trade stocks with entry, target, stop-loss and risk:reward — every morning.</div></div>
-      <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Market Mood</div><div class="feat-desc">Instant BULLISH / BEARISH / NEUTRAL reading so you know what to expect before markets open.</div></div>
-      <div class="feat-card"><div class="feat-icon">💥</div><div class="feat-title">Breakout Radar</div><div class="feat-desc">Stocks breaking out today with unusual volume. Catch moves before they happen.</div></div>
-      <div class="feat-card"><div class="feat-icon">🔄</div><div class="feat-title">Sector Rotation</div><div class="feat-desc">Know which sectors are leading, improving or lagging. Trade with the trend.</div></div>
-      <div class="feat-card"><div class="feat-icon">📈</div><div class="feat-title">Professional Charts</div><div class="feat-desc">Candlestick charts with EMA 20/50/200 and volume for any Nifty 500 stock.</div></div>
-      <div class="feat-card"><div class="feat-icon">📲</div><div class="feat-title">Telegram Alerts</div><div class="feat-desc">Auto morning & evening alerts with top picks sent to Telegram every market day.</div></div>
-    </div>
-    <div class="disclaimer">
-      ⚠️ <b>Disclaimer:</b> Momentum Frenzy is for educational purposes only. Nothing here is financial advice.
-      Always do your own research. Consult a SEBI-registered advisor before investing.
-    </div>
-    <div class="footer">
-      © 2025 Momentum Frenzy · Indian Markets · Data: Yahoo Finance ·
-      <a href="https://instagram.com/momentumfrenzy" style="color:#00e676;">@momentumfrenzy</a>
-    </div>""", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center;color:#1e1e2e;font-size:10px;margin-top:6px;'>No signup · 500+ traders · Updated every 4hrs</p>", unsafe_allow_html=True)
     st.stop()
 
 
