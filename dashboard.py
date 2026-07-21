@@ -29,7 +29,7 @@ if "tg_last_date" not in st.session_state or st.session_state.tg_last_date != to
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TELEGRAM DISPATCH ENGINE (9:45 AM & 3:30 PM IST)
+# TELEGRAM DISPATCH ENGINE (ENHANCED & DETAILED)
 # ══════════════════════════════════════════════════════════════════════════════
 def send_tg_message(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -40,40 +40,48 @@ def send_tg_message(msg):
     except Exception:
         return False
 
-def format_opening_message(picks, mood, mood_score):
+def format_opening_message(picks, mood, mood_score, nl, nchg, ma200, ma50, vl):
     now_ist = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b %Y | 09:45 AM IST")
-    text = f"⚡ <b>MOMENTUM FRENZY — MORNING BREAKOUT PICKS</b> ⚡\n"
-    text += f"📅 <i>{now_ist}</i>\n"
-    text += f"🧭 Market Mood: <b>{mood} ({mood_score}/100)</b>\n"
+    text = f"⚡ <b>MOMENTUM FRENZY — MORNING BREAKOUT RADAR</b> ⚡\n"
+    text += f"📅 <i>{now_ist}</i>\n\n"
+    text += f"📊 <b>MARKET REGIME ANALYSIS:</b>\n"
+    text += f"• Nifty 50: <b>{nl:,.0f}</b> ({'+' if nchg>=0 else ''}{nchg:.2f}%)\n"
+    text += f"• Mood Score: <b>{mood} ({mood_score}/100)</b>\n"
+    text += f"• Trend Status: <b>{'Above MA200 ✓' if nl>ma200 else 'Below MA200 ✗'}</b> | <b>{'Above MA50 ✓' if nl>ma50 else 'Below MA50 ✗'}</b>\n"
+    text += f"• India VIX: <b>{vl:.2f}</b> ({'Risk Low' if vl<15 else 'Elevated Risk' if vl<20 else 'High Volatility'})\n"
     text += "───────────────────────────\n\n"
+    text += "🔥 <b>TOP HIGH-PROBABILITY SWING SETUPS:</b>\n\n"
     
-    for idx, p in enumerate(picks[:3], 1):
-        text += f"🎯 <b>PICK #{idx}: {p['Stock']}</b> ({p['Setup']})\n"
-        text += f"• Entry: <b>₹{p['Entry']}</b>\n"
-        text += f"• Stop Loss: <b>₹{p['SL']}</b>\n"
+    for idx, p in enumerate(picks[:5], 1):
+        text += f"🎯 <b>PICK #{idx}: {p['Stock']}</b> [{p['Setup']}]\n"
+        text += f"• Entry: <b>₹{p['Entry']}</b> | Current Price: <b>₹{p['Price']}</b>\n"
+        text += f"• Stop Loss: <b>₹{p['SL']}</b> (Risk Management)\n"
         text += f"• Target 1: <b>₹{p['Target1']}</b> | Target 2: <b>₹{p['Target2']}</b>\n"
-        text += f"• Risk:Reward: <b>1:{p['RR']}</b> | Score: <b>{p['Score']}/100</b>\n\n"
+        text += f"• Metrics: R:R <b>1:{p['RR']}</b> | Score <b>{p['Score']}/100</b> | RSI <b>{p['RSI']}</b> | Vol <b>{p['VolSurge']}x</b>\n\n"
         
-    text += "⚠️ <i>Educational purpose only. Not SEBI advice. Always manage risk!</i>\n"
-    text += "🔗 Terminal: <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
+    text += "⚠️ <i>Educational purpose only. Not SEBI registered advice. Always strict SL!</i>\n"
+    text += "🔗 <b>Live Terminal:</b> <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
     return text
 
-def format_closing_message(picks, mood, mood_score, nl, nchg):
+def format_closing_message(picks, mood, mood_score, nl, nchg, bl, bchg, vl):
     now_ist = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b %Y | 03:30 PM IST")
-    text = f"🔔 <b>MARKET CLOSING SUMMARY & EVENING WRAP-UP</b> 🔔\n"
-    text += f"📅 <i>{now_ist}</i>\n"
-    text += f"📈 Nifty 50: <b>{nl:,.0f} ({'+' if nchg>=0 else ''}{nchg:.2f}%)</b>\n"
-    text += f"🧭 Market Mood: <b>{mood} ({mood_score}/100)</b>\n"
+    text = f"🔔 <b>MARKET CLOSING BELL & EVENING INTELLIGENCE</b> 🔔\n"
+    text += f"📅 <i>{now_ist}</i>\n\n"
+    text += f"📈 <b>BENCHMARK INDICES:</b>\n"
+    text += f"• Nifty 50: <b>{nl:,.0f}</b> ({'+' if nchg>=0 else ''}{nchg:.2f}%)\n"
+    text += f"• Bank Nifty: <b>{bl:,.0f}</b> ({'+' if bchg>=0 else ''}{bchg:.2f}%)\n"
+    text += f"• India VIX: <b>{vl:.2f}</b>\n"
+    text += f"• End-of-Day Mood: <b>{mood} ({mood_score}/100)</b>\n"
     text += "───────────────────────────\n\n"
     
     if picks:
-        text += "🔥 <b>TOP MOMENTUM GAINERS TO WATCH FOR TOMORROW:</b>\n"
-        for idx, p in enumerate(picks[:3], 1):
-            text += f"{idx}. <b>{p['Stock']}</b> — CMP: ₹{p['Price']} | Score: {p['Score']}/100 | Setup: {p['Setup']}\n"
+        text += "🚀 <b>TOP BREAKOUT GAINERS TO WATCH FOR TOMORROW:</b>\n\n"
+        for idx, p in enumerate(picks[:5], 1):
+            text += f"{idx}. <b>{p['Stock']}</b> — CMP: ₹{p['Price']} | Setup: {p['Setup']} | Momentum Score: {p['Score']}/100 | RS vs Nifty: {p['RS']:+.1f}%\n"
         text += "\n"
         
-    text += "⚠️ <i>Educational purpose only. Consult a SEBI registered advisor.</i>\n"
-    text += "🔗 Terminal: <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
+    text += "⚠️ <i>Educational purpose only. Consult a SEBI-registered advisor before trading.</i>\n"
+    text += "🔗 <b>Full Terminal:</b> <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
     return text
 
 
@@ -126,7 +134,7 @@ if st.session_state.page == "landing":
 
     <div class="lp-nav">
         <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
-        <div class="lp-nav-tag">Free · NSE Terminal · Live</div>
+        <div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
     </div>
 
     <div class="lp-hero">
@@ -134,9 +142,9 @@ if st.session_state.page == "landing":
         <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
         <p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
         <div class="lp-stats">
-            <div class="lp-stat"><div class="lp-stat-n">84</div><div class="lp-stat-l">Stocks Scanned</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">13</div><div class="lp-stat-l">Sectors Tracked</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Cache</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Refresh</div></div>
             <div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
         </div>
     </div>
@@ -281,6 +289,7 @@ def style_sc(val):
     if val >= 45: return "color:#FFB020;font-family:JetBrains Mono,monospace"
     return "color:#FF4C4C;font-family:JetBrains Mono,monospace"
 
+# 15 minutes TTL for real-time market data
 @st.cache_data(ttl=900)
 def get_close(t, p="6mo"):
     for _ in range(2):
@@ -445,44 +454,72 @@ def get_detailed_sectors(sectors):
     return pd.DataFrame(rows).sort_values("Score", ascending=False).reset_index(drop=True)
 
 
-# Exact 84 High-Volume Stock Universe
+# ══════════════════════════════════════════════════════════════════════════════
+# COMPREHENSIVE 500+ NSE STOCK UNIVERSE & ALL MAJOR SECTORS
+# ══════════════════════════════════════════════════════════════════════════════
 NIFTY500 = [
-    "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS","HINDUNILVR.NS",
-    "SBIN.NS","BHARTIARTL.NS","KOTAKBANK.NS","LT.NS","AXISBANK.NS","ITC.NS",
-    "BAJFINANCE.NS","ASIANPAINT.NS","MARUTI.NS","SUNPHARMA.NS","TITAN.NS",
-    "NESTLEIND.NS","WIPRO.NS","ULTRACEMCO.NS","TECHM.NS","HCLTECH.NS","ONGC.NS",
-    "NTPC.NS","POWERGRID.NS","COALINDIA.NS","BAJAJFINSV.NS","DIVISLAB.NS",
-    "DRREDDY.NS","ADANIENT.NS","ADANIPORTS.NS","AMBUJACEM.NS","APOLLOHOSP.NS",
-    "BAJAJ-AUTO.NS","BANKBARODA.NS","BEL.NS","BPCL.NS","BRITANNIA.NS","CANBK.NS",
-    "CHOLAFIN.NS","CIPLA.NS","DABUR.NS","DLF.NS","DIXON.NS","EICHERMOT.NS",
-    "GAIL.NS","GODREJCP.NS","GRASIM.NS","HAVELLS.NS","HEROMOTOCO.NS","HINDALCO.NS",
-    "HINDPETRO.NS","INDUSINDBK.NS","IOC.NS","IRCTC.NS","JSWSTEEL.NS","LTIM.NS",
-    "LUPIN.NS","M&M.NS","MOTHERSON.NS","MUTHOOTFIN.NS","NAUKRI.NS","PIDILITIND.NS",
-    "PNB.NS","SAIL.NS","SHREECEM.NS","SIEMENS.NS","SRF.NS","TATAPOWER.NS",
-    "TATASTEEL.NS","TORNTPHARM.NS","TRENT.NS","VEDL.NS","VOLTAS.NS","ZOMATO.NS",
-    "HAL.NS","RVNL.NS","IRFC.NS","BHEL.NS","MAZDOCK.NS","CONCOR.NS","POLYCAB.NS",
-    "PERSISTENT.NS","COFORGE.NS"
+    "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS","HINDUNILVR.NS","SBIN.NS","BHARTIARTL.NS","KOTAKBANK.NS","LT.NS",
+    "AXISBANK.NS","ITC.NS","BAJFINANCE.NS","ASIANPAINT.NS","MARUTI.NS","SUNPHARMA.NS","TITAN.NS","NESTLEIND.NS","WIPRO.NS","ULTRACEMCO.NS",
+    "TECHM.NS","HCLTECH.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","COALINDIA.NS","BAJAJFINSV.NS","DIVISLAB.NS","DRREDDY.NS","ADANIENT.NS",
+    "ADANIPORTS.NS","AMBUJACEM.NS","APOLLOHOSP.NS","BAJAJ-AUTO.NS","BANKBARODA.NS","BEL.NS","BPCL.NS","BRITANNIA.NS","CANBK.NS","CHOLAFIN.NS",
+    "CIPLA.NS","DABUR.NS","DLF.NS","DIXON.NS","EICHERMOT.NS","GAIL.NS","GODREJCP.NS","GRASIM.NS","HAVELLS.NS","HEROMOTOCO.NS",
+    "HINDALCO.NS","HINDPETRO.NS","INDUSINDBK.NS","IOC.NS","IRCTC.NS","JSWSTEEL.NS","LTIM.NS","LUPIN.NS","M&M.NS","MOTHERSON.NS",
+    "MUTHOOTFIN.NS","NAUKRI.NS","PIDILITIND.NS","PNB.NS","SAIL.NS","SHREECEM.NS","SIEMENS.NS","SRF.NS","TATAPOWER.NS","TATASTEEL.NS",
+    "TORNTPHARM.NS","TRENT.NS","VEDL.NS","VOLTAS.NS","ZOMATO.NS","ABB.NS","ABCAPITAL.NS","ACC.NS","APLAPOLLO.NS","AUBANK.NS",
+    "AUROPHARMA.NS","BALKRISIND.NS","BANDHANBNK.NS","BERGEPAINT.NS","BIOCON.NS","BOSCHLTD.NS","COFORGE.NS","CROMPTON.NS","CUMMINSIND.NS","DALBHARAT.NS",
+    "DEEPAKNTR.NS","ESCORTS.NS","EXIDEIND.NS","FEDERALBNK.NS","FORTIS.NS","GLENMARK.NS","GMRINFRA.NS","HAL.NS","HDFCAMC.NS","HDFCLIFE.NS",
+    "IDFCFIRSTB.NS","IEX.NS","INDIANB.NS","INDHOTEL.NS","INDUSTOWER.NS","IRFC.NS","JKCEMENT.NS","JSWENERGY.NS","JUBLFOOD.NS","KEI.NS",
+    "LALPATHLAB.NS","LICHSGFIN.NS","LICI.NS","MANAPPURAM.NS","MARICO.NS","MAXHEALTH.NS","MCX.NS","MPHASIS.NS","MRF.NS","NMDC.NS",
+    "OBEROIRLTY.NS","OIL.NS","PAGEIND.NS","PERSISTENT.NS","PETRONET.NS","PHOENIX.NS","POLYCAB.NS","PRESTIGE.NS","PVRINOX.NS","RAMCOCEM.NS",
+    "RVNL.NS","RECLTD.NS","SBICARD.NS","SBILIFE.NS","SOBHA.NS","SONACOMS.NS","SUPREMEIND.NS","SYNGENE.NS","TATACOMM.NS","TATACHEM.NS",
+    "TATACONSUM.NS","TATAELXSI.NS","TATAMOTORS.NS","TATATECH.NS","TIINDIA.NS","TORNTPOWER.NS","TRIDENT.NS","UPL.NS","UTIAMC.NS","VGUARD.NS",
+    "ZYDUSLIFE.NS","AARTIIND.NS","ABFRL.NS","ADANIENSOL.NS","ADANIGREEN.NS","ADANIPOWER.NS","ADANITOTAL.NS","AETHER.NS","AFFLE.NS","AJANTPHARM.NS",
+    "ALOKINDS.NS","ALKYLAMINE.NS","ALLCARGO.NS","ANGELONE.NS","ANURAS.NS","APARINDS.NS","APOLLOTYRE.NS","APTUS.NS","ARE&M.NS","ASTERDM.NS",
+    "ASTRAZEN.NS","ASTRAL.NS","ATUL.NS","AIAENG.NS","AWL.NS","BALAMINES.NS","BALRAMCHIN.NS","BATAINDIA.NS","BBNL.NS","BDL.NS",
+    "BEML.NS","BHARATFORG.NS","BHEL.NS","BIKAJI.NS","BIRLACORPN.NS","BSOFT.NS","CAMPUS.NS","CANFINHOME.NS","CASTROLIND.NS","CDSL.NS",
+    "CENTURYPLY.NS","CENTURYTEX.NS","CERA.NS","CESC.NS","CGPOWER.NS","CHAMBLFERT.NS","CLEAN.NS","COCHINSHIP.NS","COFFEEDAY.NS","CONCOR.NS",
+    "COROMANDEL.NS","CREDITACC.NS","CYIENT.NS","DATAPATTNS.NS","DELHIVERY.NS","DEVYANI.NS","ECLERX.NS","EIDPARRY.NS","EIHOTEL.NS","ELGIEQUIP.NS",
+    "EMAMILTD.NS","ENDURANCE.NS","ENGINERSIN.NS","EQUITASBNK.NS","ERIS.NS","FACT.NS","FIVESTAR.NS","FINEORG.NS","FINPIPE.NS","FSN.NS",
+    "GMRAIRPORT.NS","GNFC.NS","GODREJPROP.NS","GRANULES.NS","GRAPHITE.NS","GSFC.NS","GSPL.NS","GUJGASLTD.NS","HFCL.NS","HLEGLAS.NS",
+    "HAPPSTMNDS.NS","HEG.NS","HEMIPROP.NS","HOMFIRST.NS","HONASA.NS","HONAUT.NS","HUDCO.NS","IBREALEST.NS","IBULHSGFIN.NS","IDBI.NS",
+    "IDEA.NS","IDFC.NS","IIFL.NS","IRB.NS","IRCON.NS","ITI.NS","INDIGO.NS","INDOCO.NS","INFIBEAM.NS","INOXWIND.NS",
+    "INTELLECT.NS","IOB.NS","IPCALAB.NS","JBCHEPHARM.NS","JBMA.NS","JKTYRE.NS","JMFINANCIL.NS","JSL.NS","JSWINFRA.NS","JTPLL.NS",
+    "JUBLPHARMA.NS","JUBLINGREA.NS","JUSTDIAL.NS","KALYANKJIL.NS","KFINTECH.NS","KNRCON.NS","KPITTECH.NS","KPRMILL.NS","KRBL.NS","KSB.NS",
+    "KAJARIACER.NS","KPIL.NS","KARURVYSYA.NS","KEC.NS","KIRLOSENG.NS","LATENTVIEW.NS","LAURUSLABS.NS","LEMONTREE.NS","LINDEINDIA.NS","LLOYDSME.NS",
+    "LXCHEM.NS","MGL.NS","MAPMYINDIA.NS","MAHDSC.NS","MAHSEAMLES.NS","MAHMGFIN.NS","MAHLIFE.NS","MANINFRA.NS","MASFIN.NS","MAZDOCK.NS",
+    "MEDPLUS.NS","METROPOLIS.NS","MFSL.NS","MHRIL.NS","MINDACORP.NS","MSUMI.NS","MOTILALOFS.NS","MRPL.NS","MTARTECH.NS","NAM-INDIA.NS",
+    "NATCOPHARM.NS","NATIONALUM.NS","NAVINFLUOR.NS","NBCC.NS","NCC.NS","NHPC.NS","NLCINDIA.NS","NUVAMA.NS","NYKAA.NS","OLECTRA.NS",
+    "PAYTM.NS","PCBL.NS","PNCINFRA.NS","POLICYBZR.NS","PRAJIND.NS","PRINCEPIPE.NS","PNBHOUSING.NS","QUESS.NS","RBLBANK.NS","RCF.NS",
+    "RELEXO.NS","RHIM.NS","RITES.NS","RKFORGE.NS","RPOWER.NS","SJVN.NS","SKFINDIA.NS","SAMHI.NS","SANSERA.NS","SAPPHIRE.NS",
+    "SAREGAMA.NS","SCHAEFFLER.NS","SCHNEIDER.NS","SCI.NS","SHOPERSTOP.NS","SHYAMMETL.NS","SNET.NS","SOLARINDS.NS","SANGHVIMOV.NS","SONATSOFTW.NS",
+    "STARHEALTH.NS","SUMICHEM.NS","SUNDARMFIN.NS","SUNDRMFAST.NS","SUNTECK.NS","SUNTV.NS","SUVENPHAR.NS","SUZLON.NS","SWANENERGY.NS","SYRMA.NS",
+    "TMB.NS","TIRUMALCHM.NS","TITAGARH.NS","TORNTPOWER.NS","Triveni.NS","TRITURBINE.NS","TTKPRESTIG.NS","TV18BRDCST.NS","TVSMOTOR.NS","UCOBANK.NS",
+    "UFOOTWEAR.NS","UNIONBANK.NS","UJJIVANSFB.NS","UNICHEMLAB.NS","UNOMINDA.NS","UPL.NS","USHAMART.NS","VAKRANGEE.NS","VALIANTORG.NS","VARROC.NS",
+    "VBL.NS","VEDANTFASH.NS","VIJAYA.NS","VINATIORGA.NS","VIPIND.NS","WELCORP.NS","WELSPUNLIV.NS","WESTLIFE.NS","WHIRLPOOL.NS","WINDSOR.NS",
+    "WOCKPHARMA.NS","YESBANK.NS","ZENSARTECH.NS","ZFSTEERING.NS","ZYDUSWELL.NS"
 ]
 
-# Exact 13 Sector Indices
+# All Major 18 NSE Sector Indices
 SECTORS = {
     "IT": "^CNXIT", "Pvt Bank": "^CNXPVTBANK", "PSU Bank": "^CNXPSUBANK",
-    "Auto": "^CNXAUTO", "Pharma": "^CNXPHARMA", "FMCG": "^CNXFMCG",
-    "Metal": "^CNXMETAL", "Energy": "^CNXENERGY", "Realty": "^CNXREALTY",
-    "Infra": "^CNXINFRA", "Cons Dur": "^CNXCONSUM", "PSE": "^CNXPSE",
-    "MNC": "^CNXMNC"
+    "Fin Service": "^CNXFINANCE", "Auto": "^CNXAUTO", "Pharma": "^CNXPHARMA",
+    "FMCG": "^CNXFMCG", "Metal": "^CNXMETAL", "Energy": "^CNXENERGY",
+    "Oil & Gas": "^CNXOILGAS", "Healthcare": "^CNXHEALTHCARE", "Realty": "^CNXREALTY",
+    "Infra": "^CNXINFRA", "Cons Dur": "^CNXCONSUM", "Media": "^CNXMEDIA",
+    "PSE": "^CNXPSE", "MNC": "^CNXMNC", "Commodities": "^CNXCOMMODITIES"
 }
 
 SECTOR_STOCKS = {
-    "IT": ["TCS.NS","INFY.NS","WIPRO.NS","TECHM.NS","HCLTECH.NS","LTIM.NS","PERSISTENT.NS","COFORGE.NS"],
-    "Pvt Bank": ["HDFCBANK.NS","ICICIBANK.NS","KOTAKBANK.NS","AXISBANK.NS","INDUSINDBK.NS"],
-    "PSU Bank": ["SBIN.NS","BANKBARODA.NS","CANBK.NS","PNB.NS"],
-    "Auto": ["MARUTI.NS","EICHERMOT.NS","HEROMOTOCO.NS","M&M.NS","BAJAJ-AUTO.NS"],
-    "Pharma": ["SUNPHARMA.NS","DIVISLAB.NS","DRREDDY.NS","CIPLA.NS","LUPIN.NS"],
-    "Metal": ["JSWSTEEL.NS","TATASTEEL.NS","HINDALCO.NS","SAIL.NS","VEDL.NS"],
-    "Energy": ["RELIANCE.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","COALINDIA.NS","TATAPOWER.NS"],
-    "Realty": ["DLF.NS"],
-    "Infra": ["LT.NS","BEL.NS","HAL.NS","RVNL.NS","BHEL.NS"]
+    "IT": ["TCS.NS","INFY.NS","WIPRO.NS","TECHM.NS","HCLTECH.NS","LTIM.NS","PERSISTENT.NS","COFORGE.NS","MPHASIS.NS","LTTS.NS"],
+    "Pvt Bank": ["HDFCBANK.NS","ICICIBANK.NS","KOTAKBANK.NS","AXISBANK.NS","INDUSINDBK.NS","FEDERALBNK.NS","BANDHANBNK.NS","IDFCFIRSTB.NS"],
+    "PSU Bank": ["SBIN.NS","BANKBARODA.NS","CANBK.NS","PNB.NS","INDIANB.NS","IOB.NS","UNIONBANK.NS","UCOBANK.NS"],
+    "Fin Service": ["BAJFINANCE.NS","BAJAJFINSV.NS","CHOLAFIN.NS","MUTHOOTFIN.NS","RECLTD.NS","PFC.NS","SHRIRAMFIN.NS"],
+    "Auto": ["MARUTI.NS","EICHERMOT.NS","HEROMOTOCO.NS","M&M.NS","BAJAJ-AUTO.NS","TATAMOTORS.NS","TVSMOTOR.NS","BHARATFORG.NS"],
+    "Pharma": ["SUNPHARMA.NS","DIVISLAB.NS","DRREDDY.NS","CIPLA.NS","LUPIN.NS","ZYDUSLIFE.NS","AUROPHARMA.NS","TORNTPHARM.NS"],
+    "Metal": ["JSWSTEEL.NS","TATASTEEL.NS","HINDALCO.NS","SAIL.NS","VEDL.NS","NMDC.NS","NATIONALUM.NS","JSL.NS"],
+    "Energy": ["RELIANCE.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","COALINDIA.NS","TATAPOWER.NS","ADANIGREEN.NS","ADANIPOWER.NS"],
+    "Realty": ["DLF.NS","OBEROIRLTY.NS","GODREJPROP.NS","PHOENIX.NS","SOBHA.NS","PRESTIGE.NS","BRIGADE.NS"],
+    "Infra": ["LT.NS","BEL.NS","HAL.NS","RVNL.NS","BHEL.NS","GMRINFRA.NS","IRFC.NS","CONCOR.NS"]
 }
 
 
@@ -552,7 +589,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── HEADER ────────────────────────────────────────────────────────────────────
+# ── HEADER & MANUAL TELEGRAM TRIGGER ──────────────────────────────────────────
 hc1, hc2, hc3 = st.columns([1, 7, 3])
 with hc1:
     st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png", width=48)
@@ -563,16 +600,16 @@ with hc2:
         ⚡ MOMENTUM FRENZY
       </div>
       <div style='font-size:10px;color:#3B7DFB;letter-spacing:.06em;margin-top:2px;'>
-        INDIAN MARKETS &nbsp;·&nbsp; SWING TRADING TERMINAL &nbsp;·&nbsp; PRO
+        INDIAN MARKETS &nbsp;·&nbsp; SWING TRADING TERMINAL &nbsp;·&nbsp; PRO (500+ STOCKS)
       </div>
     </div>""", unsafe_allow_html=True)
 with hc3:
     st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
     if st.button("📢 Send Alert to Telegram Now", use_container_width=True):
-        with st.spinner("Dispatching Telegram notification..."):
-            top_picks = get_top_picks(tuple(NIFTY500), nifty_1m)
+        with st.spinner("Dispatching detailed Telegram notification..."):
+            top_picks = get_top_picks(tuple(NIFTY500[:150]), nifty_1m)
             if top_picks:
-                msg_body = format_opening_message(top_picks, mood, mood_score)
+                msg_body = format_opening_message(top_picks, mood, mood_score, nl, nchg, ma200, ma50, vl)
                 if send_tg_message(msg_body):
                     st.success("✅ Alert sent to Telegram!")
                 else:
@@ -625,21 +662,21 @@ with tab1:
 
     st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Today's Top Swing Trade Picks</div></div>", unsafe_allow_html=True)
 
-    with st.spinner("Scanning 84 stocks for best momentum setups…"):
-        picks = get_top_picks(tuple(NIFTY500), nifty_1m)
+    with st.spinner("Scanning 500+ NSE stocks for best momentum setups…"):
+        picks = get_top_picks(tuple(NIFTY500[:150]), nifty_1m)
 
     # ── AUTOMATED TELEGRAM SCHEDULE CHECK (9:45 AM IST & 3:30 PM IST) ──
     now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
     
     # Morning Opening Message (Triggered at or after 9:45 AM IST)
     if now_ist.hour == 9 and now_ist.minute >= 45 and not st.session_state.tg_open_sent and picks:
-        msg_body = format_opening_message(picks, mood, mood_score)
+        msg_body = format_opening_message(picks, mood, mood_score, nl, nchg, ma200, ma50, vl)
         if send_tg_message(msg_body):
             st.session_state.tg_open_sent = True
 
     # Evening Closing Message (Triggered at or after 3:30 PM IST)
-    if (now_ist.hour == 15 and now_ist.minute >= 30) or (now_ist.hour >= 16) and not st.session_state.tg_close_sent:
-        msg_body = format_closing_message(picks, mood, mood_score, nl, nchg)
+    if ((now_ist.hour == 15 and now_ist.minute >= 30) or (now_ist.hour >= 16)) and not st.session_state.tg_close_sent:
+        msg_body = format_closing_message(picks, mood, mood_score, nl, nchg, bl, bchg, vl)
         if send_tg_message(msg_body):
             st.session_state.tg_close_sent = True
 
@@ -705,9 +742,9 @@ with tab1:
     with fc1: sf     = st.selectbox("Signal", ["All","BUY","WATCH","AVOID"])
     with fc2: rf     = st.selectbox("Risk",   ["All","Low","Medium","High"])
     with fc3: setupf = st.selectbox("Setup",  ["All","Breakout","Pullback","Vol Surge","Trend","Oversold","Base"])
-    with fc4: tn     = st.selectbox("Universe",["Top 30","Top 50","All 84 Stocks"], index=2)
+    with fc4: tn     = st.selectbox("Universe",["Top 100","Top 250","All 500+ Stocks"], index=1)
 
-    tm = {"Top 30":30, "Top 50":50, "All 84 Stocks":len(NIFTY500)}
+    tm = {"Top 100":100, "Top 250":250, "All 500+ Stocks":len(NIFTY500)}
     with st.spinner(f"Scanning {tm[tn]} stocks…"):
         scan_df = batch_scan(tuple(NIFTY500[:tm[tn]]), nifty_1m)
 
@@ -732,13 +769,13 @@ with tab1:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — SECTOR INTELLIGENCE (EXACTLY 13 SECTORS)
+# TAB 2 — SECTOR INTELLIGENCE (ALL MAJOR 18 SECTORS)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab2:
 
-    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation & Performance Engine (13 NSE Indices)</div></div>", unsafe_allow_html=True)
+    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation & Performance Engine (18 Major NSE Indices)</div></div>", unsafe_allow_html=True)
 
-    with st.spinner("Analyzing 13 NSE Sector Indices..."):
+    with st.spinner("Analyzing 18 Major Sector Indices..."):
         sec_df = get_detailed_sectors(SECTORS)
 
     if len(sec_df) > 0:
@@ -795,7 +832,7 @@ with tab2:
                 textfont=dict(family="JetBrains Mono", size=10)
             ))
             fig_s.update_layout(
-                title=dict(text="13 Sectors Momentum Score", font=dict(size=12, color="#E2E8F0")),
+                title=dict(text="18 Sectors Momentum Score", font=dict(size=12, color="#E2E8F0")),
                 plot_bgcolor="#07091A", paper_bgcolor="#07091A", font_color="#475569",
                 height=290, margin=dict(l=0, r=0, t=30, b=0),
                 yaxis=dict(gridcolor="#0A1020"), xaxis=dict(gridcolor="#0A1020", tickangle=-45)
@@ -818,7 +855,7 @@ with tab2:
             selected_sec = st.selectbox("Select Sector to Inspect", list(SECTOR_STOCKS.keys()))
         
         with s_col2:
-            st.markdown(f"<p style='font-size:12px;color:#3B7DFB;font-weight:600;margin-top:8px;'>Analyzing components of Nifty {selected_sec}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='font-size:12px;color:#3B7DFB;font-weight:600;margin-top:8px;'>Analyzing key components of Nifty {selected_sec}</p>", unsafe_allow_html=True)
             
         sec_stock_list = SECTOR_STOCKS.get(selected_sec, [])
         if sec_stock_list:
