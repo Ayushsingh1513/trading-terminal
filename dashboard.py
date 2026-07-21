@@ -104,7 +104,7 @@ if st.session_state.page == "landing":
 <style>
 * { font-family: 'Inter', -apple-system, sans-serif !important; }
 .mono { font-family: 'JetBrains Mono', monospace !important; }
-.block-container { padding:0; max-width:100%; position: relative; overflow: hidden; }
+.block-container { padding:0; max-width:100%; position: relative; }
 header[data-testid="stHeader"], #MainMenu, footer { display:none; }
 .bg-orb { position: absolute; border-radius: 50%; filter: blur(90px); z-index: 0; opacity: 0.4; animation: float 12s infinite alternate ease-in-out; }
 .orb-1 { width: 400px; height: 400px; background: #3B7DFB; top: -10%; left: 10%; }
