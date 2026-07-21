@@ -29,11 +29,15 @@ if st.session_state.page == "landing":
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-    html,body,.stApp,div,p,span {
+    /* FIX: Fonts apply to everything, but background applies ONLY to the root app */
+    * {
+        font-family: 'Inter', -apple-system, sans-serif !important;
+    }
+    html, body, .stApp {
         background:#07091A;
         color:#CBD5E1;
-        font-family:'Inter', -apple-system, sans-serif !important;
     }
+    
     .mono { font-family: 'JetBrains Mono', monospace !important; }
     .block-container{padding:0;max-width:100%;}
     header[data-testid="stHeader"]{display:none;}
@@ -233,6 +237,7 @@ st.markdown("""
     font-family: 'JetBrains Mono', monospace !important;
 }
 
+/* FIX: Ensure ONLY the root containers get the dark background to prevent overlapping blocks */
 html, body, .stApp { background:#07091A; color:#CBD5E1; }
 .block-container { padding: 0 0 4rem 0; max-width: 100%; }
 header[data-testid="stHeader"], #MainMenu, footer { display: none; }
