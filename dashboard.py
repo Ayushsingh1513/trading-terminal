@@ -17,14 +17,19 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# --- SESSION STATE INITIALIZATION ---
 if "page" not in st.session_state:
     st.session_state.page = "landing"
 
-if "tg_sent_today" not in st.session_state:
-    st.session_state.tg_sent_today = False
+today_str = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
+if "tg_last_date" not in st.session_state or st.session_state.tg_last_date != today_str:
+    st.session_state.tg_last_date = today_str
+    st.session_state.tg_open_sent = False
+    st.session_state.tg_close_sent = False
+
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TELEGRAM NOTIFICATION ENGINE & TIMING FIX
+# TELEGRAM DISPATCH ENGINE (9:45 AM & 3:30 PM IST)
 # ══════════════════════════════════════════════════════════════════════════════
 def send_tg_message(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -35,9 +40,9 @@ def send_tg_message(msg):
     except Exception:
         return False
 
-def format_picks_for_telegram(picks, mood, mood_score):
-    now_ist = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b %Y | %I:%M %p IST")
-    text = f"⚡ <b>MOMENTUM FRENZY — DAILY SWING PICKS</b> ⚡\n"
+def format_opening_message(picks, mood, mood_score):
+    now_ist = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b %Y | 09:45 AM IST")
+    text = f"⚡ <b>MOMENTUM FRENZY — MORNING BREAKOUT PICKS</b> ⚡\n"
     text += f"📅 <i>{now_ist}</i>\n"
     text += f"🧭 Market Mood: <b>{mood} ({mood_score}/100)</b>\n"
     text += "───────────────────────────\n\n"
@@ -49,8 +54,26 @@ def format_picks_for_telegram(picks, mood, mood_score):
         text += f"• Target 1: <b>₹{p['Target1']}</b> | Target 2: <b>₹{p['Target2']}</b>\n"
         text += f"• Risk:Reward: <b>1:{p['RR']}</b> | Score: <b>{p['Score']}/100</b>\n\n"
         
-    text += "⚠️ <i>Educational purpose only. Not SEBI advice. Always manage your risk!</i>\n"
-    text += "🔗 Visit Terminal: <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
+    text += "⚠️ <i>Educational purpose only. Not SEBI advice. Always manage risk!</i>\n"
+    text += "🔗 Terminal: <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
+    return text
+
+def format_closing_message(picks, mood, mood_score, nl, nchg):
+    now_ist = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b %Y | 03:30 PM IST")
+    text = f"🔔 <b>MARKET CLOSING SUMMARY & EVENING WRAP-UP</b> 🔔\n"
+    text += f"📅 <i>{now_ist}</i>\n"
+    text += f"📈 Nifty 50: <b>{nl:,.0f} ({'+' if nchg>=0 else ''}{nchg:.2f}%)</b>\n"
+    text += f"🧭 Market Mood: <b>{mood} ({mood_score}/100)</b>\n"
+    text += "───────────────────────────\n\n"
+    
+    if picks:
+        text += "🔥 <b>TOP MOMENTUM GAINERS TO WATCH FOR TOMORROW:</b>\n"
+        for idx, p in enumerate(picks[:3], 1):
+            text += f"{idx}. <b>{p['Stock']}</b> — CMP: ₹{p['Price']} | Score: {p['Score']}/100 | Setup: {p['Setup']}\n"
+        text += "\n"
+        
+    text += "⚠️ <i>Educational purpose only. Consult a SEBI registered advisor.</i>\n"
+    text += "🔗 Terminal: <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
     return text
 
 
@@ -70,22 +93,6 @@ if st.session_state.page == "landing":
     .block-container { padding:0; max-width:100%; }
     header[data-testid="stHeader"], #MainMenu, footer { display:none; }
 
-    /* Animated Ambient Background Glow */
-    .stApp::before {
-        content: '';
-        position: fixed;
-        top: 0; left: 0; width: 100vw; height: 100vh;
-        background: radial-gradient(circle at 20% 20%, rgba(59, 125, 251, 0.08) 0%, transparent 40%),
-                    radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 40%);
-        pointer-events: none;
-        z-index: 0;
-        animation: ambientPulse 10s ease-in-out infinite alternate;
-    }
-    @keyframes ambientPulse {
-        0% { opacity: 0.6; transform: scale(1); }
-        100% { opacity: 1; transform: scale(1.05); }
-    }
-
     .lp-nav {
         display:flex; align-items:center; justify-content:space-between;
         padding:16px 40px; border-bottom:1px solid #0F1A35;
@@ -97,38 +104,20 @@ if st.session_state.page == "landing":
         font-family:'JetBrains Mono',monospace !important; font-size:15px; font-weight:700;
         color:#F1F5F9; letter-spacing:-.01em;
     }
-    .lp-logo-dot {
-        width:8px; height:8px; border-radius:50%;
-        background:#3B7DFB; box-shadow:0 0 10px #3B7DFB;
-    }
-    .lp-nav-tag {
-        font-size:11px; color:#64748B;
-        border:1px solid #0F1A35; border-radius:4px;
-        padding:4px 10px; letter-spacing:.06em; text-transform:uppercase; font-weight:600;
-    }
-    .lp-hero {
-        min-height:80vh; display:flex; flex-direction:column;
-        align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px;
-    }
+    .lp-logo-dot { width:8px; height:8px; border-radius:50%; background:#3B7DFB; box-shadow:0 0 10px #3B7DFB; }
+    .lp-nav-tag { font-size:11px; color:#64748B; border:1px solid #0F1A35; border-radius:4px; padding:4px 10px; text-transform:uppercase; font-weight:600; }
+    .lp-hero { min-height:80vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px; }
     .lp-eyebrow {
-        display:inline-flex; align-items:center; gap:6px;
-        background:#0D1634; border:1px solid #1E3057; border-radius:4px; padding:6px 14px;
-        font-family:'JetBrains Mono',monospace !important; font-size:11px; color:#3B7DFB; font-weight:600;
-        letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px;
+        display:inline-flex; align-items:center; gap:6px; background:#0D1634; border:1px solid #1E3057; border-radius:4px; padding:6px 14px;
+        font-family:'JetBrains Mono',monospace !important; font-size:11px; color:#3B7DFB; font-weight:600; letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px;
     }
     .lp-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#3B7DFB; animation:blink 1.4s infinite; }
     @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
-    .lp-h1 {
-        font-size:clamp(42px,6.5vw,80px); font-weight:800; line-height:1.05; letter-spacing:-.03em;
-        color:#F1F5F9; margin:0 0 10px 0; max-width:840px;
-    }
+    .lp-h1 { font-size:clamp(42px,6.5vw,80px); font-weight:800; line-height:1.05; letter-spacing:-.03em; color:#F1F5F9; margin:0 0 10px 0; max-width:840px; }
     .lp-h1 span { color:transparent; background:linear-gradient(135deg,#3B7DFB,#06B6D4); -webkit-background-clip:text; background-clip:text; }
     .lp-sub { font-size:clamp(15px,1.8vw,19px); color:#64748B; max-width:540px; line-height:1.75; margin:16px auto 40px; }
     
-    .lp-stats {
-        display:flex; border:1px solid #0F1A35; border-radius:10px; background:#0D1120; overflow:hidden;
-        max-width:680px; margin:40px auto 0;
-    }
+    .lp-stats { display:flex; border:1px solid #0F1A35; border-radius:10px; background:#0D1120; overflow:hidden; max-width:680px; margin:40px auto 0; }
     .lp-stat { flex:1; padding:20px 24px; text-align:center; border-right:1px solid #0F1A35; }
     .lp-stat:last-child { border-right:none; }
     .lp-stat-n { font-family:'JetBrains Mono',monospace !important; font-size:26px; font-weight:700; color:#3B7DFB; }
@@ -137,18 +126,18 @@ if st.session_state.page == "landing":
 
     <div class="lp-nav">
         <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
-        <div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
+        <div class="lp-nav-tag">Free · NSE Terminal · Live</div>
     </div>
 
     <div class="lp-hero">
         <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
         <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
-        <p class="lp-sub">Institutional momentum scanner for Nifty 500. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
+        <p class="lp-sub">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
         
         <div class="lp-stats">
-            <div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">Realtime</div><div class="lp-stat-l">Market Engine</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">84</div><div class="lp-stat-l">Stocks Scanned</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">13</div><div class="lp-stat-l">Sectors Tracked</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Cache</div></div>
             <div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
         </div>
     </div>
@@ -173,7 +162,6 @@ st.markdown("""
 <style>
 * { font-family: 'Inter', -apple-system, sans-serif !important; }
 
-/* Font overrides for numbers and tables */
 .mono, .pick-stock, .pick-buy-badge, .pick-cell-val, .pick-cell-lbl, .sec-hdr-text, 
 .ticker-label, .ticker-val, .mood-value, .pick-rr, .pick-meta span, .sq-title, .sq-chip, .sec-stat-val {
     font-family: 'JetBrains Mono', monospace !important;
@@ -182,14 +170,6 @@ st.markdown("""
 html, body, .stApp { background:#07091A; color:#CBD5E1; }
 .block-container { padding: 0 0 4rem 0; max-width: 100%; }
 header[data-testid="stHeader"], #MainMenu, footer { display: none; }
-
-/* Dynamic Background Glow Keyframes */
-.stApp::before {
-    content: ''; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: radial-gradient(circle at 15% 15%, rgba(59, 125, 251, 0.07) 0%, transparent 45%),
-                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.05) 0%, transparent 45%);
-    pointer-events: none; z-index: 0;
-}
 
 @keyframes fadeSlideUp {
     0% { opacity: 0; transform: translateY(16px); }
@@ -287,7 +267,7 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 """, unsafe_allow_html=True)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── HELPERS & CACHED DATA ENGINE (15 MIN TTL) ─────────────────────────────────
 def tc(v):  return "tv-up" if v >= 0 else "tv-down"
 def ar(v):  return "▲" if v >= 0 else "▼"
 
@@ -302,7 +282,8 @@ def style_sc(val):
     if val >= 45: return "color:#FFB020;font-family:JetBrains Mono,monospace"
     return "color:#FF4C4C;font-family:JetBrains Mono,monospace"
 
-@st.cache_data(ttl=7200)
+# Reduced cache time to 15 minutes (900 seconds)
+@st.cache_data(ttl=900)
 def get_close(t, p="6mo"):
     for _ in range(2):
         try:
@@ -312,7 +293,7 @@ def get_close(t, p="6mo"):
         except: pass
     return pd.Series(dtype=float)
 
-@st.cache_data(ttl=7200)
+@st.cache_data(ttl=900)
 def get_top_picks(tickers, nifty_1m):
     picks = []; CHUNK = 50
     for i in range(0, len(tickers), CHUNK):
@@ -373,7 +354,7 @@ def get_top_picks(tickers, nifty_1m):
         except: pass
     return sorted(picks, key=lambda x: x["Score"], reverse=True)[:10]
 
-@st.cache_data(ttl=7200)
+@st.cache_data(ttl=900)
 def batch_scan(tickers, nifty_1m):
     all_rows = []; CHUNK = 50
     for i in range(0, len(tickers), CHUNK):
@@ -426,7 +407,7 @@ def batch_scan(tickers, nifty_1m):
     if not all_rows: return pd.DataFrame()
     return pd.DataFrame(all_rows).sort_values("Score", ascending=False).reset_index(drop=True)
 
-@st.cache_data(ttl=7200)
+@st.cache_data(ttl=900)
 def get_detailed_sectors(sectors):
     rows = []
     for name, ticker in sectors.items():
@@ -466,7 +447,7 @@ def get_detailed_sectors(sectors):
     return pd.DataFrame(rows).sort_values("Score", ascending=False).reset_index(drop=True)
 
 
-# Expanded High-Volume Nifty Universe (Added Defense, Railways, Energy, Chemicals)
+# Exact 84 High-Volume Stock Universe
 NIFTY500 = [
     "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS","HINDUNILVR.NS",
     "SBIN.NS","BHARTIARTL.NS","KOTAKBANK.NS","LT.NS","AXISBANK.NS","ITC.NS",
@@ -482,34 +463,32 @@ NIFTY500 = [
     "PNB.NS","SAIL.NS","SHREECEM.NS","SIEMENS.NS","SRF.NS","TATAPOWER.NS",
     "TATASTEEL.NS","TORNTPHARM.NS","TRENT.NS","VEDL.NS","VOLTAS.NS","ZOMATO.NS",
     "HAL.NS","RVNL.NS","IRFC.NS","BHEL.NS","MAZDOCK.NS","CONCOR.NS","POLYCAB.NS",
-    "PERSISTENT.NS","COFORGE.NS","DEEPAKNTR.NS","TATATECH.NS","KALYANKJIL.NS"
+    "PERSISTENT.NS","COFORGE.NS"
 ]
 
-# Expanded Sector Indices (18 Tracked Sectors)
+# Exact 13 Sector Indices
 SECTORS = {
     "IT": "^CNXIT", "Pvt Bank": "^CNXPVTBANK", "PSU Bank": "^CNXPSUBANK",
     "Auto": "^CNXAUTO", "Pharma": "^CNXPHARMA", "FMCG": "^CNXFMCG",
     "Metal": "^CNXMETAL", "Energy": "^CNXENERGY", "Realty": "^CNXREALTY",
     "Infra": "^CNXINFRA", "Cons Dur": "^CNXCONSUM", "PSE": "^CNXPSE",
-    "MNC": "^CNXMNC", "Media": "^CNXMEDIA", "Fin Service": "^CNXFINANCE",
-    "Commodities": "^CNXCOMMODITIES", "Healthcare": "^CNXHEALTHCARE", "Oil & Gas": "^CNXOILGAS"
+    "MNC": "^CNXMNC"
 }
 
-# Mapping Sectors to Stock Subsets for Deep Sector Scanner
 SECTOR_STOCKS = {
     "IT": ["TCS.NS","INFY.NS","WIPRO.NS","TECHM.NS","HCLTECH.NS","LTIM.NS","PERSISTENT.NS","COFORGE.NS"],
     "Pvt Bank": ["HDFCBANK.NS","ICICIBANK.NS","KOTAKBANK.NS","AXISBANK.NS","INDUSINDBK.NS"],
-    "PSU Bank": ["SBIN.NS","BANKBARODA.NS","CANBK.NS","PNB.NS","INDIANB.NS"],
-    "Auto": ["MARUTI.NS","EICHERMOT.NS","HEROMOTOCO.NS","M&M.NS","BAJAJ-AUTO.NS","TATAMOTORS.NS"],
-    "Pharma": ["SUNPHARMA.NS","DIVISLAB.NS","DRREDDY.NS","CIPLA.NS","LUPIN.NS","ZYDUSLIFE.NS"],
-    "Metal": ["JSWSTEEL.NS","TATASTEEL.NS","HINDALCO.NS","SAIL.NS","VEDL.NS","NMDC.NS"],
+    "PSU Bank": ["SBIN.NS","BANKBARODA.NS","CANBK.NS","PNB.NS"],
+    "Auto": ["MARUTI.NS","EICHERMOT.NS","HEROMOTOCO.NS","M&M.NS","BAJAJ-AUTO.NS"],
+    "Pharma": ["SUNPHARMA.NS","DIVISLAB.NS","DRREDDY.NS","CIPLA.NS","LUPIN.NS"],
+    "Metal": ["JSWSTEEL.NS","TATASTEEL.NS","HINDALCO.NS","SAIL.NS","VEDL.NS"],
     "Energy": ["RELIANCE.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","COALINDIA.NS","TATAPOWER.NS"],
-    "Realty": ["DLF.NS","OBEROIRLTY.NS","GODREJPROP.NS","PHOENIX.NS","SOBHA.NS"],
-    "Infra": ["LT.NS","BEL.NS","HAL.NS","RVNL.NS","BHEL.NS","GMRINFRA.NS"]
+    "Realty": ["DLF.NS"],
+    "Infra": ["LT.NS","BEL.NS","HAL.NS","RVNL.NS","BHEL.NS"]
 }
 
 
-# ── Market Data ────────────────────────────────────────────────────────────────
+# ── MARKET DATA ENGINE ────────────────────────────────────────────────────────
 with st.spinner("Loading live market data..."):
     nifty_c = get_close("^NSEI", "1y")
     bank_c  = get_close("^NSEBANK")
@@ -575,7 +554,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── HEADER & TELEGRAM BROADCAST BUTTON ──────────────────────────────────────
+# ── HEADER & MANUAL TELEGRAM TRIGGER ──────────────────────────────────────────
 hc1, hc2, hc3 = st.columns([1, 7, 3])
 with hc1:
     st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png", width=48)
@@ -591,15 +570,15 @@ with hc2:
     </div>""", unsafe_allow_html=True)
 with hc3:
     st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
-    if st.button("📢 Send Live Picks to Telegram", use_container_width=True):
-        with st.spinner("Dispatching alerts to Telegram channel..."):
-            top_picks = get_top_picks(tuple(NIFTY500[:100]), nifty_1m)
+    if st.button("📢 Send Picks to Telegram Now", use_container_width=True):
+        with st.spinner("Dispatching Telegram notification..."):
+            top_picks = get_top_picks(tuple(NIFTY500), nifty_1m)
             if top_picks:
-                msg_body = format_picks_for_telegram(top_picks, mood, mood_score)
+                msg_body = format_opening_message(top_picks, mood, mood_score)
                 if send_tg_message(msg_body):
-                    st.success("✅ Picks sent to Telegram successfully!")
+                    st.success("✅ Picks sent to Telegram!")
                 else:
-                    st.error("❌ Failed to send Telegram message. Check Bot Token / Chat ID.")
+                    st.error("❌ Failed to send Telegram message.")
 
 
 # ── TABS ──────────────────────────────────────────────────────────────────────
@@ -648,15 +627,23 @@ with tab1:
 
     st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Today's Top Swing Trade Picks</div></div>", unsafe_allow_html=True)
 
-    with st.spinner("Scanning Nifty universe for best momentum setups…"):
-        picks = get_top_picks(tuple(NIFTY500[:100]), nifty_1m)
+    with st.spinner("Scanning 84 stocks for best momentum setups…"):
+        picks = get_top_picks(tuple(NIFTY500), nifty_1m)
 
-    # AUTOMATED TIMING DISPATCH CHECK (08:30 AM - 09:15 AM IST)
+    # ── AUTOMATED TELEGRAM SCHEDULE CHECK (9:45 AM IST & 3:30 PM IST) ──
     now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
-    if 8 <= now_ist.hour < 10 and not st.session_state.tg_sent_today and picks:
-        msg_body = format_picks_for_telegram(picks, mood, mood_score)
+    
+    # Morning Opening Message (Triggered at 9:45 AM IST)
+    if now_ist.hour == 9 and now_ist.minute >= 45 and not st.session_state.tg_open_sent and picks:
+        msg_body = format_opening_message(picks, mood, mood_score)
         if send_tg_message(msg_body):
-            st.session_state.tg_sent_today = True
+            st.session_state.tg_open_sent = True
+
+    # Evening Closing Message (Triggered at 3:30 PM IST)
+    if (now_ist.hour == 15 and now_ist.minute >= 30) or (now_ist.hour >= 16) and not st.session_state.tg_close_sent:
+        msg_body = format_closing_message(picks, mood, mood_score, nl, nchg)
+        if send_tg_message(msg_body):
+            st.session_state.tg_close_sent = True
 
     if picks:
         pc1, pc2, pc3 = st.columns(3)
@@ -720,9 +707,9 @@ with tab1:
     with fc1: sf     = st.selectbox("Signal", ["All","BUY","WATCH","AVOID"])
     with fc2: rf     = st.selectbox("Risk",   ["All","Low","Medium","High"])
     with fc3: setupf = st.selectbox("Setup",  ["All","Breakout","Pullback","Vol Surge","Trend","Oversold","Base"])
-    with fc4: tn     = st.selectbox("Universe",["Top 50","Top 100","All Tracked"], index=1)
+    with fc4: tn     = st.selectbox("Universe",["Top 30","Top 50","All 84 Stocks"], index=2)
 
-    tm = {"Top 50":50, "Top 100":100, "All Tracked":len(NIFTY500)}
+    tm = {"Top 30":30, "Top 50":50, "All 84 Stocks":len(NIFTY500)}
     with st.spinner(f"Scanning {tm[tn]} stocks…"):
         scan_df = batch_scan(tuple(NIFTY500[:tm[tn]]), nifty_1m)
 
@@ -747,13 +734,13 @@ with tab1:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — SECTOR INTELLIGENCE (UPGRADED & DEEP ANALYSIS)
+# TAB 2 — SECTOR INTELLIGENCE (EXACTLY 13 SECTORS)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab2:
 
-    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation & Performance Engine (18 NSE Indices)</div></div>", unsafe_allow_html=True)
+    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation & Performance Engine (13 NSE Indices)</div></div>", unsafe_allow_html=True)
 
-    with st.spinner("Analyzing 18 NSE Sector Indices..."):
+    with st.spinner("Analyzing 13 NSE Sector Indices..."):
         sec_df = get_detailed_sectors(SECTORS)
 
     if len(sec_df) > 0:
@@ -810,14 +797,13 @@ with tab2:
                 textfont=dict(family="JetBrains Mono", size=10)
             ))
             fig_s.update_layout(
-                title=dict(text="Sector Momentum Ranking Score", font=dict(size=12, color="#E2E8F0")),
+                title=dict(text="13 Sectors Momentum Score", font=dict(size=12, color="#E2E8F0")),
                 plot_bgcolor="#07091A", paper_bgcolor="#07091A", font_color="#475569",
                 height=290, margin=dict(l=0, r=0, t=30, b=0),
                 yaxis=dict(gridcolor="#0A1020"), xaxis=dict(gridcolor="#0A1020", tickangle=-45)
             )
             st.plotly_chart(fig_s, use_container_width=True)
 
-        # Complete Sector Table Breakdown
         st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Comprehensive Sector Metrics Table</div></div>", unsafe_allow_html=True)
         disp_sec = sec_df[["Sector", "DayChange%", "1M%", "3M%", "RSI", "52W%", "VolPunch", "Score"]].rename(
             columns={"DayChange%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"}
@@ -828,18 +814,17 @@ with tab2:
             use_container_width=True, height=280
         )
 
-        # Deep Dive: Sector Stock Radar
         st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Stock Drilldown Radar</div></div>", unsafe_allow_html=True)
         s_col1, s_col2 = st.columns([1, 3])
         with s_col1:
             selected_sec = st.selectbox("Select Sector to Inspect", list(SECTOR_STOCKS.keys()))
         
         with s_col2:
-            st.markdown(f"<p style='font-size:12px;color:#3B7DFB;font-weight:600;margin-top:8px;'>Analyzing key components of Nifty {selected_sec}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='font-size:12px;color:#3B7DFB;font-weight:600;margin-top:8px;'>Analyzing components of Nifty {selected_sec}</p>", unsafe_allow_html=True)
             
         sec_stock_list = SECTOR_STOCKS.get(selected_sec, [])
         if sec_stock_list:
-            with st.spinner(f"Scanning stocks in Nifty {selected_sec}..."):
+            with st.spinner(f"Scanning Nifty {selected_sec}..."):
                 sec_stocks_df = batch_scan(tuple(sec_stock_list), nifty_1m)
             if len(sec_stocks_df) > 0:
                 st.dataframe(
