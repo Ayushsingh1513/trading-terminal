@@ -2,15 +2,16 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import requests
 import numpy as np
 
+# --- CONFIG & SECRETS ---
 BOT_TOKEN = "8651727429:AAHAA9nFtPpUO2npxgdR6MyZkZBMqHLyTRg"
 CHAT_ID   = "-1003707574219"
 
 st.set_page_config(
-    page_title="Momentum Frenzy — Indian Stock Scanner",
+    page_title="Momentum Frenzy — Indian Stock Scanner Pro",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -18,6 +19,40 @@ st.set_page_config(
 
 if "page" not in st.session_state:
     st.session_state.page = "landing"
+
+if "tg_sent_today" not in st.session_state:
+    st.session_state.tg_sent_today = False
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TELEGRAM NOTIFICATION ENGINE & TIMING FIX
+# ══════════════════════════════════════════════════════════════════════════════
+def send_tg_message(msg):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"}
+    try:
+        r = requests.post(url, data=payload, timeout=8)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+def format_picks_for_telegram(picks, mood, mood_score):
+    now_ist = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b %Y | %I:%M %p IST")
+    text = f"⚡ <b>MOMENTUM FRENZY — DAILY SWING PICKS</b> ⚡\n"
+    text += f"📅 <i>{now_ist}</i>\n"
+    text += f"🧭 Market Mood: <b>{mood} ({mood_score}/100)</b>\n"
+    text += "───────────────────────────\n\n"
+    
+    for idx, p in enumerate(picks[:3], 1):
+        text += f"🎯 <b>PICK #{idx}: {p['Stock']}</b> ({p['Setup']})\n"
+        text += f"• Entry: <b>₹{p['Entry']}</b>\n"
+        text += f"• Stop Loss: <b>₹{p['SL']}</b>\n"
+        text += f"• Target 1: <b>₹{p['Target1']}</b> | Target 2: <b>₹{p['Target2']}</b>\n"
+        text += f"• Risk:Reward: <b>1:{p['RR']}</b> | Score: <b>{p['Score']}/100</b>\n\n"
+        
+    text += "⚠️ <i>Educational purpose only. Not SEBI advice. Always manage your risk!</i>\n"
+    text += "🔗 Visit Terminal: <a href='https://momentumfrenzy.online'>momentumfrenzy.online</a>"
+    return text
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # LANDING PAGE
@@ -29,191 +64,101 @@ if st.session_state.page == "landing":
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-    /* FIX: Fonts apply to everything, but background applies ONLY to the root app */
-    * {
-        font-family: 'Inter', -apple-system, sans-serif !important;
-    }
-    html, body, .stApp {
-        background:#07091A;
-        color:#CBD5E1;
-    }
-    
+    * { font-family: 'Inter', -apple-system, sans-serif !important; }
+    html, body, .stApp { background:#07091A; color:#CBD5E1; }
     .mono { font-family: 'JetBrains Mono', monospace !important; }
-    .block-container{padding:0;max-width:100%;}
-    header[data-testid="stHeader"]{display:none;}
-    #MainMenu{display:none;}
-    footer{display:none;}
+    .block-container { padding:0; max-width:100%; }
+    header[data-testid="stHeader"], #MainMenu, footer { display:none; }
 
-    /* ── NAV ── */
-    .lp-nav{
-        display:flex;align-items:center;justify-content:space-between;
-        padding:16px 40px;border-bottom:1px solid #0F1A35;
-        background:#07091A;position:sticky;top:0;z-index:99;
+    /* Animated Ambient Background Glow */
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: radial-gradient(circle at 20% 20%, rgba(59, 125, 251, 0.08) 0%, transparent 40%),
+                    radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 40%);
+        pointer-events: none;
+        z-index: 0;
+        animation: ambientPulse 10s ease-in-out infinite alternate;
     }
-    .lp-logo{
-        display:flex;align-items:center;gap:10px;
-        font-family:'JetBrains Mono',monospace !important;font-size:15px;font-weight:700;
-        color:#F1F5F9;letter-spacing:-.01em;
-    }
-    .lp-logo-dot{
-        width:8px;height:8px;border-radius:50%;
-        background:#3B7DFB;box-shadow:0 0 6px #3B7DFB88;
-    }
-    .lp-nav-links{display:flex;align-items:center;gap:8px;}
-    .lp-nav-tag{
-        font-size:11px;color:#475569;
-        border:1px solid #0F1A35;border-radius:4px;
-        padding:4px 10px;letter-spacing:.06em;text-transform:uppercase;
-        font-weight:500;
+    @keyframes ambientPulse {
+        0% { opacity: 0.6; transform: scale(1); }
+        100% { opacity: 1; transform: scale(1.05); }
     }
 
-    /* ── HERO ── */
-    .lp-hero{
-        min-height:80vh;
-        display:flex;flex-direction:column;
-        align-items:center;justify-content:center;
-        text-align:center;padding:60px 24px 40px;
-        position:relative;overflow:hidden;
+    .lp-nav {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:16px 40px; border-bottom:1px solid #0F1A35;
+        background:rgba(7, 9, 26, 0.85); backdrop-filter:blur(10px);
+        position:sticky; top:0; z-index:99;
     }
-    .lp-hero::before{
-        content:'';position:absolute;
-        top:-200px;left:50%;transform:translateX(-50%);
-        width:700px;height:700px;border-radius:50%;
-        background:radial-gradient(circle,#1a2d6622 0%,transparent 70%);
-        pointer-events:none;
+    .lp-logo {
+        display:flex; align-items:center; gap:10px;
+        font-family:'JetBrains Mono',monospace !important; font-size:15px; font-weight:700;
+        color:#F1F5F9; letter-spacing:-.01em;
     }
-    .lp-eyebrow{
-        display:inline-flex;align-items:center;gap:6px;
-        background:#0D1634;border:1px solid #1E3057;
-        border-radius:4px;padding:5px 14px;
-        font-family:'JetBrains Mono',monospace !important;
-        font-size:11px;color:#3B7DFB;font-weight:600;
-        letter-spacing:.1em;text-transform:uppercase;
-        margin-bottom:28px;
+    .lp-logo-dot {
+        width:8px; height:8px; border-radius:50%;
+        background:#3B7DFB; box-shadow:0 0 10px #3B7DFB;
     }
-    .lp-eyebrow-dot{
-        width:5px;height:5px;border-radius:50%;
-        background:#3B7DFB;animation:blink 1.4s infinite;
+    .lp-nav-tag {
+        font-size:11px; color:#64748B;
+        border:1px solid #0F1A35; border-radius:4px;
+        padding:4px 10px; letter-spacing:.06em; text-transform:uppercase; font-weight:600;
     }
-    @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-    .lp-h1{
-        font-size:clamp(42px,6.5vw,84px);font-weight:800;
-        line-height:1.05;letter-spacing:-.03em;
-        color:#F1F5F9;margin:0 0 10px 0;
-        max-width:820px;
+    .lp-hero {
+        min-height:80vh; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px;
     }
-    .lp-h1 span{
-        color:transparent;
-        background:linear-gradient(135deg,#3B7DFB,#06B6D4);
-        -webkit-background-clip:text;background-clip:text;
+    .lp-eyebrow {
+        display:inline-flex; align-items:center; gap:6px;
+        background:#0D1634; border:1px solid #1E3057; border-radius:4px; padding:6px 14px;
+        font-family:'JetBrains Mono',monospace !important; font-size:11px; color:#3B7DFB; font-weight:600;
+        letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px;
     }
-    .lp-sub{
-        font-size:clamp(15px,1.8vw,19px);color:#64748B;
-        max-width:520px;line-height:1.75;margin:16px auto 44px;
-        font-weight:400;
+    .lp-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#3B7DFB; animation:blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    .lp-h1 {
+        font-size:clamp(42px,6.5vw,80px); font-weight:800; line-height:1.05; letter-spacing:-.03em;
+        color:#F1F5F9; margin:0 0 10px 0; max-width:840px;
     }
-
-    /* ── STAT STRIP ── */
-    .lp-stats{
-        display:flex;gap:0;
-        border:1px solid #0F1A35;border-radius:10px;
-        background:#0D1120;overflow:hidden;
-        max-width:640px;margin:56px auto 0;
+    .lp-h1 span { color:transparent; background:linear-gradient(135deg,#3B7DFB,#06B6D4); -webkit-background-clip:text; background-clip:text; }
+    .lp-sub { font-size:clamp(15px,1.8vw,19px); color:#64748B; max-width:540px; line-height:1.75; margin:16px auto 40px; }
+    
+    .lp-stats {
+        display:flex; border:1px solid #0F1A35; border-radius:10px; background:#0D1120; overflow:hidden;
+        max-width:680px; margin:40px auto 0;
     }
-    .lp-stat{
-        flex:1;padding:20px 24px;text-align:center;
-        border-right:1px solid #0F1A35;
-    }
-    .lp-stat:last-child{border-right:none;}
-    .lp-stat-n{
-        font-family:'JetBrains Mono',monospace !important;
-        font-size:26px;font-weight:700;color:#3B7DFB;
-        line-height:1;
-    }
-    .lp-stat-l{font-size:10px;color:#334155;text-transform:uppercase;letter-spacing:.1em;margin-top:5px;}
-
-    /* ── FEATURES ── */
-    .lp-section{max-width:1080px;margin:80px auto;padding:0 24px;}
-    .lp-section-label{
-        font-family:'JetBrains Mono',monospace !important;
-        font-size:10px;color:#3B7DFB;letter-spacing:.15em;
-        text-transform:uppercase;font-weight:600;margin-bottom:14px;
-    }
-    .lp-section-h{
-        font-size:28px;font-weight:700;color:#E2E8F0;
-        letter-spacing:-.02em;margin-bottom:36px;line-height:1.3;
-    }
-    .feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:#0F1A35;border:1px solid #0F1A35;border-radius:10px;overflow:hidden;}
-    .feat-item{background:#0D1120;padding:28px;transition:background .2s;}
-    .feat-item:hover{background:#101828;}
-    .feat-title{font-size:14px;font-weight:600;color:#E2E8F0;margin-bottom:7px;}
-    .feat-desc{font-size:12px;color:#475569;line-height:1.7;}
-
-    .lp-disc{
-        max-width:680px;margin:40px auto 0;
-        padding:14px 20px;
-        background:#0D1120;border:1px solid #0F1A35;border-radius:6px;
-        font-size:11px;color:#334155;text-align:center;line-height:1.7;
-    }
+    .lp-stat { flex:1; padding:20px 24px; text-align:center; border-right:1px solid #0F1A35; }
+    .lp-stat:last-child { border-right:none; }
+    .lp-stat-n { font-family:'JetBrains Mono',monospace !important; font-size:26px; font-weight:700; color:#3B7DFB; }
+    .lp-stat-l { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:.1em; margin-top:4px; }
     </style>
 
     <div class="lp-nav">
-        <div class="lp-logo">
-            <div class="lp-logo-dot"></div>
-            MomentumFrenzy
-        </div>
-        <div class="lp-nav-links">
-            <div class="lp-nav-tag">Free · No Login · NSE</div>
-        </div>
+        <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
+        <div class="lp-nav-tag">Free · NSE Terminal · Pro</div>
     </div>
 
     <div class="lp-hero">
-        <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · Swing Trading Terminal</div>
+        <div class="lp-eyebrow"><div class="lp-eyebrow-dot"></div>Indian Markets · High-Probability Swing Scanner</div>
         <h1 class="lp-h1">Find the trade.<br><span>Before the move.</span></h1>
-        <p class="lp-sub">Professional momentum scanner for Nifty 500. Entry, Stop Loss, and Targets auto-calculated every morning — free, always.</p>
+        <p class="lp-sub">Institutional momentum scanner for Nifty 500. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
+        
         <div class="lp-stats">
             <div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">14</div><div class="lp-stat-l">Sectors Tracked</div></div>
-            <div class="lp-stat"><div class="lp-stat-n">4hrs</div><div class="lp-stat-l">Cache Refresh</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
+            <div class="lp-stat"><div class="lp-stat-n">Realtime</div><div class="lp-stat-l">Market Engine</div></div>
             <div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    c1,c2,c3 = st.columns([1,1,1])
+    c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        if st.button("⚡  Open Terminal — Free", use_container_width=True, type="primary"):
+        if st.button("⚡  Launch Terminal — Free", use_container_width=True, type="primary"):
             st.session_state.page = "terminal"
             st.rerun()
-        st.markdown("<p style='text-align:center;color:#1E3057;font-size:11px;margin-top:6px;font-family:\"JetBrains Mono\",monospace;'>No account · No download · Updated 4hrs</p>", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="lp-section">
-        <div class="lp-section-label">What's inside</div>
-        <div class="lp-section-h">Everything you need.<br>Nothing you don't.</div>
-        <div class="feat-grid">
-            <div class="feat-item">
-                <div class="feat-title">🎯 Daily Trade Picks</div>
-                <div class="feat-desc">Entry, Stop Loss, Target 1 &amp; Target 2 with Risk:Reward — auto-calculated every morning.</div>
-            </div>
-            <div class="feat-item">
-                <div class="feat-title">🧭 Market Mood Score</div>
-                <div class="feat-desc">BULLISH / NEUTRAL / BEARISH reading built from Nifty vs MA200, MA50, and India VIX.</div>
-            </div>
-            <div class="feat-item">
-                <div class="feat-title">💥 Breakout Radar</div>
-                <div class="feat-desc">Stocks crossing key levels with volume surge vs 20-day average. Ranked by momentum score.</div>
-            </div>
-            <div class="feat-item">
-                <div class="feat-title">🔄 Sector Rotation</div>
-                <div class="feat-desc">4-quadrant view of all 14 NSE sectors — Leading, Improving, Weakening, Lagging.</div>
-            </div>
-        </div>
-    </div>
-    <div class="lp-disc">
-        ⚠️ <strong style="color:#475569;">Disclaimer:</strong> Momentum Frenzy is for educational purposes only. Financial decisions carry risk.
-    </div>
-    """, unsafe_allow_html=True)
     st.stop()
 
 
@@ -226,46 +171,40 @@ st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
-/* Force typography overrides across the entire app */
-* {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-}
+* { font-family: 'Inter', -apple-system, sans-serif !important; }
 
-/* Target all our specific data/number elements with the mono font */
+/* Font overrides for numbers and tables */
 .mono, .pick-stock, .pick-buy-badge, .pick-cell-val, .pick-cell-lbl, .sec-hdr-text, 
-.ticker-label, .ticker-val, .mood-value, .pick-rr, .pick-meta span, .sq-title, .sq-chip {
+.ticker-label, .ticker-val, .mood-value, .pick-rr, .pick-meta span, .sq-title, .sq-chip, .sec-stat-val {
     font-family: 'JetBrains Mono', monospace !important;
 }
 
-/* FIX: Ensure ONLY the root containers get the dark background to prevent overlapping blocks */
 html, body, .stApp { background:#07091A; color:#CBD5E1; }
 .block-container { padding: 0 0 4rem 0; max-width: 100%; }
 header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 
-/* ── ANIMATIONS ── */
+/* Dynamic Background Glow Keyframes */
+.stApp::before {
+    content: ''; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at 15% 15%, rgba(59, 125, 251, 0.07) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.05) 0%, transparent 45%);
+    pointer-events: none; z-index: 0;
+}
+
 @keyframes fadeSlideUp {
     0% { opacity: 0; transform: translateY(16px); }
     100% { opacity: 1; transform: translateY(0); }
 }
-.animated-entry {
-    animation: fadeSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+.animated-entry { animation: fadeSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-/* ── TOP TICKER BAR ── */
+/* Ticker Bar */
 .ticker-bar {
-    background:#0A0E1E;
-    border-bottom:1px solid #0F1A35;
-    padding:0 20px;
-    display:flex; align-items:center;
-    position:sticky; top:0; z-index:999;
+    background:#0A0E1E; border-bottom:1px solid #0F1A35; padding:0 20px;
+    display:flex; align-items:center; position:sticky; top:0; z-index:999;
     height:42px; overflow-x: auto; white-space: nowrap; scrollbar-width: none;
 }
 .ticker-bar::-webkit-scrollbar { display: none; }
-.ticker-item {
-    display:flex; align-items:center; gap:8px;
-    padding:0 18px; border-right:1px solid #0F1A35;
-    height:100%;
-}
+.ticker-item { display:flex; align-items:center; gap:8px; padding:0 18px; border-right:1px solid #0F1A35; height:100%; }
 .ticker-item:last-child { border-right:none; }
 .ticker-label { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:.1em; font-weight:600; }
 .ticker-val { font-size:13px; font-weight:700; color:#F1F5F9; }
@@ -275,37 +214,19 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .ticker-spacer { flex:1; }
 .ticker-time { font-size:10px; color:#334155; padding-left:16px; }
 
-/* ── TABS ── */
-.stTabs [data-baseweb="tab-list"] {
-    background:#07091A; border-bottom:1px solid #0F1A35;
-    padding:0 20px; gap:8px;
-}
-.stTabs [data-baseweb="tab"] {
-    background:transparent; color:#64748B;
-    font-size:13px; font-weight:600; padding:12px 20px;
-    border-bottom:2px solid transparent; border-radius:0;
-}
-.stTabs [aria-selected="true"] {
-    color:#3B7DFB !important; border-bottom-color:#3B7DFB !important;
-    background:transparent !important;
-}
-.stTabs [data-baseweb="tab-panel"] { padding: 12px 20px; }
+/* Tabs Header */
+.stTabs [data-baseweb="tab-list"] { background:#07091A; border-bottom:1px solid #0F1A35; padding:0 20px; gap:8px; }
+.stTabs [data-baseweb="tab"] { background:transparent; color:#64748B; font-size:13px; font-weight:600; padding:12px 20px; border-bottom:2px solid transparent; }
+.stTabs [aria-selected="true"] { color:#3B7DFB !important; border-bottom-color:#3B7DFB !important; background:transparent !important; }
+.stTabs [data-baseweb="tab-panel"] { padding: 16px 20px; }
 
-/* ── SECTION HEADER ── */
-.sec-hdr {
-    display:flex; align-items:center; gap:10px;
-    padding:18px 0 12px 0; border-bottom:1px solid #0A1020;
-    margin-bottom:16px;
-}
+/* Section Headers */
+.sec-hdr { display:flex; align-items:center; gap:10px; padding:18px 0 12px 0; border-bottom:1px solid #0A1020; margin-bottom:16px; }
 .sec-hdr-line { width:4px; height:18px; background:linear-gradient(180deg, #3B7DFB, #06B6D4); border-radius:2px; }
 .sec-hdr-text { font-size:12px; font-weight:700; color:#E2E8F0; text-transform:uppercase; letter-spacing:.12em; }
 
-/* ── MOOD BANNER ── */
-.mood-banner {
-    display:flex; align-items:stretch;
-    background:#0D1120; border:1px solid #0F1A35;
-    border-radius:10px; overflow:hidden; margin:12px 0 16px;
-}
+/* Mood Banner */
+.mood-banner { display:flex; align-items:stretch; background:#0D1120; border:1px solid #0F1A35; border-radius:10px; overflow:hidden; margin:12px 0 16px; }
 .mood-side { width:5px; flex-shrink:0; }
 .mood-content { flex:1; padding:16px 20px; display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
 .mood-label-sm { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
@@ -317,83 +238,51 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .mood-meta { font-size:11px; color:#475569; line-height:1.8; }
 .mood-tip { font-size:12px; color:#64748B; margin-top:6px; padding-top:6px; border-top:1px solid #0A1020; }
 
-/* ── PICK CARDS ── */
+/* Trade Cards */
 .pick-card {
-    background:#0D1120;
-    border:1px solid #1E2D47;
-    border-radius:12px;
-    overflow:hidden;
-    margin-bottom:16px;
+    background:#0D1120; border:1px solid #1E2D47; border-radius:12px; overflow:hidden; margin-bottom:16px;
     transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     box-shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
-.pick-card:hover {
-    border-color:#3B7DFB;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(59, 125, 251, 0.15);
-}
-.pick-card-head {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 16px; border-bottom:1px solid #0F1A35;
-    background:linear-gradient(180deg, #101628, #0D1120);
-}
+.pick-card:hover { border-color:#3B7DFB; transform: translateY(-3px); box-shadow: 0 8px 24px rgba(59, 125, 251, 0.15); }
+.pick-card-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #0F1A35; background:linear-gradient(180deg, #101628, #0D1120); }
 .pick-stock { font-size:18px; font-weight:800; color:#FFFFFF; margin:0; line-height:1; }
 .pick-setup { font-size:10px; color:#64748B; margin-top:3px; }
-.pick-buy-badge {
-    background:rgba(0, 214, 143, 0.12); color:#00D68F;
-    font-size:10px; font-weight:800; padding:4px 10px;
-    border-radius:5px; border:1px solid rgba(0, 214, 143, 0.3);
-    letter-spacing:.08em; white-space:nowrap;
-}
+.pick-buy-badge { background:rgba(0, 214, 143, 0.12); color:#00D68F; font-size:10px; font-weight:800; padding:4px 10px; border-radius:5px; border:1px solid rgba(0, 214, 143, 0.3); letter-spacing:.08em; }
 .pick-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:#0F1A35; }
 .pick-cell { background:#0A0E1E; padding:10px 14px; }
 .pick-cell-lbl { font-size:9px; color:#475569; text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px; font-weight:600; }
 .pick-cell-val { font-size:14px; font-weight:700; }
-.pv-entry { color:#E2E8F0; }
-.pv-sl { color:#FF4C4C; }
-.pv-t1 { color:#00D68F; }
-.pv-t2 { color:#06B6D4; }
-.pick-foot {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 14px; border-top:1px solid #0F1A35; background:#0A0E1E;
-}
+.pv-entry { color:#E2E8F0; } .pv-sl { color:#FF4C4C; } .pv-t1 { color:#00D68F; } .pv-t2 { color:#06B6D4; }
+.pick-foot { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-top:1px solid #0F1A35; background:#0A0E1E; }
 .pick-rr { font-size:11px; font-weight:700; }
 .pick-meta { display:flex; gap:10px; font-size:10px; color:#475569; }
 
-/* ── DATAFRAME ── */
-.stDataFrame { border:1px solid #0F1A35; border-radius:8px; overflow:hidden; }
-
-/* ── SECTOR QUAD ── */
-.sq-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.sq-card { border-radius:8px; padding:14px; min-height:90px; }
-.sq-leading { background:#051409; border:1px solid rgba(0, 214, 143, 0.2); }
-.sq-improving { background:#07100A; border:1px solid rgba(6, 182, 212, 0.2); }
-.sq-weakening { background:#120E05; border:1px solid rgba(255, 176, 32, 0.2); }
-.sq-lagging { background:#120505; border:1px solid rgba(255, 76, 76, 0.2); }
-.sq-title { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; margin-bottom:8px; }
+/* Sector Quadrant Grid */
+.sq-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.sq-card { border-radius:10px; padding:16px; min-height:110px; background:#0D1120; transition: transform 0.2s; }
+.sq-card:hover { transform: translateY(-2px); }
+.sq-leading { background:linear-gradient(180deg, #051409, #0D1120); border:1px solid rgba(0, 214, 143, 0.25); }
+.sq-improving { background:linear-gradient(180deg, #07100A, #0D1120); border:1px solid rgba(6, 182, 212, 0.25); }
+.sq-weakening { background:linear-gradient(180deg, #120E05, #0D1120); border:1px solid rgba(255, 176, 32, 0.25); }
+.sq-lagging { background:linear-gradient(180deg, #120505, #0D1120); border:1px solid rgba(255, 76, 76, 0.25); }
+.sq-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; margin-bottom:10px; }
 .sq-leading .sq-title { color:#00D68F; }
 .sq-improving .sq-title { color:#06B6D4; }
 .sq-weakening .sq-title { color:#FFB020; }
 .sq-lagging .sq-title { color:#FF4C4C; }
-.sq-chip {
-    display:inline-flex; align-items:center; gap:4px;
-    font-size:10px; padding:3px 8px; border-radius:4px;
-    background:rgba(255,255,255,0.05); color:#94A3B8; margin:2px;
-}
+.sq-chip { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:4px 9px; border-radius:5px; background:rgba(255,255,255,0.05); color:#CBD5E1; margin:3px; border:1px solid rgba(255,255,255,0.08); }
 
-/* ── INSTAGRAM CTA ── */
-.ig-cta {
-    background:#0D1120; border:1px solid #0F1A35;
-    border-radius:10px; padding:24px; text-align:center; margin:20px 0;
-}
+/* Sector Mini Stats */
+.sec-stat-box { background:#0A0E1E; border:1px solid #0F1A35; border-radius:8px; padding:12px 16px; text-align:center; }
+.sec-stat-lbl { font-size:9px; color:#475569; text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
+.sec-stat-val { font-size:18px; font-weight:700; color:#F1F5F9; }
+
+/* Instagram CTA */
+.ig-cta { background:#0D1120; border:1px solid #0F1A35; border-radius:10px; padding:24px; text-align:center; margin:20px 0; }
 .ig-cta-title { font-size:15px; font-weight:700; color:#E2E8F0; margin-bottom:4px; }
 .ig-cta-sub { font-size:12px; color:#475569; margin-bottom:14px; }
-.ig-btn {
-    display:inline-block;
-    background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);
-    color:#fff !important; padding:8px 24px; border-radius:6px;
-    text-decoration:none; font-size:12px; font-weight:700;
-}
+.ig-btn { display:inline-block; background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045); color:#fff !important; padding:8px 24px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:700; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -413,7 +302,7 @@ def style_sc(val):
     if val >= 45: return "color:#FFB020;font-family:JetBrains Mono,monospace"
     return "color:#FF4C4C;font-family:JetBrains Mono,monospace"
 
-@st.cache_data(ttl=14400)
+@st.cache_data(ttl=7200)
 def get_close(t, p="6mo"):
     for _ in range(2):
         try:
@@ -423,7 +312,7 @@ def get_close(t, p="6mo"):
         except: pass
     return pd.Series(dtype=float)
 
-@st.cache_data(ttl=14400)
+@st.cache_data(ttl=7200)
 def get_top_picks(tickers, nifty_1m):
     picks = []; CHUNK = 50
     for i in range(0, len(tickers), CHUNK):
@@ -435,15 +324,11 @@ def get_top_picks(tickers, nifty_1m):
             for t in chunk:
                 try:
                     if len(chunk) == 1:
-                        close = raw['Close'].squeeze().dropna()
-                        high  = raw['High'].squeeze().dropna()
-                        low   = raw['Low'].squeeze().dropna()
-                        vol   = raw['Volume'].squeeze().dropna()
+                        close = raw['Close'].squeeze().dropna(); high = raw['High'].squeeze().dropna()
+                        low   = raw['Low'].squeeze().dropna();  vol  = raw['Volume'].squeeze().dropna()
                     else:
-                        close = raw[t]['Close'].squeeze().dropna()
-                        high  = raw[t]['High'].squeeze().dropna()
-                        low   = raw[t]['Low'].squeeze().dropna()
-                        vol   = raw[t]['Volume'].squeeze().dropna()
+                        close = raw[t]['Close'].squeeze().dropna(); high = raw[t]['High'].squeeze().dropna()
+                        low   = raw[t]['Low'].squeeze().dropna();   vol  = raw[t]['Volume'].squeeze().dropna()
                     if len(close) < 50: continue
                     price  = float(close.iloc[-1])
                     ema20  = float(close.ewm(span=20).mean().iloc[-1])
@@ -488,7 +373,7 @@ def get_top_picks(tickers, nifty_1m):
         except: pass
     return sorted(picks, key=lambda x: x["Score"], reverse=True)[:10]
 
-@st.cache_data(ttl=14400)
+@st.cache_data(ttl=7200)
 def batch_scan(tickers, nifty_1m):
     all_rows = []; CHUNK = 50
     for i in range(0, len(tickers), CHUNK):
@@ -542,30 +427,46 @@ def batch_scan(tickers, nifty_1m):
     return pd.DataFrame(all_rows).sort_values("Score", ascending=False).reset_index(drop=True)
 
 @st.cache_data(ttl=7200)
-def get_sector_vol_punch(sectors):
+def get_detailed_sectors(sectors):
     rows = []
     for name, ticker in sectors.items():
         try:
-            df   = yf.download(ticker, period="3mo", interval="1d", progress=False, auto_adjust=True)
-            if len(df) < 20: continue
-            vol  = df['Volume'].squeeze().dropna()
-            avg20= float(vol.rolling(20).mean().iloc[-1])
-            today= float(vol.iloc[-1])
-            punch= round(today/avg20, 2) if avg20 > 0 else 1.0
-            avg5 = float(vol.rolling(5).mean().iloc[-1])
-            punch5=round(avg5/avg20, 2) if avg20 > 0 else 1.0
-            close= df['Close'].squeeze().dropna()
-            pct  = float((close.iloc[-1]/close.iloc[-2]-1)*100) if len(close)>=2 else 0
-            recent_vol  = vol.iloc[-30:]
-            recent_avg  = float(vol.iloc[-50:-30].mean()) if len(vol)>=50 else avg20
-            vol_ratios  = (recent_vol/recent_avg).round(2).tolist()
-            dates = [str(d.date()) for d in recent_vol.index]
-            rows.append({"Sector": name, "Punch": punch, "Punch5": punch5,
-                         "PctToday": round(pct,2), "Dates": dates, "VolRatios": vol_ratios})
+            df = yf.download(ticker, period="6mo", interval="1d", progress=False, auto_adjust=True)
+            if len(df) < 30: continue
+            close = df['Close'].squeeze().dropna()
+            vol   = df['Volume'].squeeze().dropna()
+            
+            price = float(close.iloc[-1])
+            prev  = float(close.iloc[-2]) if len(close)>=2 else price
+            pct_today = round((price/prev - 1)*100, 2)
+            
+            r1m = float((close.iloc[-1]/close.iloc[max(-21,-len(close))]-1)*100)
+            r3m = float((close.iloc[-1]/close.iloc[0]-1)*100)
+            
+            delta = close.diff()
+            gain  = delta.clip(lower=0).rolling(14).mean()
+            loss  = -delta.clip(upper=0).rolling(14).mean()
+            rsi   = float(100-(100/(1+gain.iloc[-1]/(loss.iloc[-1]+1e-9))))
+            
+            w52h  = float(close.rolling(min(252,len(close))).max().iloc[-1])
+            pfh   = round((price/w52h-1)*100, 1)
+            
+            avg20 = float(vol.rolling(20).mean().iloc[-1]) if len(vol)>=20 else 1.0
+            today_vol = float(vol.iloc[-1]) if len(vol)>0 else 1.0
+            punch = round(today_vol/avg20, 2) if avg20 > 0 else 1.0
+            
+            score = round(r1m*0.4 + r3m*0.3 + (rsi/100)*20 + (10+pfh)*1, 2)
+            
+            rows.append({
+                "Sector": name, "Ticker": ticker, "Price": round(price,1),
+                "DayChange%": pct_today, "1M%": round(r1m,2), "3M%": round(r3m,2),
+                "RSI": round(rsi,1), "52W%": pfh, "VolPunch": punch, "Score": score
+            })
         except: pass
-    return sorted(rows, key=lambda x: x["Punch"], reverse=True)
+    return pd.DataFrame(rows).sort_values("Score", ascending=False).reset_index(drop=True)
 
 
+# Expanded High-Volume Nifty Universe (Added Defense, Railways, Energy, Chemicals)
 NIFTY500 = [
     "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS","HINDUNILVR.NS",
     "SBIN.NS","BHARTIARTL.NS","KOTAKBANK.NS","LT.NS","AXISBANK.NS","ITC.NS",
@@ -579,25 +480,43 @@ NIFTY500 = [
     "HINDPETRO.NS","INDUSINDBK.NS","IOC.NS","IRCTC.NS","JSWSTEEL.NS","LTIM.NS",
     "LUPIN.NS","M&M.NS","MOTHERSON.NS","MUTHOOTFIN.NS","NAUKRI.NS","PIDILITIND.NS",
     "PNB.NS","SAIL.NS","SHREECEM.NS","SIEMENS.NS","SRF.NS","TATAPOWER.NS",
-    "TATASTEEL.NS","TORNTPHARM.NS","TRENT.NS","VEDL.NS","VOLTAS.NS","ZOMATO.NS"
+    "TATASTEEL.NS","TORNTPHARM.NS","TRENT.NS","VEDL.NS","VOLTAS.NS","ZOMATO.NS",
+    "HAL.NS","RVNL.NS","IRFC.NS","BHEL.NS","MAZDOCK.NS","CONCOR.NS","POLYCAB.NS",
+    "PERSISTENT.NS","COFORGE.NS","DEEPAKNTR.NS","TATATECH.NS","KALYANKJIL.NS"
 ]
 
+# Expanded Sector Indices (18 Tracked Sectors)
 SECTORS = {
     "IT": "^CNXIT", "Pvt Bank": "^CNXPVTBANK", "PSU Bank": "^CNXPSUBANK",
     "Auto": "^CNXAUTO", "Pharma": "^CNXPHARMA", "FMCG": "^CNXFMCG",
     "Metal": "^CNXMETAL", "Energy": "^CNXENERGY", "Realty": "^CNXREALTY",
     "Infra": "^CNXINFRA", "Cons Dur": "^CNXCONSUM", "PSE": "^CNXPSE",
-    "MNC": "^CNXMNC", "Media": "^CNXMEDIA"
+    "MNC": "^CNXMNC", "Media": "^CNXMEDIA", "Fin Service": "^CNXFINANCE",
+    "Commodities": "^CNXCOMMODITIES", "Healthcare": "^CNXHEALTHCARE", "Oil & Gas": "^CNXOILGAS"
 }
 
+# Mapping Sectors to Stock Subsets for Deep Sector Scanner
+SECTOR_STOCKS = {
+    "IT": ["TCS.NS","INFY.NS","WIPRO.NS","TECHM.NS","HCLTECH.NS","LTIM.NS","PERSISTENT.NS","COFORGE.NS"],
+    "Pvt Bank": ["HDFCBANK.NS","ICICIBANK.NS","KOTAKBANK.NS","AXISBANK.NS","INDUSINDBK.NS"],
+    "PSU Bank": ["SBIN.NS","BANKBARODA.NS","CANBK.NS","PNB.NS","INDIANB.NS"],
+    "Auto": ["MARUTI.NS","EICHERMOT.NS","HEROMOTOCO.NS","M&M.NS","BAJAJ-AUTO.NS","TATAMOTORS.NS"],
+    "Pharma": ["SUNPHARMA.NS","DIVISLAB.NS","DRREDDY.NS","CIPLA.NS","LUPIN.NS","ZYDUSLIFE.NS"],
+    "Metal": ["JSWSTEEL.NS","TATASTEEL.NS","HINDALCO.NS","SAIL.NS","VEDL.NS","NMDC.NS"],
+    "Energy": ["RELIANCE.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","COALINDIA.NS","TATAPOWER.NS"],
+    "Realty": ["DLF.NS","OBEROIRLTY.NS","GODREJPROP.NS","PHOENIX.NS","SOBHA.NS"],
+    "Infra": ["LT.NS","BEL.NS","HAL.NS","RVNL.NS","BHEL.NS","GMRINFRA.NS"]
+}
+
+
 # ── Market Data ────────────────────────────────────────────────────────────────
-with st.spinner(""):
+with st.spinner("Loading live market data..."):
     nifty_c = get_close("^NSEI", "1y")
     bank_c  = get_close("^NSEBANK")
     vix_c   = get_close("^INDIAVIX", "1mo")
 
 if len(nifty_c) < 2 or len(bank_c) < 2:
-    st.error("⚠️ Data unavailable. Refresh in 1–2 minutes."); st.stop()
+    st.error("⚠️ Data temporarily unavailable. Refreshing..."); st.stop()
 
 nl    = float(nifty_c.iloc[-1]);  np_ = float(nifty_c.iloc[-2]); nchg = (nl/np_-1)*100
 bl    = float(bank_c.iloc[-1]);   bp  = float(bank_c.iloc[-2]);  bchg = (bl/bp-1)*100
@@ -652,34 +571,35 @@ st.markdown(f"""
     <span class="ticker-val" style="color:{mood_c};">{mood} {mood_score}/100</span>
   </div>
   <div class="ticker-spacer"></div>
-  <span class="ticker-time">{datetime.now().strftime('%d %b %Y  %H:%M')}</span>
+  <span class="ticker-time">{(datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime('%d %b %Y  %H:%M IST')}</span>
 </div>
 """, unsafe_allow_html=True)
 
-# ── HEADER ────────────────────────────────────────────────────────────────────
-hc1, hc2, hc3 = st.columns([1, 8, 2])
+# ── HEADER & TELEGRAM BROADCAST BUTTON ──────────────────────────────────────
+hc1, hc2, hc3 = st.columns([1, 7, 3])
 with hc1:
     st.image("https://raw.githubusercontent.com/sonuravi2705-creator/trading-terminal/main/logo.png", width=48)
 with hc2:
     st.markdown("""
-    <div style='padding:8px 0 4px;'>
-      <div style='font-family:"JetBrains Mono",monospace !important;font-size:15px;font-weight:700;color:#F1F5F9;letter-spacing:-.01em;'>
+    <div style='padding:4px 0;'>
+      <div style='font-family:"JetBrains Mono",monospace !important;font-size:16px;font-weight:700;color:#F1F5F9;letter-spacing:-.01em;'>
         ⚡ MOMENTUM FRENZY
       </div>
-      <div style='font-size:10px;color:#1E3A8A;letter-spacing:.06em;margin-top:2px;'>
-        INDIAN MARKETS &nbsp;·&nbsp; SWING TRADING SCANNER &nbsp;·&nbsp; PRO TERMINAL
+      <div style='font-size:10px;color:#3B7DFB;letter-spacing:.06em;margin-top:2px;'>
+        INDIAN MARKETS &nbsp;·&nbsp; SWING TRADING TERMINAL &nbsp;·&nbsp; PRO
       </div>
     </div>""", unsafe_allow_html=True)
 with hc3:
-    st.markdown("""
-    <div style='text-align:right;padding-top:10px;'>
-      <a href='https://instagram.com/momentumfrenzy' target='_blank'
-         style='font-size:11px;color:#334155;text-decoration:none;
-         border:1px solid #0F1A35;padding:5px 12px;border-radius:4px;
-         font-family:"JetBrains Mono",monospace !important;'>
-        @momentumfrenzy
-      </a>
-    </div>""", unsafe_allow_html=True)
+    st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
+    if st.button("📢 Send Live Picks to Telegram", use_container_width=True):
+        with st.spinner("Dispatching alerts to Telegram channel..."):
+            top_picks = get_top_picks(tuple(NIFTY500[:100]), nifty_1m)
+            if top_picks:
+                msg_body = format_picks_for_telegram(top_picks, mood, mood_score)
+                if send_tg_message(msg_body):
+                    st.success("✅ Picks sent to Telegram successfully!")
+                else:
+                    st.error("❌ Failed to send Telegram message. Check Bot Token / Chat ID.")
 
 
 # ── TABS ──────────────────────────────────────────────────────────────────────
@@ -728,8 +648,15 @@ with tab1:
 
     st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Today's Top Swing Trade Picks</div></div>", unsafe_allow_html=True)
 
-    with st.spinner("Scanning for best setups…"):
+    with st.spinner("Scanning Nifty universe for best momentum setups…"):
         picks = get_top_picks(tuple(NIFTY500[:100]), nifty_1m)
+
+    # AUTOMATED TIMING DISPATCH CHECK (08:30 AM - 09:15 AM IST)
+    now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+    if 8 <= now_ist.hour < 10 and not st.session_state.tg_sent_today and picks:
+        msg_body = format_picks_for_telegram(picks, mood, mood_score)
+        if send_tg_message(msg_body):
+            st.session_state.tg_sent_today = True
 
     if picks:
         pc1, pc2, pc3 = st.columns(3)
@@ -775,7 +702,7 @@ with tab1:
                 </div>""", unsafe_allow_html=True)
 
         if len(picks) > 3:
-            st.markdown("<div class='sec-hdr animated-entry' style='margin-top:8px;'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>More Setups</div></div>", unsafe_allow_html=True)
+            st.markdown("<div class='sec-hdr animated-entry' style='margin-top:8px;'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>More High-Ranked Setups</div></div>", unsafe_allow_html=True)
             more_df = pd.DataFrame(picks[3:]).rename(columns={
                 "Stock":"Stock","Price":"CMP","Setup":"Setup","Score":"Score",
                 "Entry":"Entry ₹","SL":"SL ₹","Target1":"T1 ₹","Target2":"T2 ₹","RR":"R:R"
@@ -783,9 +710,9 @@ with tab1:
             st.dataframe(
                 more_df.style.map(style_sc, subset=["Score"])
                 .format({"CMP":"{:.1f}","Entry ₹":"{:.1f}","SL ₹":"{:.1f}","T1 ₹":"{:.1f}","T2 ₹":"{:.1f}","R:R":"{:.1f}","RSI":"{:.1f}","VolSurge":"{:.1f}x"}),
-                use_container_width=True, height=240)
+                use_container_width=True, height=220)
     else:
-        st.info("No high-quality setups found today. Market may be in consolidation.")
+        st.info("No high-probability setups found right now. Market may be consolidating.")
 
     st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Full Momentum Scanner</div></div>", unsafe_allow_html=True)
 
@@ -793,9 +720,9 @@ with tab1:
     with fc1: sf     = st.selectbox("Signal", ["All","BUY","WATCH","AVOID"])
     with fc2: rf     = st.selectbox("Risk",   ["All","Low","Medium","High"])
     with fc3: setupf = st.selectbox("Setup",  ["All","Breakout","Pullback","Vol Surge","Trend","Oversold","Base"])
-    with fc4: tn     = st.selectbox("Universe",["Top 50","Top 100","Top 150"], index=0)
+    with fc4: tn     = st.selectbox("Universe",["Top 50","Top 100","All Tracked"], index=1)
 
-    tm = {"Top 50":50, "Top 100":100, "Top 150":150}
+    tm = {"Top 50":50, "Top 100":100, "All Tracked":len(NIFTY500)}
     with st.spinner(f"Scanning {tm[tn]} stocks…"):
         scan_df = batch_scan(tuple(NIFTY500[:tm[tn]]), nifty_1m)
 
@@ -820,85 +747,106 @@ with tab1:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — SECTOR INTELLIGENCE
+# TAB 2 — SECTOR INTELLIGENCE (UPGRADED & DEEP ANALYSIS)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab2:
 
-    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation — 4 Quadrant</div></div>", unsafe_allow_html=True)
+    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Rotation & Performance Engine (18 NSE Indices)</div></div>", unsafe_allow_html=True)
 
-    with st.spinner("Loading sectors…"):
-        rows = []
-        for name, ticker in SECTORS.items():
-            try:
-                close = get_close(ticker,"3mo")
-                if len(close) < 20: continue
-                r1m = float((close.iloc[-1]/close.iloc[max(-21,-len(close))]-1)*100)
-                r3m = float((close.iloc[-1]/close.iloc[0]-1)*100)
-                rows.append({"Sector": name, "1M%": round(r1m,2), "3M%": round(r3m,2), "Score": round(r1m*.6+r3m*.4,2)})
-            except: pass
+    with st.spinner("Analyzing 18 NSE Sector Indices..."):
+        sec_df = get_detailed_sectors(SECTORS)
 
-    sector_df = pd.DataFrame(rows).sort_values("Score",ascending=False).reset_index(drop=True)
-    if len(sector_df) > 0:
-        med1 = sector_df["1M%"].median(); med3 = sector_df["3M%"].median()
-        leading  = sector_df[(sector_df["1M%"]>=med1)&(sector_df["3M%"]>=med3)]["Sector"].tolist()
-        improving= sector_df[(sector_df["1M%"]>=med1)&(sector_df["3M%"]<med3)]["Sector"].tolist()
-        weakening= sector_df[(sector_df["1M%"]<med1)&(sector_df["3M%"]>=med3)]["Sector"].tolist()
-        lagging  = sector_df[(sector_df["1M%"]<med1)&(sector_df["3M%"]<med3)]["Sector"].tolist()
+    if len(sec_df) > 0:
+        med1 = sec_df["1M%"].median()
+        med3 = sec_df["3M%"].median()
+        
+        leading   = sec_df[(sec_df["1M%"]>=med1)&(sec_df["3M%"]>=med3)]
+        improving = sec_df[(sec_df["1M%"]>=med1)&(sec_df["3M%"]<med3)]
+        weakening = sec_df[(sec_df["1M%"]<med1)&(sec_df["3M%"]>=med3)]
+        lagging   = sec_df[(sec_df["1M%"]<med1)&(sec_df["3M%"]<med3)]
 
-        def qs(lst):
-            out = ""
-            for s in lst:
-                r = sector_df[sector_df["Sector"]==s].iloc[0]
-                out += f'<span class="sq-chip">{s}&nbsp;<b style="color:#94A3B8">{r["1M%"]:+.1f}%</b></span>'
-            return out or "<span style='color:#1E2D47;font-size:11px;'>—</span>"
+        # Summary Metrics
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.markdown(f"<div class='sec-stat-box'><div class='sec-stat-lbl'>Leading Sectors</div><div class='sec-stat-val' style='color:#00D68F;'>{len(leading)}</div></div>", unsafe_allow_html=True)
+        m2.markdown(f"<div class='sec-stat-box'><div class='sec-stat-lbl'>Improving Sectors</div><div class='sec-stat-val' style='color:#06B6D4;'>{len(improving)}</div></div>", unsafe_allow_html=True)
+        m3.markdown(f"<div class='sec-stat-box'><div class='sec-stat-lbl'>Weakening</div><div class='sec-stat-val' style='color:#FFB020;'>{len(weakening)}</div></div>", unsafe_allow_html=True)
+        m4.markdown(f"<div class='sec-stat-box'><div class='sec-stat-lbl'>Lagging</div><div class='sec-stat-val' style='color:#FF4C4C;'>{len(lagging)}</div></div>", unsafe_allow_html=True)
+        top_vol = sec_df.sort_values("VolPunch", ascending=False).iloc[0]
+        m5.markdown(f"<div class='sec-stat-box'><div class='sec-stat-lbl'>Top Vol Surge</div><div class='sec-stat-val' style='color:#3B7DFB;'>{top_vol['Sector']} ({top_vol['VolPunch']}x)</div></div>", unsafe_allow_html=True)
 
-        ql, qr = st.columns([1.2,1])
+        st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
+
+        def make_chips(df_sub):
+            if len(df_sub) == 0: return "<span style='color:#475569;font-size:11px;'>No sectors currently in this quadrant</span>"
+            chips = ""
+            for _, r in df_sub.iterrows():
+                c = "#00D68F" if r["1M%"]>=0 else "#FF4C4C"
+                chips += f'<span class="sq-chip">{r["Sector"]} <b style="color:{c};">{r["1M%"]:+.1f}%</b></span>'
+            return chips
+
+        ql, qr = st.columns([1.2, 1])
         with ql:
             st.markdown(f"""
             <div class="sq-grid animated-entry">
               <div class="sq-card sq-leading">
-                <div class="sq-title">↑ Leading</div>{qs(leading)}
+                <div class="sq-title">↑ Leading (Strong Short & Long Term)</div>{make_chips(leading)}
               </div>
               <div class="sq-card sq-improving">
-                <div class="sq-title">↗ Improving</div>{qs(improving)}
+                <div class="sq-title">↗ Improving (Fresh Momentum Rebound)</div>{make_chips(improving)}
               </div>
               <div class="sq-card sq-weakening">
-                <div class="sq-title">↘ Weakening</div>{qs(weakening)}
+                <div class="sq-title">↘ Weakening (Momentum Cooling Down)</div>{make_chips(weakening)}
               </div>
               <div class="sq-card sq-lagging">
-                <div class="sq-title">↓ Lagging</div>{qs(lagging)}
+                <div class="sq-title">↓ Lagging (Underperforming Market)</div>{make_chips(lagging)}
               </div>
             </div>""", unsafe_allow_html=True)
+
         with qr:
             fig_s = go.Figure(go.Bar(
-                x=sector_df["Sector"], y=sector_df["Score"],
-                marker_color=["#00D68F" if s>0 else "#FF4C4C" for s in sector_df["Score"]],
-                text=[f"{s:+.1f}" for s in sector_df["Score"]], textposition="outside",
-                textfont=dict(family="JetBrains Mono",size=10)))
+                x=sec_df["Sector"], y=sec_df["Score"],
+                marker_color=["#00D68F" if s>50 else "#06B6D4" if s>30 else "#FFB020" if s>10 else "#FF4C4C" for s in sec_df["Score"]],
+                text=[f"{s:.0f}" for s in sec_df["Score"]], textposition="outside",
+                textfont=dict(family="JetBrains Mono", size=10)
+            ))
             fig_s.update_layout(
+                title=dict(text="Sector Momentum Ranking Score", font=dict(size=12, color="#E2E8F0")),
                 plot_bgcolor="#07091A", paper_bgcolor="#07091A", font_color="#475569",
-                height=280, margin=dict(l=0,r=0,t=10,b=0),
-                yaxis=dict(gridcolor="#0A1020"), xaxis=dict(gridcolor="#0A1020"))
+                height=290, margin=dict(l=0, r=0, t=30, b=0),
+                yaxis=dict(gridcolor="#0A1020"), xaxis=dict(gridcolor="#0A1020", tickangle=-45)
+            )
             st.plotly_chart(fig_s, use_container_width=True)
 
-    st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Volume Punch</div></div>", unsafe_allow_html=True)
-    with st.spinner("Analyzing volume activity…"):
-        vp = get_sector_vol_punch(SECTORS)
+        # Complete Sector Table Breakdown
+        st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Comprehensive Sector Metrics Table</div></div>", unsafe_allow_html=True)
+        disp_sec = sec_df[["Sector", "DayChange%", "1M%", "3M%", "RSI", "52W%", "VolPunch", "Score"]].rename(
+            columns={"DayChange%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"}
+        )
+        st.dataframe(
+            disp_sec.style.map(style_sc, subset=["Score"])
+            .format({"Today %":"{:+.2f}%", "1M%":"{:+.2f}%", "3M%":"{:+.2f}%", "RSI":"{:.1f}", "From 52W High %":"{:.1f}%", "Vol Multiplier":"{:.2f}x", "Score":"{:.1f}"}),
+            use_container_width=True, height=280
+        )
 
-    if vp:
-        vp1, vp2, vp3 = st.columns(3)
-        for col, item in zip([vp1,vp2,vp3], vp[:3]):
-            bc = "#FF4C4C" if item["Punch"]>=3 else "#FFB020" if item["Punch"]>=2 else "#00D68F" if item["Punch"]>=1.5 else "#334155"
-            pc2 = "#00D68F" if item["PctToday"]>=0 else "#FF4C4C"
-            with col:
-                st.markdown(f"""
-                <div class="animated-entry" style='background:#0D1120;border:1px solid #0F1A35;border-left:3px solid {bc};border-radius:8px;padding:14px 16px;margin-bottom:12px;'>
-                  <div style='font-size:11px;font-weight:600;color:#94A3B8;margin-bottom:6px;font-family:"JetBrains Mono",monospace;'>{item["Sector"]}</div>
-                  <div style='font-family:"JetBrains Mono",monospace;font-size:26px;font-weight:700;color:{bc};line-height:1;'>{item["Punch"]}x</div>
-                  <div style='font-size:10px;color:#334155;margin-top:4px;font-family:"JetBrains Mono",monospace;'>
-                    Today &nbsp;<span style='color:{pc2};font-weight:600;'>{item["PctToday"]:+.2f}%</span>
-                  </div>
-                </div>""", unsafe_allow_html=True)
+        # Deep Dive: Sector Stock Radar
+        st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Sector Stock Drilldown Radar</div></div>", unsafe_allow_html=True)
+        s_col1, s_col2 = st.columns([1, 3])
+        with s_col1:
+            selected_sec = st.selectbox("Select Sector to Inspect", list(SECTOR_STOCKS.keys()))
+        
+        with s_col2:
+            st.markdown(f"<p style='font-size:12px;color:#3B7DFB;font-weight:600;margin-top:8px;'>Analyzing key components of Nifty {selected_sec}</p>", unsafe_allow_html=True)
+            
+        sec_stock_list = SECTOR_STOCKS.get(selected_sec, [])
+        if sec_stock_list:
+            with st.spinner(f"Scanning stocks in Nifty {selected_sec}..."):
+                sec_stocks_df = batch_scan(tuple(sec_stock_list), nifty_1m)
+            if len(sec_stocks_df) > 0:
+                st.dataframe(
+                    sec_stocks_df.style.map(style_sig, subset=["Signal"]).map(style_sc, subset=["Score"])
+                    .format({"Price":"{:.1f}","RSI":"{:.1f}","RS":"{:+.1f}","VolSurge":"{:.1f}x","52W%":"{:.1f}%","Score":"{:.0f}"}),
+                    use_container_width=True, height=220
+                )
 
 
 # ── FOOTER ────────────────────────────────────────────────────────────────────
@@ -906,7 +854,7 @@ st.markdown(f"""
 <div style='text-align:center;padding:24px 20px;border-top:1px solid #0A1020;margin-top:24px;'>
   <p style='color:#1E2D47;font-size:10px;margin:0;font-family:"JetBrains Mono",monospace !important;letter-spacing:.04em;'>
     Educational purposes only. Not financial advice. Always DYOR. Consult a SEBI-registered advisor.<br><br>
-    © 2025 Momentum Frenzy &nbsp;·&nbsp;
+    © 2026 Momentum Frenzy &nbsp;·&nbsp;
     <a href='https://instagram.com/momentumfrenzy' style='color:#1E3A8A;text-decoration:none;'>@momentumfrenzy</a>
   </p>
 </div>""", unsafe_allow_html=True)
