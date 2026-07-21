@@ -546,8 +546,8 @@ with tab2:
         st.plotly_chart(fig_s, use_container_width=True)
 
     st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Comprehensive Sector Metrics Table</div></div>", unsafe_allow_html=True)
-    disp_sec = sector_df[["Sector", "DayChange%", "1M%", "3M%", "RSI", "52W%", "VolPunch", "Score"]].rename(
-        columns={"DayChange%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"}
+    disp_sec = sector_df[["Sector", "Today%", "1M%", "3M%", "RSI", "52W%", "VolPunch", "Score"]].rename(
+        columns={"Today%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"}
     )
     st.dataframe(
         disp_sec.style.map(style_sc, subset=["Score"])
