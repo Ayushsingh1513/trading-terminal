@@ -11,8 +11,8 @@ import pytz
 # 1. CONFIGURATION & TELEGRAM SETUP
 # ══════════════════════════════════════════════════════════════════════════════
 # It is best practice to store these in GitHub Repository Secrets
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID_HERE")
+TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
+TELEGRAM_CHAT_ID = "-1003707574219"
 IST = pytz.timezone('Asia/Kolkata')
 
 def send_telegram_alert(message):
