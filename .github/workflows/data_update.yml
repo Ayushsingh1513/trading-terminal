@@ -2,9 +2,12 @@ name: Live Data Engine Updater
 
 on:
   schedule:
-    # Runs every 15 mins during NSE market hours (Mon-Fri)
     - cron: '*/15 3-10 * * 1-5'
-  workflow_dispatch: # Allows manual testing
+  workflow_dispatch:
+
+# THIS FORCES GITHUB TO ALLOW FILE OVERWRITES
+permissions:
+  contents: write
 
 jobs:
   update-data:
@@ -25,9 +28,6 @@ jobs:
           pip install yfinance pandas numpy requests pytz
 
       - name: Run Data Engine & Telegram Alerts
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python data_engine.py
 
@@ -35,9 +35,9 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # This safely adds whatever files were created without crashing
           git add .
-          
           git commit -m "Auto-update market data and telegram alerts [skip ci]" || echo "No changes to commit"
+          
+          # This prevents git conflicts before saving
+          git pull --rebase origin main || echo "Nothing to pull"
           git push
