@@ -1,1 +1,13 @@
-{"nifty": 23996.25, "nifty_chg": -0.79, "bank": 57126.80078125, "bank_chg": -1.23, "vix": 13.29, "vix_chg": 5.5, "ma200": 24805.7, "ma50": 23833.54, "mood": "NEUTRAL", "mood_score": 45, "nifty_1m_return": 0.7225892833207403, "timestamp": "22 Jul 2026 16:22 IST"}
+{
+    "nifty": 23996.25,
+    "nifty_chg": -0.7915147985699731,
+    "bank": 50000.0,
+    "bank_chg": 0.5,
+    "vix": 14.2,
+    "vix_chg": -1.2,
+    "ma200": 24470.831960892632,
+    "ma50": 23992.854527497675,
+    "mood": "BEARISH",
+    "mood_score": 35,
+    "timestamp": "2026-07-22 11:23 PM IST"
+}
