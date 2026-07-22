@@ -116,11 +116,13 @@ def track_performance_and_alert(current_scanner_df):
 # 4. MAIN DATA PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 def run_pipeline():
-    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Running Upgraded Engine with UI formatting...")
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Running Full Live Data Engine...")
 
-    # 1. Market Data Generation (RESTORED FOR UI)
+    # 1. Market Data Generation
     nifty = yf.Ticker('^NSEI').history(period='1y')
-    if nifty.empty: return
+    if nifty.empty: 
+        print("Warning: Nifty data missing.")
+        return
     
     nifty['Return_21'] = nifty['Close'].pct_change(21)
     nifty_rs = float(nifty['Return_21'].iloc[-1])
@@ -130,7 +132,7 @@ def run_pipeline():
     market_payload = {
         "nifty": current_nifty,
         "nifty_chg": float((current_nifty - nifty['Close'].iloc[-2]) / nifty['Close'].iloc[-2] * 100),
-        "bank": 50000.0, 
+        "bank": 50000.0, # Placeholder to avoid UI breaking if used elsewhere
         "bank_chg": 0.5,
         "vix": 14.2,     
         "vix_chg": -1.2,
@@ -143,7 +145,7 @@ def run_pipeline():
     with open("market_data.json", "w") as f:
         json.dump(market_payload, f, indent=4)
 
-    # 2. Stock Scanner (UI COLUMNS RESTORED)
+    # 2. Stock Scanner
     tickers = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TATAMOTORS.NS"]
     scanner_data = []
     
@@ -213,14 +215,60 @@ def run_pipeline():
     scanner_df.to_csv("scanner_data.csv", index=False)
     track_performance_and_alert(scanner_df)
 
-    # 3. Sector Data Generation (RESTORED FOR UI)
-    sector_data = pd.DataFrame([
-        {"Sector": "Financials", "Today%": 1.2, "1M%": 4.5, "3M%": 12.0, "RSI": 62, "52W%": -2.1, "VolPunch": 1.5, "Score": 85},
-        {"Sector": "Tech", "Today%": -0.5, "1M%": 2.1, "3M%": -1.5, "RSI": 48, "52W%": -15.4, "VolPunch": 0.8, "Score": 40}
-    ])
-    sector_data.to_csv("sector_data.csv", index=False)
+    # 3. LIVE Sector Data Generation 
+    sector_payload = []
+    sector_mapping = {'Financials': '^NSEBANK', 'Tech': '^CNXIT'}
     
-    print("Engine Update Complete. UI Data Restored.")
+    for sec_name, symbol in sector_mapping.items():
+        try:
+            sdf = yf.Ticker(symbol).history(period="1y")
+            if sdf.empty or len(sdf) < 65: continue
+            
+            latest_c = float(sdf['Close'].iloc[-1])
+            
+            today_pct = ((latest_c - float(sdf['Close'].iloc[-2])) / float(sdf['Close'].iloc[-2])) * 100
+            m1_pct = ((latest_c - float(sdf['Close'].iloc[-21])) / float(sdf['Close'].iloc[-21])) * 100
+            m3_pct = ((latest_c - float(sdf['Close'].iloc[-63])) / float(sdf['Close'].iloc[-63])) * 100
+            w52_pct = ((latest_c - float(sdf['High'].max())) / float(sdf['High'].max())) * 100
+            
+            # RSI Calculation
+            delta = sdf['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs_val = gain / loss
+            rsi_latest = float(100 - (100 / (1 + rs_val)).iloc[-1])
+            
+            # Volume Calculation (Indices often lack volume data on yf, providing safe fallback)
+            sdf['Vol_20'] = sdf['Volume'].rolling(20).mean()
+            vol_20 = float(sdf['Vol_20'].iloc[-1])
+            latest_vol = float(sdf['Volume'].iloc[-1])
+            vol_punch = round(latest_vol / vol_20, 1) if vol_20 > 0 else 1.0
+
+            # Sector Score (Trend & RSI based)
+            sec_score = 50
+            if rsi_latest > 60: sec_score += 20
+            elif rsi_latest < 40: sec_score -= 20
+            if m1_pct > 0: sec_score += 15
+            if today_pct > 0: sec_score += 15
+            
+            sector_payload.append({
+                "Sector": sec_name,
+                "Today%": round(today_pct, 2),
+                "1M%": round(m1_pct, 2),
+                "3M%": round(m3_pct, 2),
+                "RSI": round(rsi_latest, 1),
+                "52W%": round(w52_pct, 2),
+                "VolPunch": vol_punch,
+                "Score": max(0, min(100, sec_score))
+            })
+        except Exception as e:
+            print(f"Error fetching {sec_name}: {e}")
+
+    if sector_payload:
+        pd.DataFrame(sector_payload).to_csv("sector_data.csv", index=False)
+        print("Sector Data successfully pulled from live markets.")
+
+    print("Engine Update Complete.")
 
 if __name__ == "__main__":
     run_pipeline()
