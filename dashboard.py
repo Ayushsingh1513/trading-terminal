@@ -37,88 +37,148 @@ def load_backend_data():
 market_data, scanner_df, sector_df = load_backend_data()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# LANDING PAGE (BULLETPROOF CSS)
+# NEW: IMMERSIVE 3D CYBER-GRID LANDING PAGE
 # ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.page == "landing":
-    # ALL CSS MINIFIED TO PREVENT STREAMLIT MARKDOWN LEAKS
     st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-@keyframes gradientBG{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
-.stApp{background:linear-gradient(-45deg, #050714, #0A0D1F, #02050D, #080B1A) !important;background-size:400% 400% !important;animation:gradientBG 15s ease infinite !important;}
-div.stButton > button[kind="primary"]{background:linear-gradient(135deg, #3B7DFB 0%, #06B6D4 100%) !important;color:white !important;border:none !important;padding:24px 32px !important;font-size:18px !important;font-weight:700 !important;border-radius:12px !important;box-shadow:0 0 20px rgba(59, 125, 251, 0.3) !important;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;text-transform:uppercase !important;letter-spacing:1px !important;}
-div.stButton > button[kind="primary"]:hover{box-shadow:0 0 40px rgba(6, 182, 212, 0.7) !important;transform:translateY(-4px) scale(1.02) !important;}
 *{font-family:'Inter', -apple-system, sans-serif !important;}
 .mono{font-family:'JetBrains Mono', monospace !important;}
-.block-container{padding:0;max-width:100%;position:relative;}
 header[data-testid="stHeader"], #MainMenu, footer{display:none;}
-.bg-orb{position:absolute;border-radius:50%;filter:blur(90px);z-index:0;opacity:0.4;animation:float 12s infinite alternate ease-in-out;}
-.orb-1{width:400px;height:400px;background:#3B7DFB;top:-10%;left:10%;}
-.orb-2{width:500px;height:500px;background:#06B6D4;bottom:-20%;right:5%;animation-delay:-5s;}
-@keyframes float{0%{transform:translateY(0px) scale(1);}100%{transform:translateY(50px) scale(1.1);}}
-@keyframes fadeUp{0%{opacity:0;transform:translateY(30px);}100%{opacity:1;transform:translateY(0);}}
-.animate-1{animation:fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;opacity:0;}
-.animate-2{animation:fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.15s;opacity:0;}
-.animate-3{animation:fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.3s;opacity:0;}
-.animate-4{animation:fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.45s;opacity:0;}
-.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 40px;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(7, 9, 26, 0.4);backdrop-filter:blur(20px);position:sticky;top:0;z-index:99;}
-.lp-logo{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace !important;font-size:15px;font-weight:700;color:#F1F5F9;letter-spacing:-.01em;}
-.lp-logo-dot{width:8px;height:8px;border-radius:50%;background:#3B7DFB;box-shadow:0 0 10px #3B7DFB;}
-@keyframes pulseGlow{0%{box-shadow:0 0 5px rgba(0,214,143,0.1);}50%{box-shadow:0 0 15px rgba(0,214,143,0.6);}100%{box-shadow:0 0 5px rgba(0,214,143,0.1);}}
-.lp-live-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:50px;background:rgba(0,214,143,0.1);border:1px solid rgba(0,214,143,0.3);font-size:10px;font-family:'JetBrains Mono',monospace !important;color:#00D68F;font-weight:700;letter-spacing:.1em;margin-bottom:24px;text-transform:uppercase;}
+.block-container{padding:0 !important; max-width:100% !important;}
+
+/* Dark gradient background */
+.stApp { background: #02050D !important; overflow-x: hidden; }
+
+/* CYBER GRID ANIMATION */
+.grid-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at center, #0A0D1F 0%, #02050D 100%);
+    overflow: hidden; z-index: -2;
+}
+.cyber-grid {
+    position: absolute; bottom: -50%; left: -50%; width: 200%; height: 150%;
+    background-image: 
+        linear-gradient(rgba(6, 182, 212, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(6, 182, 212, 0.15) 1px, transparent 1px);
+    background-size: 60px 60px;
+    transform: perspective(600px) rotateX(60deg) translateY(0);
+    animation: gridMove 10s linear infinite;
+    z-index: -1;
+}
+.grid-fade {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to bottom, #02050D 20%, transparent 80%);
+    z-index: 0;
+}
+@keyframes gridMove {
+    0% { transform: perspective(600px) rotateX(60deg) translateY(0); }
+    100% { transform: perspective(600px) rotateX(60deg) translateY(60px); }
+}
+
+/* Animations */
+@keyframes fadeUp {0%{opacity:0; transform:translateY(30px);} 100%{opacity:1; transform:translateY(0);}}
+.a-1{animation:fadeUp 0.8s ease forwards; opacity:0;}
+.a-2{animation:fadeUp 0.8s ease forwards 0.2s; opacity:0;}
+.a-3{animation:fadeUp 0.8s ease forwards 0.4s; opacity:0;}
+.a-4{animation:fadeUp 0.8s ease forwards 0.6s; opacity:0;}
+
+/* Nav & Hero */
+.lp-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 50px;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(2,5,13,0.7);backdrop-filter:blur(20px);position:fixed;width:100%;top:0;z-index:100;}
+.lp-logo{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace !important;font-size:16px;font-weight:700;color:#F1F5F9;letter-spacing:-.01em;}
+.lp-logo-dot{width:10px;height:10px;border-radius:50%;background:#3B7DFB;box-shadow:0 0 15px #3B7DFB;}
+
+.hero-section { padding: 160px 20px 80px; text-align: center; max-width: 1200px; margin: 0 auto; position: relative; z-index: 10; }
+.lp-live-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:50px;background:rgba(0,214,143,0.1);border:1px solid rgba(0,214,143,0.3);font-size:11px;font-family:'JetBrains Mono',monospace !important;color:#00D68F;font-weight:700;letter-spacing:.1em;margin-bottom:24px;text-transform:uppercase;}
 .lp-live-dot{width:6px;height:6px;border-radius:50%;background:#00D68F;animation:pulseGlow 2s infinite;}
-.lp-hero{min-height:85vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px 40px;position:relative;z-index:10;}
-.glass-panel{background:rgba(13, 17, 35, 0.3);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255, 255, 255, 0.08);border-radius:24px;padding:60px 40px;box-shadow:0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);max-width:900px;margin:0 auto;width:100%;transition:transform 0.5s ease;}
-.glass-panel:hover{border-color:rgba(6, 182, 212, 0.2);}
-.lp-h1{font-size:clamp(42px,6vw,72px);font-weight:800;line-height:1.1;letter-spacing:-.03em;color:#F1F5F9;margin:0 0 16px 0;}
+@keyframes pulseGlow{0%{box-shadow:0 0 5px rgba(0,214,143,0.1);}50%{box-shadow:0 0 15px rgba(0,214,143,0.6);}100%{box-shadow:0 0 5px rgba(0,214,143,0.1);}}
+
+.lp-h1{font-size:clamp(48px, 7vw, 84px);font-weight:800;line-height:1.05;letter-spacing:-.03em;color:#FFFFFF;margin:0 0 20px 0;}
 .lp-h1 span{color:transparent;background:linear-gradient(135deg,#3B7DFB,#06B6D4);-webkit-background-clip:text;background-clip:text;}
-.lp-sub{font-size:clamp(15px,1.8vw,19px);color:#94A3B8;max-width:540px;line-height:1.75;margin:0 auto 40px;}
-.lp-stats{display:flex;flex-wrap:wrap;border:1px solid rgba(255,255,255,0.05);border-radius:12px;background:rgba(0,0,0,0.2);overflow:hidden;margin:40px auto 0;}
-.lp-stat{flex:1;min-width:120px;padding:20px 10px;text-align:center;border-right:1px solid rgba(255,255,255,0.05);transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);position:relative;}
-.lp-stat:last-child{border-right:none;}
-.lp-stat:hover{background:rgba(6, 182, 212, 0.08);transform:translateY(-4px);}
-.lp-stat-n{font-family:'JetBrains Mono',monospace !important;font-size:26px;font-weight:700;color:#06B6D4;text-shadow:0 0 10px rgba(6,182,212,0.3);transition:color 0.3s ease;}
-.lp-stat:hover .lp-stat-n{color:#FFFFFF;text-shadow:0 0 20px rgba(6,182,212,0.8);}
-.lp-stat-l{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.1em;margin-top:4px;}
+.lp-sub{font-size:clamp(16px, 2vw, 22px);color:#94A3B8;max-width:650px;line-height:1.6;margin:0 auto 50px;}
+
+/* Feature Cards Grid */
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: 60px auto 40px; text-align: left; }
+.f-card { background: rgba(13, 17, 35, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 32px; transition: transform 0.4s ease, border-color 0.4s ease; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+.f-card:hover { transform: translateY(-10px); border-color: rgba(6, 182, 212, 0.4); box-shadow: 0 30px 60px rgba(6,182,212,0.15); }
+.f-icon { font-size: 32px; margin-bottom: 20px; background: rgba(255,255,255,0.05); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); }
+.f-title { font-size: 18px; font-weight: 700; color: #F1F5F9; margin-bottom: 12px; }
+.f-desc { font-size: 14px; color: #94A3B8; line-height: 1.7; }
+
+/* Streamlit Button Overrides for Landing Page */
+div.stButton > button[kind="primary"]{background:linear-gradient(135deg, #3B7DFB 0%, #06B6D4 100%) !important;color:white !important;border:none !important;padding:28px 40px !important;font-size:20px !important;font-weight:800 !important;border-radius:14px !important;box-shadow:0 0 30px rgba(6, 182, 212, 0.4) !important;transition:all 0.3s ease !important;text-transform:uppercase !important;letter-spacing:1px !important;}
+div.stButton > button[kind="primary"]:hover{box-shadow:0 0 50px rgba(6, 182, 212, 0.8) !important;transform:translateY(-4px) scale(1.03) !important;}
 </style>
-<div class="bg-orb orb-1"></div>
-<div class="bg-orb orb-2"></div>
+
+<!-- BACKGROUND SYSTEM -->
+<div class="grid-container">
+    <div class="cyber-grid"></div>
+    <div class="grid-fade"></div>
+</div>
+
+<!-- NAVIGATION -->
 <div class="lp-nav">
-<div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
+    <div class="lp-logo"><div class="lp-logo-dot"></div>MomentumFrenzy</div>
+    <div style="font-family:'JetBrains Mono'; font-size:12px; color:#64748B;">NSE SYSTEM: <span style="color:#00D68F;">ONLINE</span></div>
 </div>
-<div class="lp-hero">
-<div class="glass-panel">
-<div class="lp-live-badge animate-1"><div class="lp-live-dot"></div>Data Engine Online</div>
-<h1 class="lp-h1 animate-2">Find the trade.<br><span>Before the move.</span></h1>
-<p class="lp-sub animate-3">Institutional momentum scanner for NSE. Entry, Stop Loss, Targets, and Sector Rotation auto-calculated in real time.</p>
-<div style="height: 30px;"></div>
-<div class="lp-stats animate-4">
-<div class="lp-stat"><div class="lp-stat-n">500+</div><div class="lp-stat-l">Stocks Scanned</div></div>
-<div class="lp-stat"><div class="lp-stat-n">18</div><div class="lp-stat-l">Sectors Tracked</div></div>
-<div class="lp-stat"><div class="lp-stat-n">15 min</div><div class="lp-stat-l">Live Refresh</div></div>
-<div class="lp-stat"><div class="lp-stat-n">Free</div><div class="lp-stat-l">Always</div></div>
-</div>
-</div>
+
+<!-- MAIN HERO SECTION -->
+<div class="hero-section">
+    <div class="lp-live-badge a-1"><div class="lp-live-dot"></div>Institutional Engine Active</div>
+    <h1 class="lp-h1 a-2">Find the trade.<br><span>Before the move.</span></h1>
+    <p class="lp-sub a-3">Stop reacting to old news. Momentum Frenzy is a quantitative terminal that mathematically detects high-probability setups in the Indian Stock Market before retail traders find them.</p>
+
+    <!-- WHAT IT DOES SECTION -->
+    <div class="features-grid a-4">
+        <div class="f-card">
+            <div class="f-icon">🎯</div>
+            <div class="f-title">Algorithmic Breakouts</div>
+            <div class="f-desc">The engine scans all 500+ major NSE stocks every 15 minutes to instantly detect Volume Surges, Pullbacks, and Golden Crossovers.</div>
+        </div>
+        <div class="f-card">
+            <div class="f-icon">🛡️</div>
+            <div class="f-title">Auto Risk & Reward</div>
+            <div class="f-desc">Never guess your exit. Every "BUY" signal automatically calculates the mathematical Stop Loss and dual Take-Profit targets.</div>
+        </div>
+        <div class="f-card">
+            <div class="f-icon">📊</div>
+            <div class="f-title">Sector Heatmaps</div>
+            <div class="f-desc">Visualize exactly where institutional money is flowing with live interactive treemaps and sector rotation quadrants.</div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 1.2, 1])
+    c1, c2, c3 = st.columns([1, 1, 1])
     with c2:
-        st.markdown("<div style='margin-top: -240px; position: relative; z-index: 50;' class='animate-4'>", unsafe_allow_html=True)
-        if st.button("⚡ Launch Terminal — Free", use_container_width=True, type="primary"):
+        st.markdown("<div style='margin-bottom: 80px; position: relative; z-index: 50;' class='a-4'>", unsafe_allow_html=True)
+        if st.button("⚡ INITIALIZE TERMINAL", use_container_width=True, type="primary"):
             st.session_state.page = "terminal"
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# SEBI SHIELD POPUP
+# TERMINAL CSS & SEBI MODAL
 # ══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<style>
+.stApp { background: #07091A !important; }
+div.stButton > button[kind="primary"]{background:linear-gradient(135deg, #3B7DFB 0%, #06B6D4 100%) !important;color:white !important;border:none !important;padding:20px !important;border-radius:12px !important;box-shadow:0 0 20px rgba(59, 125, 251, 0.3) !important;}
+</style>
+""", unsafe_allow_html=True)
+
 if st.session_state.page == "terminal" and not st.session_state.legal_accepted:
     st.markdown("""
     <style>
-    .legal-modal{background:rgba(13,17,32,0.6);backdrop-filter:blur(16px);border:1px solid rgba(255,76,76,0.4);border-radius:16px;padding:30px;margin:40px auto;max-width:600px;text-align:center;box-shadow:0 20px 50px rgba(255,76,76,0.15);}
+    .legal-modal{background:rgba(13,17,32,0.6);backdrop-filter:blur(16px);border:1px solid rgba(255,76,76,0.4);border-radius:16px;padding:30px;margin:100px auto;max-width:600px;text-align:center;box-shadow:0 20px 50px rgba(255,76,76,0.15);}
     .legal-title{color:#FF4C4C;font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-bottom:15px;}
     .legal-text{color:#94A3B8;font-size:14px;line-height:1.6;margin-bottom:25px;text-align:left;}
+    header[data-testid="stHeader"], #MainMenu, footer{display:none;}
     </style>
     <div class="legal-modal">
         <div class="legal-title">⚠️ MANDATORY RISK DISCLOSURE</div>
@@ -137,6 +197,10 @@ if st.session_state.page == "terminal" and not st.session_state.legal_accepted:
             st.rerun()
     st.stop()
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TERMINAL UI INITIALIZATION
+# ══════════════════════════════════════════════════════════════════════════════
 if market_data is None:
     st.markdown("<div style='text-align:center; padding:100px; color:#3B7DFB;'><h2>⚙️ Initializing Data Engine...</h2></div>", unsafe_allow_html=True)
     st.stop()
@@ -306,7 +370,6 @@ with tab1:
     with fc1: sf     = st.selectbox("Signal", ["All","BUY","WATCH","AVOID"])
     with fc2: rf     = st.selectbox("Risk",   ["All","Low","Medium","High"])
     with fc3: setupf = st.selectbox("Setup",  ["All","Breakout","Pullback","Vol Surge","Trend","Oversold","Base"])
-    # --- NEW FEATURE 1: VOLUME SLIDER ---
     with fc4: volf   = st.slider("Min Vol Surge", 0.0, 5.0, 1.0, 0.5)
     with fc5: tn     = st.selectbox("Universe",["Top 100","Top 250","All 500+ Stocks"], index=2)
 
@@ -341,11 +404,9 @@ with tab1:
     st.download_button("⬇️ Export Data to CSV (Excel)", data=csv_data, file_name="momentum_scanner_live.csv", mime="text/csv", use_container_width=True)
 
 with tab2:
-    # --- NEW FEATURE 2: MARKET BREADTH GAUGE ---
     breadth_c1, breadth_c2 = st.columns([1, 3])
     with breadth_c1:
         st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Market Breadth</div></div>", unsafe_allow_html=True)
-        # Calculate how many sectors are positive today
         positive_sectors = len(sector_df[sector_df["Today%"] > 0])
         breadth_score = (positive_sectors / len(sector_df)) * 100 if len(sector_df) > 0 else 0
         
