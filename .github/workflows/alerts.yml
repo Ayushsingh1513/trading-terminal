@@ -1,17 +1,28 @@
-name: Market Alerts
+name: Market Close Telegram Alert
+
 on:
   schedule:
-    - cron: '0 4 * * 1-5'    # 9:30 AM IST
-    - cron: '0 10 * * 1-5'   # 3:30 PM IST
-  workflow_dispatch:
+    # Runs at exactly 3:20 PM IST (9:50 AM UTC) every Monday-Friday
+    - cron: '50 9 * * 1-5'
+  workflow_dispatch: 
+
+permissions:
+  contents: write
 
 jobs:
   send-alert:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - run: pip install yfinance requests pandas
-      - run: python alert.py
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install yfinance pandas numpy requests pytz
+
+      - name: Run Data Engine (Triggers Alert)
+        run: python data_engine.py
