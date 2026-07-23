@@ -47,7 +47,7 @@ def load_performance_stats():
                 return round(pop, 1), len(closed)
         except Exception:
             pass
-    return 78.5, 42  # High-confidence algorithmic baseline
+    return 78.5, 42  # Algorithmic baseline
 
 market_data, scanner_df, sector_df = load_backend_data()
 pop_rate, total_trades_tracked = load_performance_stats()
@@ -193,7 +193,6 @@ header[data-testid="stHeader"],#MainMenu,footer{display:none;}
 .sec-hdr-line{width:4px;height:18px;background:linear-gradient(180deg,#3B7DFB,#06B6D4);border-radius:2px;box-shadow:0 0 8px rgba(6,182,212,0.5);}
 .sec-hdr-text{font-size:12px;font-weight:700;color:#E2E8F0;text-transform:uppercase;letter-spacing:.12em;}
 
-/* Performance Bar CSS */
 .perf-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;background:rgba(13,17,35,0.4);backdrop-filter:blur(16px);border:1px solid rgba(0,214,143,0.25);border-radius:14px;padding:16px 24px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,214,143,0.05);}
 .perf-stat{display:flex;flex-direction:column;}
 .perf-lbl{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;font-weight:600;}
@@ -274,7 +273,6 @@ top_picks = scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records')
 tab1, tab2 = st.tabs(["  🎯  Picks & Scanner  ", "  📊  Sector Intelligence  "])
 
 with tab1:
-    # --- NEW STRATEGIC FEATURE: PERFORMANCE TRACK RECORD CARD ---
     st.markdown(f"""<div class="perf-bar animated-entry">
 <div class="perf-stat">
 <span class="perf-lbl">Algorithm PoP Rate</span>
@@ -458,7 +456,39 @@ with tab2:
         st.plotly_chart(fig_s, use_container_width=True)
 
     st.markdown("<div class='sec-hdr animated-entry'><div class='sec-hdr-line'></div><div class='sec-hdr-text'>Comprehensive Sector Metrics Table</div></div>", unsafe_allow_html=True)
-    disp_sec = sector_df[["Sector", "Today%", "1M%", "3M%", "RSI", "52W%", "VolPunch", "Score"]].rename(columns={"Today%":"Today %", "52W%":"From 52W High %", "VolPunch":"Vol Multiplier"})
-    st.dataframe(disp_sec, column_config={"Today %": st.column_config.NumberColumn(format="%+.2f%%"), "1M%": st.column_config.NumberColumn(format="%+.2f%%"), "3M%": st.column_config.NumberColumn(format="%+.2f%%"), "RSI": st.column_config.ProgressColumn("RSI", format="%.1f", min_value=0, max_value=100), "From 52W High %": st.column_config.NumberColumn(format="%.1f%%"), "Vol Multiplier": st.column_config.NumberColumn(format="%.2fx"), "Score": st.column_config.ProgressColumn("Momentum Score", format="%.1f", min_value=0, max_value=100)}, hide_index=True, use_container_width=True, height=280)
+    
+    # ══════════════════════════════════════════════════════════════════════════════
+    # SMART MONEY / INSTITUTIONAL FLOW TABLE INTEGRATION
+    # ══════════════════════════════════════════════════════════════════════════════
+    if "InstFlow" not in sector_df.columns:
+        sector_df["InstFlow"] = "Neutral ⚪"
+    if "UDRatio" not in sector_df.columns:
+        sector_df["UDRatio"] = 1.0
+
+    disp_sec = sector_df[["Sector", "Today%", "1M%", "3M%", "RSI", "InstFlow", "52W%", "VolPunch", "Score"]].rename(
+        columns={
+            "Today%": "Today %", 
+            "InstFlow": "Smart Money Flow", 
+            "52W%": "From 52W High %", 
+            "VolPunch": "Vol Multiplier"
+        }
+    )
+    
+    st.dataframe(
+        disp_sec, 
+        column_config={
+            "Today %": st.column_config.NumberColumn(format="%+.2f%%"), 
+            "1M%": st.column_config.NumberColumn(format="%+.2f%%"), 
+            "3M%": st.column_config.NumberColumn(format="%+.2f%%"), 
+            "RSI": st.column_config.ProgressColumn("RSI", format="%.1f", min_value=0, max_value=100), 
+            "Smart Money Flow": st.column_config.TextColumn("Smart Money Flow"),
+            "From 52W High %": st.column_config.NumberColumn(format="%.1f%%"), 
+            "Vol Multiplier": st.column_config.NumberColumn(format="%.2fx"), 
+            "Score": st.column_config.ProgressColumn("Momentum Score", format="%.1f", min_value=0, max_value=100)
+        }, 
+        hide_index=True, 
+        use_container_width=True, 
+        height=280
+    )
 
 st.markdown("<div style='text-align:center;padding:24px 20px;border-top:1px solid rgba(255,255,255, 0.05);margin-top:24px;'><p style='color:#64748B;font-size:10px;margin:0;font-family:\"JetBrains Mono\",monospace !important;letter-spacing:.04em;'>Educational purposes only. Not financial advice. Always DYOR. Consult a SEBI-registered advisor.<br><br>© 2026 Momentum Frenzy &nbsp;·&nbsp;<a href='https://instagram.com/momentumfrenzy' style='color:#06B6D4;text-decoration:none;'>@momentumfrenzy</a></p></div>", unsafe_allow_html=True)
