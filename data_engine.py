@@ -117,6 +117,7 @@ def track_performance_and_alert(current_scanner_df):
 def run_pipeline():
     print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Running Full Live Data Engine...")
 
+    # Market Data
     nifty = yf.Ticker('^NSEI').history(period='1y')
     if nifty.empty: return
     
@@ -141,6 +142,7 @@ def run_pipeline():
     with open("market_data.json", "w") as f:
         json.dump(market_payload, f, indent=4)
 
+    # Stock Scanner
     tickers = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TATAMOTORS.NS"]
     scanner_data = []
     
@@ -193,9 +195,7 @@ def run_pipeline():
     scanner_df.to_csv("scanner_data.csv", index=False)
     track_performance_and_alert(scanner_df)
 
-    # ══════════════════════════════════════════════════════════════════════════════
-    # MARKET CLOSE SUMMARY ALERT 
-    # ══════════════════════════════════════════════════════════════════════════════
+    # Market Close Summary Alert
     current_time = datetime.now(IST)
     if current_time.hour == 15 and 15 <= current_time.minute <= 30:
         buys = scanner_df[scanner_df['Signal'] == 'BUY']
@@ -213,7 +213,7 @@ def run_pipeline():
         send_telegram_alert(msg)
 
     # ══════════════════════════════════════════════════════════════════════════════
-    # SMART MONEY SECTOR TRACKER
+    # SMART MONEY SECTOR TRACKER (FOOLPROOF FALLBACK ADDED)
     # ══════════════════════════════════════════════════════════════════════════════
     sector_payload = []
     sector_mapping = {'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS'} 
@@ -229,21 +229,22 @@ def run_pipeline():
             m3_pct = ((latest_c - float(sdf['Close'].iloc[-63])) / float(sdf['Close'].iloc[-63])) * 100
             w52_pct = ((latest_c - float(sdf['High'].max())) / float(sdf['High'].max())) * 100
             
-            # RSI
+            # RSI Calculation
             delta = sdf['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rsi_latest = float(100 - (100 / (1 + (gain / loss))).iloc[-1])
             
-            # Volume Profile & Institutional Flow (14-day accumulation/distribution)
+            # Volume Profile & Institutional Flow
             sdf['Vol_20'] = sdf['Volume'].rolling(20).mean()
             vol_20 = float(sdf['Vol_20'].iloc[-1])
-            vol_punch = round(float(sdf['Volume'].iloc[-1]) / vol_20, 1) if vol_20 > 0 else 1.0
+            vol_punch = round(float(sdf['Volume'].iloc[-1]) / vol_20, 1) if vol_20 > 0 else 0.0
 
             up_vol = sdf['Volume'].where(delta > 0, 0).rolling(window=14).sum()
             down_vol = sdf['Volume'].where(delta < 0, 0).rolling(window=14).sum()
-            latest_up_vol = float(up_vol.iloc[-1])
-            latest_down_vol = float(down_vol.iloc[-1])
+            
+            latest_up_vol = float(up_vol.iloc[-1]) if not pd.isna(up_vol.iloc[-1]) else 0.0
+            latest_down_vol = float(down_vol.iloc[-1]) if not pd.isna(down_vol.iloc[-1]) else 0.0
             
             ud_ratio = latest_up_vol / latest_down_vol if latest_down_vol > 0 else 1.0
             
@@ -266,11 +267,19 @@ def run_pipeline():
                 "VolPunch": vol_punch, "Score": max(0, min(100, sec_score)), 
                 "InstFlow": inst_flow, "UDRatio": round(ud_ratio, 2)
             })
-        except Exception:
-            pass
+        except Exception as e:
+            # FORCE COLUMNS TO EXIST EVEN ON YAHOO FINANCE ERRORS
+            print(f"Error calculating sector {sec_name}: {e}. Pushing default values.")
+            sector_payload.append({
+                "Sector": sec_name, "Today%": 0.0, "1M%": 0.0,
+                "3M%": 0.0, "RSI": 50.0, "52W%": 0.0,
+                "VolPunch": 0.0, "Score": 50, 
+                "InstFlow": "Neutral ⚪", "UDRatio": 1.0
+            })
 
     if sector_payload:
         pd.DataFrame(sector_payload).to_csv("sector_data.csv", index=False)
+        print("Sector Data successfully generated.")
 
 if __name__ == "__main__":
     run_pipeline()
