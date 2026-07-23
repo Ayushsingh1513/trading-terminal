@@ -142,8 +142,16 @@ def run_pipeline():
     with open("market_data.json", "w") as f:
         json.dump(market_payload, f, indent=4)
 
-    # Stock Scanner
-    tickers = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TATAMOTORS.NS"]
+    # ── EXPANDED STOCK UNIVERSE ──
+    tickers = [
+        "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", 
+        "TATAMOTORS.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "LARSEN.NS",
+        "BAJFINANCE.NS", "AXISBANK.NS", "KOTAKBANK.NS", "MARUTI.NS", "SUNPHARMA.NS",
+        "ULTRACEMCO.NS", "ASIANPAINT.NS", "NTPC.NS", "TATASTEEL.NS", "POWERGRID.NS",
+        "M&M.NS", "HCLTECH.NS", "TITAN.NS", "BAJAJFINSV.NS", "ADANIENT.NS",
+        "WIPRO.NS", "JSWSTEEL.NS", "HAL.NS", "DIXON.NS", "BHEL.NS"
+    ]
+    
     scanner_data = []
     
     for ticker in tickers:
@@ -213,10 +221,21 @@ def run_pipeline():
         send_telegram_alert(msg)
 
     # ══════════════════════════════════════════════════════════════════════════════
-    # SMART MONEY SECTOR TRACKER (FOOLPROOF FALLBACK ADDED)
+    # ── EXPANDED SMART MONEY SECTOR TRACKER ──
     # ══════════════════════════════════════════════════════════════════════════════
     sector_payload = []
-    sector_mapping = {'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS'} 
+    
+    # Highly reliable Indian ETFs mapping to broad sectors
+    sector_mapping = {
+        'Financials': 'BANKBEES.NS',
+        'Tech': 'ITBEES.NS',
+        'Auto': 'AUTOBEES.NS',
+        'Pharma': 'PHARMABEES.NS',
+        'FMCG': 'CONSUMBEES.NS', 
+        'PSU Bank': 'PSUBNKBEES.NS',
+        'Infra': 'INFRABEES.NS',
+        'Midcap': 'MID150BEES.NS'
+    }
     
     for sec_name, symbol in sector_mapping.items():
         try:
@@ -268,7 +287,6 @@ def run_pipeline():
                 "InstFlow": inst_flow, "UDRatio": round(ud_ratio, 2)
             })
         except Exception as e:
-            # FORCE COLUMNS TO EXIST EVEN ON YAHOO FINANCE ERRORS
             print(f"Error calculating sector {sec_name}: {e}. Pushing default values.")
             sector_payload.append({
                 "Sector": sec_name, "Today%": 0.0, "1M%": 0.0,
