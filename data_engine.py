@@ -18,13 +18,12 @@ def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
+        requests.post(url, json=payload)
     except Exception as e:
         print(f"Failed to send Telegram alert: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. UPGRADED RISK & CONFLUENCE (PULLBACK + RS)
+# 2. STRATEGY & TARGETS
 # ══════════════════════════════════════════════════════════════════════════════
 def calculate_confluence(row, nifty_rs):
     score = 0
@@ -47,7 +46,7 @@ def calculate_targets(entry_price, atr):
     return sl, t1, t2, rr
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. SMART TRAILING PERFORMANCE TRACKER
+# 3. PERFORMANCE TRACKER
 # ══════════════════════════════════════════════════════════════════════════════
 def track_performance_and_alert(current_scanner_df):
     history_file = "performance_history.json"
@@ -68,25 +67,25 @@ def track_performance_and_alert(current_scanner_df):
                 trade['Status'] = 'WIN (FULL)'
                 trade['Exit_Price'] = current_price
                 history['closed_trades'].append(trade)
-                send_telegram_alert(f"🏆 *MASSIVE WIN!*\n\n📈 *{trade['Stock']}* hit Target 2!\n💰 *Entry:* ₹{trade['Entry']} ➔ *Exit:* ₹{current_price}\n🔥 *Result:* Maximum Profit Booked!")
+                send_telegram_alert(f"🏆 *MASSIVE WIN!*\n\n📈 *{trade['Stock']}* hit Target 2!\n💰 *Entry:* ₹{trade['Entry']} ➔ *Exit:* ₹{current_price}")
                 
             elif current_price >= trade['Target1'] and not trade.get('T1_Hit', False):
                 trade['T1_Hit'] = True
                 trade['SL'] = trade['Entry']
                 updated_active.append(trade)
-                send_telegram_alert(f"🎯 *TARGET 1 HIT!*\n\n📈 *{trade['Stock']}* reached T1.\n🔒 *Action:* 50% Profit Booked. SL moved to Breakeven (₹{trade['Entry']}). Risk-Free Trade!")
+                send_telegram_alert(f"🎯 *TARGET 1 HIT!*\n\n📈 *{trade['Stock']}* reached T1.\n🔒 *Action:* 50% Profit Booked. SL moved to Breakeven.")
                 
             elif current_price <= trade['SL']:
                 if trade.get('T1_Hit', False):
                     trade['Status'] = 'BREAKEVEN'
                     trade['Exit_Price'] = current_price
                     history['closed_trades'].append(trade)
-                    send_telegram_alert(f"🛡️ *TRAILING SL HIT*\n\n📉 *{trade['Stock']}* returned to entry.\n💰 *Exit:* ₹{current_price}\n⚖️ *Result:* Risk-Free Breakeven.")
+                    send_telegram_alert(f"🛡️ *TRAILING SL HIT*\n\n📉 *{trade['Stock']}* returned to entry.\n⚖️ *Result:* Risk-Free Breakeven.")
                 else:
                     trade['Status'] = 'LOSS'
                     trade['Exit_Price'] = current_price
                     history['closed_trades'].append(trade)
-                    send_telegram_alert(f"🛑 *STOP LOSS HIT*\n\n📉 *{trade['Stock']}* hit SL.\n💰 *Entry:* ₹{trade['Entry']} ➔ *Exit:* ₹{current_price}\n🛡️ *Result:* Capital Protected.")
+                    send_telegram_alert(f"🛑 *STOP LOSS HIT*\n\n📉 *{trade['Stock']}* hit SL at ₹{current_price}.")
             else:
                 updated_active.append(trade)
         else:
@@ -113,16 +112,13 @@ def track_performance_and_alert(current_scanner_df):
         json.dump(history, f, indent=4)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4. MAIN DATA PIPELINE
+# 4. MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 def run_pipeline():
     print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Running Full Live Data Engine...")
 
-    # 1. Market Data Generation
     nifty = yf.Ticker('^NSEI').history(period='1y')
-    if nifty.empty: 
-        print("Warning: Nifty data missing.")
-        return
+    if nifty.empty: return
     
     nifty['Return_21'] = nifty['Close'].pct_change(21)
     nifty_rs = float(nifty['Return_21'].iloc[-1])
@@ -132,7 +128,7 @@ def run_pipeline():
     market_payload = {
         "nifty": current_nifty,
         "nifty_chg": float((current_nifty - nifty['Close'].iloc[-2]) / nifty['Close'].iloc[-2] * 100),
-        "bank": 50000.0, # Placeholder to avoid UI breaking if used elsewhere
+        "bank": 50000.0, 
         "bank_chg": 0.5,
         "vix": 14.2,     
         "vix_chg": -1.2,
@@ -145,7 +141,6 @@ def run_pipeline():
     with open("market_data.json", "w") as f:
         json.dump(market_payload, f, indent=4)
 
-    # 2. Stock Scanner
     tickers = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "TATAMOTORS.NS"]
     scanner_data = []
     
@@ -162,8 +157,7 @@ def run_pipeline():
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs_val = gain / loss
-            df['RSI'] = 100 - (100 / (1 + rs_val))
+            df['RSI'] = 100 - (100 / (1 + (gain / loss)))
             
             df['TR'] = np.maximum(df['High'] - df['Low'], np.maximum(abs(df['High'] - df['Close'].shift()), abs(df['Low'] - df['Close'].shift())))
             df['ATR'] = df['TR'].rolling(14).mean()
@@ -173,51 +167,54 @@ def run_pipeline():
             vol_surge = float(latest['Volume'] / latest['Vol_20']) if latest['Vol_20'] > 0 else 1.0
             
             row = {
-                'Stock': ticker,
-                'Price': price,
-                'EMA_20': float(latest['EMA_20']),
-                'EMA_50': float(latest['EMA_50']),
-                'Return_21': float(latest['Return_21']),
-                'RSI': float(latest['RSI']),
-                'VolSurge': vol_surge,
+                'Stock': ticker, 'Price': price, 'EMA_20': float(latest['EMA_20']),
+                'EMA_50': float(latest['EMA_50']), 'Return_21': float(latest['Return_21']),
+                'RSI': float(latest['RSI']), 'VolSurge': vol_surge,
                 'RS': float(latest['Return_21'] * 100),
                 '52W%': float(((price - df['High'].max()) / df['High'].max()) * 100),
                 'Sector': 'Financials' if 'BANK' in ticker else 'Tech'
             }
             
             row['Score'] = calculate_confluence(row, nifty_rs)
-            
             if row['Score'] >= 80:
-                row['Signal'] = 'BUY'
-                row['Risk'] = 'Low'
-                row['Setup'] = 'Pullback/RS'
+                row['Signal'], row['Risk'], row['Setup'] = 'BUY', 'Low', 'Pullback/RS'
             elif row['Score'] >= 50:
-                row['Signal'] = 'WATCH'
-                row['Risk'] = 'Medium'
-                row['Setup'] = 'Consolidating'
+                row['Signal'], row['Risk'], row['Setup'] = 'WATCH', 'Medium', 'Consolidating'
             else:
-                row['Signal'] = 'AVOID'
-                row['Risk'] = 'High'
-                row['Setup'] = 'Weak'
+                row['Signal'], row['Risk'], row['Setup'] = 'AVOID', 'High', 'Weak'
 
             sl, t1, t2, rr = calculate_targets(price, latest['ATR'])
-            row['Entry'] = round(price, 2)
-            row['SL'] = sl
-            row['Target1'] = t1
-            row['Target2'] = t2
-            row['RR'] = rr
-            
+            row.update({'Entry': round(price, 2), 'SL': sl, 'Target1': t1, 'Target2': t2, 'RR': rr})
             scanner_data.append(row)
-        except Exception as e:
-            print(f"Error {ticker}: {e}")
+        except Exception:
+            pass
 
     scanner_df = pd.DataFrame(scanner_data).sort_values(by='Score', ascending=False)
     scanner_df.to_csv("scanner_data.csv", index=False)
     track_performance_and_alert(scanner_df)
 
-    # 3. LIVE Sector Data Generation 
+    # ══════════════════════════════════════════════════════════════════════════════
+    # MARKET CLOSE SUMMARY ALERT (Runs only between 3:15 PM and 3:30 PM IST)
+    # ══════════════════════════════════════════════════════════════════════════════
+    current_time = datetime.now(IST)
+    if current_time.hour == 15 and 15 <= current_time.minute <= 30:
+        buys = scanner_df[scanner_df['Signal'] == 'BUY']
+        watches = scanner_df[scanner_df['Signal'] == 'WATCH']
+        
+        msg = "📊 *MARKET CLOSE SUMMARY*\n\n"
+        msg += "🟢 *BUY Signals:*\n"
+        for _, r in buys.iterrows(): msg += f"• {r['Stock']} ({r['Score']}/100)\n"
+        if buys.empty: msg += "None\n"
+        
+        msg += "\n🟡 *WATCH List:*\n"
+        for _, r in watches.iterrows(): msg += f"• {r['Stock']} ({r['Score']}/100)\n"
+        if watches.empty: msg += "None\n"
+        
+        send_telegram_alert(msg)
+
+    # 3. FIX: USE ETFs INSTEAD OF INDICES FOR INDIAN SECTOR DATA
     sector_payload = []
-    sector_mapping = {'Financials': '^NSEBANK', 'Tech': '^CNXIT'}
+    sector_mapping = {'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS'} # Extremely reliable
     
     for sec_name, symbol in sector_mapping.items():
         try:
@@ -225,26 +222,20 @@ def run_pipeline():
             if sdf.empty or len(sdf) < 65: continue
             
             latest_c = float(sdf['Close'].iloc[-1])
-            
             today_pct = ((latest_c - float(sdf['Close'].iloc[-2])) / float(sdf['Close'].iloc[-2])) * 100
             m1_pct = ((latest_c - float(sdf['Close'].iloc[-21])) / float(sdf['Close'].iloc[-21])) * 100
             m3_pct = ((latest_c - float(sdf['Close'].iloc[-63])) / float(sdf['Close'].iloc[-63])) * 100
             w52_pct = ((latest_c - float(sdf['High'].max())) / float(sdf['High'].max())) * 100
             
-            # RSI Calculation
             delta = sdf['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs_val = gain / loss
-            rsi_latest = float(100 - (100 / (1 + rs_val)).iloc[-1])
+            rsi_latest = float(100 - (100 / (1 + (gain / loss))).iloc[-1])
             
-            # Volume Calculation (Indices often lack volume data on yf, providing safe fallback)
             sdf['Vol_20'] = sdf['Volume'].rolling(20).mean()
             vol_20 = float(sdf['Vol_20'].iloc[-1])
-            latest_vol = float(sdf['Volume'].iloc[-1])
-            vol_punch = round(latest_vol / vol_20, 1) if vol_20 > 0 else 1.0
+            vol_punch = round(float(sdf['Volume'].iloc[-1]) / vol_20, 1) if vol_20 > 0 else 1.0
 
-            # Sector Score (Trend & RSI based)
             sec_score = 50
             if rsi_latest > 60: sec_score += 20
             elif rsi_latest < 40: sec_score -= 20
@@ -252,23 +243,15 @@ def run_pipeline():
             if today_pct > 0: sec_score += 15
             
             sector_payload.append({
-                "Sector": sec_name,
-                "Today%": round(today_pct, 2),
-                "1M%": round(m1_pct, 2),
-                "3M%": round(m3_pct, 2),
-                "RSI": round(rsi_latest, 1),
-                "52W%": round(w52_pct, 2),
-                "VolPunch": vol_punch,
-                "Score": max(0, min(100, sec_score))
+                "Sector": sec_name, "Today%": round(today_pct, 2), "1M%": round(m1_pct, 2),
+                "3M%": round(m3_pct, 2), "RSI": round(rsi_latest, 1), "52W%": round(w52_pct, 2),
+                "VolPunch": vol_punch, "Score": max(0, min(100, sec_score))
             })
-        except Exception as e:
-            print(f"Error fetching {sec_name}: {e}")
+        except Exception:
+            pass
 
     if sector_payload:
         pd.DataFrame(sector_payload).to_csv("sector_data.csv", index=False)
-        print("Sector Data successfully pulled from live markets.")
-
-    print("Engine Update Complete.")
 
 if __name__ == "__main__":
     run_pipeline()
