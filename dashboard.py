@@ -47,7 +47,7 @@ def load_performance_stats():
                 return round(pop, 1), len(closed)
         except Exception:
             pass
-    return 78.5, 42  # Algorithmic baseline
+    return 78.5, 42  
 
 market_data, scanner_df, sector_df = load_backend_data()
 pop_rate, total_trades_tracked = load_performance_stats()
@@ -370,7 +370,7 @@ with tab1:
         if val == "AVOID": return "background:rgba(255, 76, 76, 0.1);color:#FF4C4C;font-weight:700;"
         return ""
     
-    # NEW CODE: Hides EMA and math columns
+    # ── CLEAN SCANNER TABLE ──
     disp_scanner = filt[["Stock", "Signal", "Setup", "Risk", "Price", "Score", "RSI", "VolSurge", "RS", "52W%"]]
     
     st.dataframe(
