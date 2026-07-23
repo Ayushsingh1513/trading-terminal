@@ -1,4 +1,15 @@
 {
     "closed_trades": [],
-    "active_trades": []
+    "active_trades": [
+        {
+            "Stock": "ICICIBANK.NS",
+            "Entry": 1438.7,
+            "Target1": 1477.26,
+            "Target2": 1528.67,
+            "SL": 1407.85,
+            "Date": "2026-07-23",
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        }
+    ]
 }
