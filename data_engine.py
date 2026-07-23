@@ -194,7 +194,7 @@ def run_pipeline():
     track_performance_and_alert(scanner_df)
 
     # ══════════════════════════════════════════════════════════════════════════════
-    # MARKET CLOSE SUMMARY ALERT (Runs only between 3:15 PM and 3:30 PM IST)
+    # MARKET CLOSE SUMMARY ALERT 
     # ══════════════════════════════════════════════════════════════════════════════
     current_time = datetime.now(IST)
     if current_time.hour == 15 and 15 <= current_time.minute <= 30:
@@ -212,9 +212,11 @@ def run_pipeline():
         
         send_telegram_alert(msg)
 
-    # 3. FIX: USE ETFs INSTEAD OF INDICES FOR INDIAN SECTOR DATA
+    # ══════════════════════════════════════════════════════════════════════════════
+    # SMART MONEY SECTOR TRACKER
+    # ══════════════════════════════════════════════════════════════════════════════
     sector_payload = []
-    sector_mapping = {'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS'} # Extremely reliable
+    sector_mapping = {'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS'} 
     
     for sec_name, symbol in sector_mapping.items():
         try:
@@ -227,15 +229,31 @@ def run_pipeline():
             m3_pct = ((latest_c - float(sdf['Close'].iloc[-63])) / float(sdf['Close'].iloc[-63])) * 100
             w52_pct = ((latest_c - float(sdf['High'].max())) / float(sdf['High'].max())) * 100
             
+            # RSI
             delta = sdf['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rsi_latest = float(100 - (100 / (1 + (gain / loss))).iloc[-1])
             
+            # Volume Profile & Institutional Flow (14-day accumulation/distribution)
             sdf['Vol_20'] = sdf['Volume'].rolling(20).mean()
             vol_20 = float(sdf['Vol_20'].iloc[-1])
             vol_punch = round(float(sdf['Volume'].iloc[-1]) / vol_20, 1) if vol_20 > 0 else 1.0
 
+            up_vol = sdf['Volume'].where(delta > 0, 0).rolling(window=14).sum()
+            down_vol = sdf['Volume'].where(delta < 0, 0).rolling(window=14).sum()
+            latest_up_vol = float(up_vol.iloc[-1])
+            latest_down_vol = float(down_vol.iloc[-1])
+            
+            ud_ratio = latest_up_vol / latest_down_vol if latest_down_vol > 0 else 1.0
+            
+            if ud_ratio >= 1.5: inst_flow = "Heavy Accumulation 🟢"
+            elif ud_ratio >= 1.1: inst_flow = "Accumulation ↗️"
+            elif ud_ratio <= 0.6: inst_flow = "Heavy Distribution 🔴"
+            elif ud_ratio <= 0.9: inst_flow = "Distribution ↘️"
+            else: inst_flow = "Neutral ⚪"
+
+            # Dynamic Score
             sec_score = 50
             if rsi_latest > 60: sec_score += 20
             elif rsi_latest < 40: sec_score -= 20
@@ -245,7 +263,8 @@ def run_pipeline():
             sector_payload.append({
                 "Sector": sec_name, "Today%": round(today_pct, 2), "1M%": round(m1_pct, 2),
                 "3M%": round(m3_pct, 2), "RSI": round(rsi_latest, 1), "52W%": round(w52_pct, 2),
-                "VolPunch": vol_punch, "Score": max(0, min(100, sec_score))
+                "VolPunch": vol_punch, "Score": max(0, min(100, sec_score)), 
+                "InstFlow": inst_flow, "UDRatio": round(ud_ratio, 2)
             })
         except Exception:
             pass
