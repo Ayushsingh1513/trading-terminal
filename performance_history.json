@@ -100,6 +100,198 @@
             "Date": "2026-07-24",
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "APOLLOHOSP.NS",
+            "Entry": 8805.5,
+            "Target1": 9004.14,
+            "Target2": 9269.0,
+            "SL": 8646.59,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "DIVISLAB.NS",
+            "Entry": 7248.5,
+            "Target1": 7482.6,
+            "Target2": 7794.73,
+            "SL": 7061.22,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "SIEMENS.NS",
+            "Entry": 3689.8,
+            "Target1": 3838.43,
+            "Target2": 4036.6,
+            "SL": 3570.9,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "ALKEM.NS",
+            "Entry": 5633.5,
+            "Target1": 5821.38,
+            "Target2": 6071.88,
+            "SL": 5483.2,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "SHREECEM.NS",
+            "Entry": 26740.0,
+            "Target1": 27597.51,
+            "Target2": 28740.86,
+            "SL": 26053.99,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "SHRIRAMFIN.NS",
+            "Entry": 1005.1,
+            "Target1": 1056.16,
+            "Target2": 1124.25,
+            "SL": 964.25,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "ADANIPORTS.NS",
+            "Entry": 1768.3,
+            "Target1": 1823.31,
+            "Target2": 1896.65,
+            "SL": 1724.29,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "CHOLAFIN.NS",
+            "Entry": 1724.4,
+            "Target1": 1795.37,
+            "Target2": 1890.0,
+            "SL": 1667.62,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "NAM-INDIA.NS",
+            "Entry": 1112.5,
+            "Target1": 1172.18,
+            "Target2": 1251.75,
+            "SL": 1064.76,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "PHOENIXLTD.NS",
+            "Entry": 2010.7,
+            "Target1": 2096.23,
+            "Target2": 2210.27,
+            "SL": 1942.27,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "ABCAPITAL.NS",
+            "Entry": 393.85,
+            "Target1": 410.37,
+            "Target2": 432.39,
+            "SL": 380.64,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "CIPLA.NS",
+            "Entry": 1410.6,
+            "Target1": 1461.32,
+            "Target2": 1528.95,
+            "SL": 1370.02,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "GRASIM.NS",
+            "Entry": 3089.4,
+            "Target1": 3182.96,
+            "Target2": 3307.7,
+            "SL": 3014.55,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "PRESTIGE.NS",
+            "Entry": 1592.8,
+            "Target1": 1674.56,
+            "Target2": 1783.57,
+            "SL": 1527.39,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "INDIGO.NS",
+            "Entry": 4985.0,
+            "Target1": 5204.16,
+            "Target2": 5496.38,
+            "SL": 4809.67,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "AUROPHARMA.NS",
+            "Entry": 1532.0,
+            "Target1": 1587.77,
+            "Target2": 1662.12,
+            "SL": 1487.39,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "LUPIN.NS",
+            "Entry": 2370.5,
+            "Target1": 2453.1,
+            "Target2": 2563.22,
+            "SL": 2304.42,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "MAXHEALTH.NS",
+            "Entry": 1080.4,
+            "Target1": 1119.86,
+            "Target2": 1172.48,
+            "SL": 1048.83,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "FORTIS.NS",
+            "Entry": 948.7,
+            "Target1": 978.95,
+            "Target2": 1019.29,
+            "SL": 924.5,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "PAGEIND.NS",
+            "Entry": 40275.0,
+            "Target1": 41829.11,
+            "Target2": 43901.25,
+            "SL": 39031.71,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "ZYDUSLIFE.NS",
+            "Entry": 1108.7,
+            "Target1": 1146.23,
+            "Target2": 1196.28,
+            "SL": 1078.67,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "GAIL.NS",
+            "Entry": 170.02,
+            "Target1": 175.5,
+            "Target2": 182.8,
+            "SL": 165.64,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "OFSS.NS",
+            "Entry": 10652.0,
+            "Target1": 11342.21,
+            "Target2": 12262.5,
+            "SL": 10099.83,
+            "Status": "ACTIVE"
+        },
+        {
+            "Stock": "OBEROIRLTY.NS",
+            "Entry": 1821.2,
+            "Target1": 1905.36,
+            "Target2": 2017.58,
+            "SL": 1753.87,
+            "Status": "ACTIVE"
         }
     ]
 }
