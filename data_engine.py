@@ -205,7 +205,7 @@ def scan_hybrid_setups(sector_trends, mkt):
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. STRUCTURED TELEGRAM ALERTS
+# 5. STRUCTURED TELEGRAM ALERTS & TRADE TRACKER
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, mkt):
     history_file = "performance_history.json"
@@ -213,7 +213,49 @@ def track_targets_and_notify(scanner_df, mkt):
     
     c_time = datetime.now(IST)
     
-    # ── WIDENED MORNING ALERT WINDOW (9:15 AM to 9:55 AM IST) ──
+    # ── 1. CHECK ACTIVE TRADES FOR EXITS ──
+    still_active = []
+    for trade in history.get('active_trades', []):
+        try:
+            stock = trade['Stock']
+            curr_df = yf.Ticker(stock).history(period="1d")
+            
+            if not curr_df.empty:
+                c_price = float(curr_df['Close'].iloc[-1])
+                
+                # Condition A: Stop Loss Hit
+                if c_price <= trade['SL']:
+                    trade['Status'] = "CLOSED - SL HIT 🔴"
+                    trade['Exit_Price'] = c_price
+                    history['closed_trades'].append(trade)
+                    loss_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
+                    send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{trade['Entry']}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
+                    continue # Skip adding back to active list
+                    
+                # Condition B: Target 2 Hit (Full Exit)
+                elif c_price >= trade['Target2']:
+                    trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
+                    trade['Exit_Price'] = c_price
+                    history['closed_trades'].append(trade)
+                    profit_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
+                    send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{trade['Entry']}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
+                    continue # Skip adding back to active list
+                    
+                # Condition C: Target 1 Hit (Partial Exit & Trail SL)
+                elif c_price >= trade['Target1'] and not trade.get('T1_Hit', False):
+                    trade['T1_Hit'] = True
+                    trade['SL'] = trade['Entry']  # Trail SL to Breakeven
+                    send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. Stop Loss moved to Entry (₹{trade['SL']:.2f}) to secure a risk-free trade.")
+        except Exception as e:
+            print(f"Error checking trade {trade.get('Stock', 'Unknown')}: {e}")
+            pass
+            
+        # Keep trade in active list if neither SL nor T2 was hit
+        still_active.append(trade)
+        
+    history['active_trades'] = still_active
+    
+    # ── 2. WIDENED MORNING ALERT WINDOW (9:15 AM to 9:55 AM IST) ──
     if c_time.hour == 9 and 15 <= c_time.minute <= 55:
         pulse_msg = f"""📊 *DAILY MARKET PULSE*
 ━━━━━━━━━━━━━━━━━━━
@@ -224,18 +266,21 @@ def track_targets_and_notify(scanner_df, mkt):
 ━━━━━━━━━━━━━━━━━━━"""
         send_telegram_alert(pulse_msg)
         
-    # ── WIDENED CLOSE SUMMARY WINDOW (3:15 PM to 3:55 PM IST) ──
+    # ── 3. WIDENED CLOSE SUMMARY WINDOW (3:15 PM to 3:55 PM IST) ──
     elif c_time.hour == 15 and 15 <= c_time.minute <= 55:
         top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
         msg = f"📊 *MARKET CLOSE SUMMARY*\n\n🟢 *Qualified BUY Setups ({len(top_buys)}):*\n"
         for _, r in top_buys.iterrows(): msg += f"• *{r['Stock']}* ({r['Setup']})\n"
         send_telegram_alert(msg if not top_buys.empty else msg + "None today.")
 
+    # ── 4. RECORD & NOTIFY NEW SETUPS ──
     for buy in scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records'):
+        # Only add if not already in active trades
         if not any(t['Stock'] == buy['Stock'] for t in history['active_trades']):
             history['active_trades'].append({
                 "Stock": buy["Stock"], "Entry": float(buy["Entry"]), "Target1": float(buy["Target1"]),
-                "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE"
+                "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE",
+                "T1_Hit": False
             })
             
             alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
@@ -254,17 +299,5 @@ def track_targets_and_notify(scanner_df, mkt):
 📊 *Volume Surge:* {buy['VolSurge']}x | *RSI:* {buy['RSI']}"""
             send_telegram_alert(alert_msg)
 
+    # Save everything back to the ledger
     json.dump(history, open(history_file, "w"), indent=4)
-
-def run_pipeline():
-    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Enhanced v2.0 Engine...")
-    mkt = get_market_data()
-    if not mkt: return
-    json.dump(mkt, open("market_data.json", "w"), indent=4)
-    
-    sector_trends = get_sector_trends()
-    scanner_df = scan_hybrid_setups(sector_trends, mkt)
-    track_targets_and_notify(scanner_df, mkt)
-
-if __name__ == "__main__":
-    run_pipeline()
