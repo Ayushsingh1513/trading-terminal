@@ -1,24 +1,24 @@
 Stock,Signal,Setup,Risk,Price,Score,RSI,VolSurge,RS,52W%,Entry,SL,Target1,Target2,RR,Sector
-BHARTIARTL.NS,WATCH,Tight Flag / Vol Compression 🗜️,Medium,,70,58.2,0.95,3.82,,,,,,0,Auto
-ADANIENT.NS,WATCH,Tight Flag / Vol Compression 🗜️,Medium,,70,42.2,0.88,2.54,,,,,,0,Auto
-TITAN.NS,WATCH,Tight Flag / Vol Compression 🗜️,Medium,,70,84.2,0.47,9.33,,,,,,0,Auto
-NTPC.NS,WATCH,Tight Flag / Vol Compression 🗜️,Medium,,70,42.4,0.63,-1.83,,,,,,0,Auto
-TATASTEEL.NS,WATCH,Tight Flag / Vol Compression 🗜️,Medium,,70,41.0,0.87,-1.91,,,,,,0,Auto
-ASIANPAINT.NS,WATCH,Tight Flag / Vol Compression 🗜️,Medium,,70,39.1,0.57,0.95,,,,,,0,Auto
-TCS.NS,AVOID,Consolidating,Medium,,30,65.3,0.54,5.28,,,,,,0,Tech
-SBIN.NS,AVOID,Consolidating,Medium,,30,44.8,0.86,-0.93,,,,,,0,Auto
-ICICIBANK.NS,AVOID,Consolidating,Medium,,30,58.6,0.99,4.88,,,,,,0,Financials
-INFY.NS,AVOID,Consolidating,Medium,,30,51.2,1.13,-0.43,,,,,,0,Tech
-HDFCBANK.NS,AVOID,Consolidating,Medium,,30,35.9,0.98,-5.05,,,,,,0,Financials
-RELIANCE.NS,AVOID,Consolidating,Medium,,30,45.8,1.03,-1.9,,,,,,0,Auto
-ITC.NS,AVOID,Consolidating,Medium,,30,33.2,1.61,-3.29,,,,,,0,Auto
-AXISBANK.NS,AVOID,Consolidating,Medium,,30,25.1,1.09,-10.48,,,,,,0,Financials
-BAJFINANCE.NS,AVOID,Consolidating,Medium,,30,59.0,0.96,7.66,,,,,,0,Financials
-ULTRACEMCO.NS,AVOID,Consolidating,Medium,,30,54.4,1.6,4.05,,,,,,0,Auto
-SUNPHARMA.NS,AVOID,Consolidating,Medium,,30,61.2,1.07,3.93,,,,,,0,Auto
-MARUTI.NS,AVOID,Consolidating,Medium,,30,31.4,0.62,2.24,,,,,,0,Auto
-KOTAKBANK.NS,AVOID,Consolidating,Medium,,30,40.6,0.67,-5.95,,,,,,0,Financials
-M&M.NS,AVOID,Consolidating,Medium,,30,53.8,1.17,4.7,,,,,,0,Auto
-POWERGRID.NS,AVOID,Consolidating,Medium,,30,52.2,0.9,-0.55,,,,,,0,Auto
-HCLTECH.NS,AVOID,Consolidating,Medium,,30,69.9,0.41,12.21,,,,,,0,Tech
-BAJAJFINSV.NS,AVOID,Consolidating,Medium,,30,46.7,0.96,5.48,,,,,,0,Financials
+TITAN.NS,BUY,Tight Flag / Vol Compression 🗜️,Low,4654.7,100,72.0,0.24,8.82,-1.65,4654.7,4565.99,4765.58,4913.43,2.9,Auto
+POWERGRID.NS,BUY,Tight Flag / Vol Compression 🗜️,Low,288.85,100,55.5,0.29,1.74,-11.11,288.85,283.0,296.16,305.9,2.9,Auto
+SUNPHARMA.NS,BUY,Tight Flag / Vol Compression 🗜️,Low,1949.5,100,60.4,0.26,4.93,-0.86,1949.5,1911.81,1996.61,2059.43,2.9,Auto
+ITC.NS,BUY,Oversold Rebound ↩,Low,282.5,90,39.4,0.55,-2.59,-13.18,282.5,277.43,288.83,297.28,2.9,Auto
+ASIANPAINT.NS,BUY,Oversold Rebound ↩,Low,2632.3,90,30.3,0.13,-1.32,-6.27,2632.3,2573.35,2705.99,2804.25,2.9,Auto
+ADANIENT.NS,BUY,Oversold Rebound ↩,Low,3005.9,90,31.8,0.24,-1.06,-7.37,3005.9,2913.95,3120.84,3274.1,2.9,Auto
+NTPC.NS,BUY,Tight Flag / Vol Compression 🗜️,Low,347.1,90,39.1,0.11,-2.79,-16.24,347.1,339.9,356.11,368.11,2.9,Auto
+M&M.NS,WATCH,Consolidating,Medium,3139.5,60,44.7,0.27,-0.31,-16.23,3139.5,3058.56,3240.68,3375.58,2.9,Auto
+ULTRACEMCO.NS,WATCH,Consolidating,Medium,11725.0,60,50.0,0.45,2.58,-10.56,11725.0,11447.2,12072.25,12535.25,2.9,Auto
+MARUTI.NS,WATCH,Consolidating,Medium,13281.0,50,28.1,0.15,0.25,-14.09,13281.0,12923.4,13728.0,14324.0,2.9,Auto
+TATASTEEL.NS,WATCH,Consolidating,Medium,181.86,50,29.4,0.19,-3.63,-17.29,181.86,177.82,186.91,193.65,2.9,Auto
+BHARTIARTL.NS,WATCH,Consolidating,Medium,1881.7,50,45.3,0.27,0.23,-8.52,1881.7,1837.47,1936.99,2010.7,2.9,Auto
+SBIN.NS,WATCH,Consolidating,Medium,1002.8,50,39.4,0.49,-4.07,-17.32,1002.8,978.48,1033.2,1073.72,2.9,Auto
+RELIANCE.NS,WATCH,Consolidating,Medium,1273.4,50,36.9,0.3,-3.39,-14.11,1273.4,1244.07,1310.06,1358.95,2.9,Auto
+ICICIBANK.NS,AVOID,Consolidating,Medium,1421.1,40,52.6,0.46,3.46,-3.98,1421.1,1389.24,1460.92,1514.02,2.9,Financials
+BAJAJFINSV.NS,AVOID,Consolidating,Medium,1875.5,40,46.6,0.37,5.43,-9.53,1875.5,1827.83,1935.09,2014.55,2.9,Financials
+HCLTECH.NS,AVOID,Consolidating,Medium,1244.2,40,71.7,0.39,14.19,-28.04,1244.2,1198.67,1301.11,1376.98,2.9,Tech
+TCS.NS,AVOID,Consolidating,Medium,2232.9,40,72.2,0.3,7.18,-32.07,2232.9,2160.05,2323.96,2445.38,2.9,Tech
+HDFCBANK.NS,AVOID,Consolidating,Medium,741.2,30,21.0,0.31,-6.92,-24.2,741.2,722.08,765.1,796.98,2.9,Financials
+INFY.NS,AVOID,Consolidating,Medium,1020.4,30,45.2,1.17,-2.0,-39.67,1020.4,984.48,1065.3,1125.18,2.9,Tech
+AXISBANK.NS,AVOID,Consolidating,Medium,1217.7,30,23.0,0.39,-11.51,-14.08,1217.7,1182.28,1261.97,1321.01,2.9,Financials
+KOTAKBANK.NS,AVOID,Consolidating,Medium,383.05,30,42.0,0.23,-5.48,-11.77,383.05,372.0,396.86,415.27,2.9,Financials
+BAJFINANCE.NS,AVOID,Consolidating,Medium,1012.1,30,45.9,0.93,3.87,-5.8,1012.1,981.93,1049.81,1100.1,2.9,Financials
