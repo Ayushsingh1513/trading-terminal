@@ -1,13 +1,12 @@
 {
     "nifty": 23767.44921875,
     "nifty_chg": -0.42795183956449573,
-    "bank": 50000.0,
-    "bank_chg": 0.4,
-    "vix": 13.8,
-    "vix_chg": -0.8,
+    "sensex": 76059.7734375,
+    "sensex_chg": -0.43410282858690924,
+    "pcr": 1.05,
+    "pcr_status": "\u26aa NEUTRAL",
     "ma200": 24401.434826563378,
-    "ma50": 23979.313247223927,
+    "nifty_rs": -1.0582169323978152,
     "mood": "BEARISH",
-    "mood_score": 35,
-    "timestamp": "2026-07-24 05:26 PM IST"
+    "timestamp": "2026-07-24 07:19 PM IST"
 }
