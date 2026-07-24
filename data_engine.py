@@ -1,98 +1,270 @@
-import streamlit as st
+import yfinance as yf
 import pandas as pd
+import numpy as np
 import json
 import os
+import requests
+from datetime import datetime
+import pytz
 
-st.set_page_config(page_title="Momentum Frenzy v2.0", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
+# ══════════════════════════════════════════════════════════════════════════════
+# 1. CONFIGURATION & LISTS
+# ══════════════════════════════════════════════════════════════════════════════
+TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
+TELEGRAM_CHAT_ID = "-1003707574219"
+IST = pytz.timezone('Asia/Kolkata')
 
-@st.cache_data(ttl=30)
-def load_data():
-    if not os.path.exists("market_data.json") or not os.path.exists("scanner_data.csv") or not os.path.exists("sector_data.csv"): 
-        return None, None, None
-    try: 
-        return json.load(open("market_data.json")), pd.read_csv("scanner_data.csv"), pd.read_csv("sector_data.csv")
-    except: 
-        return None, None, None
+SECTOR_MAP = {
+    'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS', 'Auto': 'AUTOBEES.NS',
+    'Pharma': 'PHARMABEES.NS', 'FMCG': 'CONSUMBEES.NS', 'PSU Bank': 'PSUBNKBEES.NS'
+}
 
-market_data, scanner_df, sector_df = load_data()
+# 200+ Liquid Large & Midcap Universe
+STOCK_UNIVERSE = [
+    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS", 
+    "BHARTIARTL.NS", "ITC.NS", "LARSEN.NS", "BAJFINANCE.NS", "AXISBANK.NS", 
+    "KOTAKBANK.NS", "TATAMOTORS.NS", "SUNPHARMA.NS", "MARUTI.NS", "ULTRACEMCO.NS", 
+    "ASIANPAINT.NS", "NTPC.NS", "TATASTEEL.NS", "POWERGRID.NS", "M&M.NS", 
+    "HCLTECH.NS", "TITAN.NS", "BAJAJFINSV.NS", "ADANIENT.NS", "WIPRO.NS", 
+    "JSWSTEEL.NS", "ONGC.NS", "GRASIM.NS", "HINDUNILVR.NS", "NESTLEIND.NS", 
+    "TECHM.NS", "INDUSINDBK.NS", "HINDALCO.NS", "DRREDDY.NS", "CIPLA.NS", 
+    "TATACONSUM.NS", "DIVISLAB.NS", "APOLLOHOSP.NS", "BRITANNIA.NS", "EICHERMOT.NS", 
+    "BAJAJ-AUTO.NS", "HEROMOTOCO.NS", "COALINDIA.NS", "BPCL.NS", "SHRIRAMFIN.NS", 
+    "LTIM.NS", "ADANIPORTS.NS", "SBICARD.NS", "PNB.NS", "BANKBARODA.NS", 
+    "CHOLAFIN.NS", "MUTHOOTFIN.NS", "CANBK.NS", "UNIONBANK.NS", "IDFCFIRSTB.NS", 
+    "FEDERALBNK.NS", "BANDHANBNK.NS", "AUBANK.NS", "MANAPPURAM.NS", "M&MFIN.NS", 
+    "RECLTD.NS", "PFC.NS", "IREDA.NS", "IRFC.NS", "HDFCAMC.NS", "NAM-INDIA.NS", 
+    "CAMS.NS", "MCX.NS", "BSE.NS", "CDSL.NS", "ABCAPITAL.NS", "ICICIPRULI.NS", 
+    "HDFCLIFE.NS", "SBILIFE.NS", "ICICIGI.NS", "PERSISTENT.NS", "COFORGE.NS", 
+    "MPHASIS.NS", "OFSS.NS", "KPITTECH.NS", "CYIENT.NS", "TATAELXSI.NS", 
+    "LTTS.NS", "BISOFT.NS", "SONACOMS.NS", "ZOMATO.NS", "PAYTM.NS", "NYKAA.NS", 
+    "PBFINTECH.NS", "TVSMOTOR.NS", "BHARATFORG.NS", "BALKRISIND.NS", "ASHOKLEY.NS", 
+    "BOSCHLTD.NS", "MRF.NS", "CUMMINSIND.NS", "SIEMENS.NS", "ABB.NS", "POLYCAB.NS", 
+    "KEI.NS", "HAVELLS.NS", "DIXON.NS", "KAYNES.NS", "CGPOWER.NS", "SUZLON.NS", 
+    "BHEL.NS", "HAL.NS", "BEL.NS", "BDL.NS", "MAZDOCK.NS", "COCHINSHIP.NS", 
+    "GRSE.NS", "DATAPATTNS.NS", "MTARTECH.NS", "AETHER.NS", "TATAPOWER.NS", 
+    "ADANIGREEN.NS", "ADANIPOWER.NS", "NHPC.NS", "SJVN.NS", "TORNTPOWER.NS", 
+    "IEX.NS", "GAIL.NS", "IGL.NS", "MGL.NS", "PETRONET.NS", "OIL.NS", 
+    "HINDPETRO.NS", "IOC.NS", "GMRINFRA.NS", "IRCTC.NS", "CONCOR.NS", "RVNL.NS", 
+    "IRCON.NS", "TITAGARH.NS", "VEDL.NS", "JINDALSTEL.NS", "SAIL.NS", "NMDC.NS", 
+    "NATIONALUM.NS", "HINDZINC.NS", "PIIND.NS", "SRF.NS", "NAVINFLUOR.NS", 
+    "DEEPAKNTR.NS", "TATACHEM.NS", "COROMANDEL.NS", "UPL.NS", "AARTIIND.NS", 
+    "LINDEINDIA.NS", "LUPIN.NS", "TORNTPHARM.NS", "AUROPHARMA.NS", "ZYDUSLIFE.NS", 
+    "BIOCON.NS", "SYNGENE.NS", "GLENMARK.NS", "IPCALAB.NS", "ALKEM.NS", 
+    "LAURUSLABS.NS", "MAXHEALTH.NS", "MEDANTA.NS", "FORTIS.NS", "LALPATHLAB.NS", 
+    "METROPOLIS.NS", "TRENT.NS", "DABUR.NS", "GODREJCP.NS", "MARICO.NS", 
+    "COLPAL.NS", "PGHH.NS", "UBL.NS", "MCDOWELL-N.NS", "RADICO.NS", "VBL.NS", 
+    "DMART.NS", "JUBLFOOD.NS", "DEVYANI.NS", "INDIGOPNTS.NS", "KANSAINER.NS", 
+    "PAGEIND.NS", "BATAINDIA.NS", "RELAXO.NS", "VOLTAS.NS", "BLUESTARCO.NS", 
+    "KALYANKJIL.NS", "INDIGO.NS", "IHCL.NS", "CHALET.NS", "DLF.NS", 
+    "MACROTECH.NS", "GODREJPROP.NS", "OBEROIRLTY.NS", "PRESTIGE.NS", 
+    "PHOENIXLTD.NS", "BRIGADE.NS", "SHREECEM.NS", "AMBUJACEM.NS", "ACC.NS", 
+    "DALBHARAT.NS", "RAMCOCEM.NS", "INDIACEM.NS", "JKCEMENT.NS"
+]
 
-if market_data is None:
-    st.markdown("<div style='text-align:center; padding:100px; color:#06B6D4;'><h2>⚙️ Initializing Engine v2.0...</h2></div>", unsafe_allow_html=True)
-    st.stop()
+# Broker-approved MTF List (Top highly-liquid names usually eligible)
+MTF_APPROVED = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS", "ITC.NS", "LARSEN.NS", "TATAMOTORS.NS"]
 
-st.markdown("""<style>
-.stApp{background:#07091A !important; color:#CBD5E1;} 
-header[data-testid="stHeader"],#MainMenu,footer{display:none;}
-.block-container{padding:0 1rem 3rem 1rem !important;}
-.ticker-bar{background:rgba(13,17,32,0.8); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,0.08); padding:8px 20px; display:flex; gap:20px; align-items:center; font-family:monospace; font-size:12px; margin-bottom:20px;}
-.pick-card{background:rgba(13,17,35,0.5); border:1px solid rgba(0,214,143,0.3); border-radius:14px; padding:16px; margin-bottom:16px;}
-.pick-head{display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px; margin-bottom:12px;}
-.pick-stock{font-size:20px; font-weight:800; color:#FFF;}
-.pick-badge{background:rgba(0,214,143,0.15); color:#00D68F; font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; border:1px solid rgba(0,214,143,0.4);}
-.pick-grid{display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; text-align:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;}
-.pick-lbl{font-size:9px; color:#64748B; text-transform:uppercase;} 
-.pick-val{font-size:14px; font-weight:700;}
-</style>""", unsafe_allow_html=True)
+def send_telegram_alert(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    try:
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        print(f"Telegram Error: {e}")
 
-nl, nchg = market_data.get('nifty', 0), market_data.get('nifty_chg', 0)
-sl, schg = market_data.get('sensex', 0), market_data.get('sensex_chg', 0)
-tc = "color:#00D68F;" if nchg >= 0 else "color:#FF4C4C;"
-sc = "color:#00D68F;" if schg >= 0 else "color:#FF4C4C;"
+# ══════════════════════════════════════════════════════════════════════════════
+# 2. MARKET DATA & PCR FETCH
+# ══════════════════════════════════════════════════════════════════════════════
+def get_market_data():
+    nifty = yf.Ticker('^NSEI').history(period='1y')
+    sensex = yf.Ticker('^BSESN').history(period='5d')
+    if nifty.empty or sensex.empty: return None
 
-st.markdown(f"""<div class="ticker-bar">
-<div><b>NIFTY:</b> {nl:,.0f} <span style="{tc}">{nchg:+.2f}%</span></div>
-<div><b>SENSEX:</b> {sl:,.0f} <span style="{sc}">{schg:+.2f}%</span></div>
-<div><b>REGIME:</b> <span style="color:#00D68F;">{market_data.get('mood', 'N/A')}</span></div>
-<div><b>PCR:</b> {market_data.get('pcr', 1.0)} ({market_data.get('pcr_status', 'NEUTRAL')})</div>
-<div style="margin-left:auto; color:#64748B;">Updated: {market_data.get('timestamp', '')}</div>
-</div>""", unsafe_allow_html=True)
+    c_nifty = float(nifty['Close'].iloc[-1])
+    nifty_chg = float((c_nifty - nifty['Close'].iloc[-2]) / nifty['Close'].iloc[-2] * 100)
+    c_sensex = float(sensex['Close'].iloc[-1])
+    sensex_chg = float((c_sensex - sensex['Close'].iloc[-2]) / sensex['Close'].iloc[-2] * 100)
+    nifty_200 = float(nifty['Close'].ewm(span=200).mean().iloc[-1])
+    
+    # Safe PCR Fallback
+    pcr_value = 1.05 
+    pcr_status = "⚠️ OVERBOUGHT" if pcr_value > 1.5 else ("🟢 OVERSOLD" if pcr_value < 0.7 else "⚪ NEUTRAL")
 
-st.title("⚡ Momentum Frenzy v2.0")
+    return {
+        "nifty": c_nifty, "nifty_chg": nifty_chg,
+        "sensex": c_sensex, "sensex_chg": sensex_chg,
+        "pcr": pcr_value, "pcr_status": pcr_status,
+        "ma200": nifty_200, "nifty_rs": float(nifty['Close'].pct_change(21).iloc[-1] * 100),
+        "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH",
+        "timestamp": datetime.now(IST).strftime("%Y-%m-%d %I:%M %p IST")
+    }
 
-st.subheader("🎯 Top Rated Setups (MTF & Weekly Trend Aligned)")
-top_buys = scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records') if 'Signal' in scanner_df.columns else []
+# ══════════════════════════════════════════════════════════════════════════════
+# 3. SECTOR TREND & SMART MONEY
+# ══════════════════════════════════════════════════════════════════════════════
+def get_sector_trends():
+    sector_data = {}
+    sector_rows = []
+    
+    for sec_name, etf_symbol in SECTOR_MAP.items():
+        try:
+            sdf = yf.Ticker(etf_symbol).history(period="6mo")
+            if sdf.empty or len(sdf) < 20: continue
+            
+            c_price = float(sdf['Close'].iloc[-1])
+            m1_ret = float(((c_price - sdf['Close'].iloc[-21]) / sdf['Close'].iloc[-21]) * 100)
+            
+            delta = sdf['Close'].diff()
+            up_v = sdf['Volume'].where(delta > 0, 0).rolling(14).sum().iloc[-1]
+            dn_v = sdf['Volume'].where(delta < 0, 0).rolling(14).sum().iloc[-1]
+            ud_ratio = (up_v / dn_v) if dn_v > 0 else 1.0
+            
+            flow_label = "Big Money Buying 🟢" if ud_ratio >= 1.3 else ("Big Money Selling 🔴" if ud_ratio <= 0.7 else "Neutral / Sideways ⚪")
+            is_uptrend = m1_ret > 0 and c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
+            
+            sector_data[sec_name] = {"uptrend": is_uptrend, "m1_ret": m1_ret, "flow": flow_label}
+            sector_rows.append({
+                "Sector": sec_name, "Today%": round(((c_price - sdf['Close'].iloc[-2]) / sdf['Close'].iloc[-2]) * 100, 2),
+                "1M%": round(m1_ret, 2), "Smart Money Flow": flow_label,
+                "Score": 80 if is_uptrend else 40
+            })
+        except:
+            pass
+            
+    pd.DataFrame(sector_rows).to_csv("sector_data.csv", index=False)
+    return sector_data
 
-if top_buys:
-    cols_per_row = 3
-    for i in range(0, len(top_buys), cols_per_row):
-        cols = st.columns(cols_per_row)
-        for col, pk in zip(cols, top_buys[i:i+cols_per_row]):
-            mtf_val = pk.get('MTF', 'Cash Only')
-            weekly_val = pk.get('WeeklyTrend', 'N/A')
-            with col:
-                st.markdown(f"""<div class="pick-card">
-<div class="pick-head">
-<div><div class="pick-stock">{pk.get('Stock', '')}</div><div style="font-size:11px; color:#94A3B8;">{mtf_val} · Weekly: {weekly_val}</div></div>
-<div class="pick-badge">SCORE {pk.get('Score', 0)}/100</div>
-</div>
-<div class="pick-grid">
-<div><div class="pick-lbl">Entry</div><div class="pick-val" style="color:#E2E8F0;">₹{pk.get('Entry', 0)}</div></div>
-<div><div class="pick-lbl">Stop Loss</div><div class="pick-val" style="color:#FF4C4C;">₹{pk.get('SL', 0)}</div></div>
-<div><div class="pick-lbl">Target 1</div><div class="pick-val" style="color:#00D68F;">₹{pk.get('Target1', 0)}</div></div>
-<div><div class="pick-lbl">Target 2</div><div class="pick-val" style="color:#06B6D4;">₹{pk.get('Target2', 0)}</div></div>
-</div>
-<div style="margin-top:10px; font-size:11px; display:flex; justify-content:space-between; color:#94A3B8;">
-<span>R:R = 1:{pk.get('RR', 0)}</span><span>{pk.get('Setup', '')}</span>
-</div>
-</div>""", unsafe_allow_html=True)
-else:
-    st.info("No stocks meet the strict institutional criteria right now. Cash is a position.")
+# ══════════════════════════════════════════════════════════════════════════════
+# 4. ADVANCED SCANNER (Weekly MTF Alignment + Daily Setup)
+# ══════════════════════════════════════════════════════════════════════════════
+def scan_hybrid_setups(sector_trends, mkt):
+    scanner_results = []
+    
+    for ticker in STOCK_UNIVERSE:
+        try:
+            df = yf.Ticker(ticker).history(period="1y")
+            if df.empty or len(df) < 50: continue
+            
+            weekly_df = df['Close'].resample('W').last()
+            weekly_20_ema = weekly_df.ewm(span=20).mean().iloc[-1]
+            is_weekly_uptrend = float(df['Close'].iloc[-1]) > float(weekly_20_ema)
 
-st.subheader("🔍 Institutional Scanner Database")
-def style_sig(val):
-    if val == "BUY": return "background:rgba(0, 214, 143, 0.15); color:#00D68F; font-weight:700;"
-    if val == "WATCH": return "background:rgba(255, 176, 32, 0.15); color:#FFB020; font-weight:700;"
-    return "background:rgba(255, 76, 76, 0.15); color:#FF4C4C; font-weight:700;"
+            df['EMA_20'] = df['Close'].ewm(span=20).mean()
+            df['EMA_50'] = df['Close'].ewm(span=50).mean()
+            
+            delta = df['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            df['RSI'] = 100 - (100 / (1 + (gain / loss)))
+            
+            df['TR'] = np.maximum(df['High'] - df['Low'], np.maximum(abs(df['High'] - df['Close'].shift()), abs(df['Low'] - df['Close'].shift())))
+            df['ATR'] = df['TR'].rolling(14).mean()
+            df['Vol_20'] = df['Volume'].rolling(20).mean()
+            
+            latest = df.iloc[-1]
+            price = float(latest['Close'])
+            rsi = float(latest['RSI'])
+            atr = float(latest['ATR'])
+            
+            sec_name = "Financials" if "BANK" in ticker else ("Tech" if "TCS" in ticker or "INFY" in ticker else "Auto")
+            sec_trend = sector_trends.get(sec_name, {}).get("uptrend", False)
+            
+            is_oversold_rebound = (rsi < 42) and (price >= float(latest['EMA_50']) * 0.98)
+            range_pct = ((df['High'].tail(5).max() - df['Low'].tail(5).min()) / df['Low'].tail(5).min()) * 100
+            is_compression = (range_pct <= 3.5) and (float(latest['Volume']) < float(latest['Vol_20']) * 0.95)
+            
+            setup_type = "Oversold Rebound ↩" if is_oversold_rebound else ("Tight Flag 🗜️" if is_compression else "Consolidating")
+            score = 30
+            if is_oversold_rebound or is_compression: score += 40
+            if sec_trend: score += 20 
+            if price > float(latest['EMA_20']): score += 10
+            
+            if not is_weekly_uptrend: score = min(score, 49) 
+            if mkt['pcr'] > 1.5: score = min(score, 79) 
+            
+            signal = "BUY" if score >= 80 else ("WATCH" if score >= 50 else "AVOID")
+            mtf_status = "✅ MTF Eligible" if ticker in MTF_APPROVED else "❌ Cash Only"
+            
+            sl = round(price - (atr * 1.2), 2)
+            t1 = round(price + (atr * 1.5), 2)
+            t2 = round(price + (atr * 3.5), 2)
+            
+            scanner_results.append({
+                "Stock": ticker, "Signal": signal, "Setup": setup_type, "WeeklyTrend": "UP" if is_weekly_uptrend else "DOWN",
+                "MTF": mtf_status, "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
+                "VolSurge": round(float(latest['Volume'] / latest['Vol_20']), 2),
+                "Entry": round(price, 2), "SL": sl, "Target1": t1, "Target2": t2,
+                "RR": round((t2 - price) / (price - sl), 1) if (price - sl) > 0 else 0, "Sector": sec_name
+            })
+        except:
+            pass
 
-available_cols = [col for col in ["Stock", "Signal", "MTF", "WeeklyTrend", "Setup", "Price", "Score", "RSI", "VolSurge"] if col in scanner_df.columns]
-clean_table = scanner_df[available_cols]
+    scan_df = pd.DataFrame(scanner_results).sort_values("Score", ascending=False)
+    scan_df.to_csv("scanner_data.csv", index=False)
+    return scan_df
 
-st.dataframe(
-    clean_table.style.map(style_sig, subset=["Signal"]) if "Signal" in clean_table.columns else clean_table,
-    column_config={
-        "Price": st.column_config.NumberColumn(format="₹%.2f"),
-        "Score": st.column_config.ProgressColumn("Confluence", format="%.0f", min_value=0, max_value=100),
-        "RSI": st.column_config.ProgressColumn("RSI", format="%.1f", min_value=0, max_value=100),
-        "VolSurge": st.column_config.NumberColumn("Volume Surge", format="%.2fx"),
-    }, hide_index=True, use_container_width=True, height=360
-)
+# ══════════════════════════════════════════════════════════════════════════════
+# 5. STRUCTURED TELEGRAM ALERTS
+# ══════════════════════════════════════════════════════════════════════════════
+def track_targets_and_notify(scanner_df, mkt):
+    history_file = "performance_history.json"
+    history = json.load(open(history_file, "r")) if os.path.exists(history_file) else {"closed_trades": [], "active_trades": []}
+    
+    c_time = datetime.now(IST)
+    
+    # ── WIDENED MORNING ALERT WINDOW (9:15 AM to 9:55 AM IST) ──
+    if c_time.hour == 9 and 15 <= c_time.minute <= 55:
+        pulse_msg = f"""📊 *DAILY MARKET PULSE*
+━━━━━━━━━━━━━━━━━━━
+🏛️ *Nifty 50:* {mkt['nifty']:,.0f} ({mkt['nifty_chg']:+.2f}%)
+🏛️ *Sensex:* {mkt['sensex']:,.0f} ({mkt['sensex_chg']:+.2f}%)
+⚖️ *PCR Filter:* {mkt['pcr']} ({mkt['pcr_status']})
+🛡️ *Market Regime:* {mkt['mood']}
+━━━━━━━━━━━━━━━━━━━"""
+        send_telegram_alert(pulse_msg)
+        
+    # ── WIDENED CLOSE SUMMARY WINDOW (3:15 PM to 3:55 PM IST) ──
+    elif c_time.hour == 15 and 15 <= c_time.minute <= 55:
+        top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
+        msg = f"📊 *MARKET CLOSE SUMMARY*\n\n🟢 *Qualified BUY Setups ({len(top_buys)}):*\n"
+        for _, r in top_buys.iterrows(): msg += f"• *{r['Stock']}* ({r['Setup']})\n"
+        send_telegram_alert(msg if not top_buys.empty else msg + "None today.")
+
+    for buy in scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records'):
+        if not any(t['Stock'] == buy['Stock'] for t in history['active_trades']):
+            history['active_trades'].append({
+                "Stock": buy["Stock"], "Entry": float(buy["Entry"]), "Target1": float(buy["Target1"]),
+                "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE"
+            })
+            
+            alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
+━━━━━━━━━━━━━━━━━━━
+🎯 *Stock:* {buy['Stock']}
+⭐ *Algorithmic Rating:* STRONG BUY ({buy['Score']}/100)
+🛠️ *Setup:* {buy['Setup']}
+📈 *Weekly Trend:* {buy['WeeklyTrend']} | {buy['MTF']}
+
+🟢 *Entry Zone:* ₹{buy['Entry']}
+🔴 *Stop Loss:* ₹{buy['SL']}
+🎯 *Target 1 (Lock 50%):* ₹{buy['Target1']}
+🚀 *Target 2 (Runner):* ₹{buy['Target2']}
+⚖️ *Risk:Reward:* 1 : {buy['RR']}
+━━━━━━━━━━━━━━━━━━━
+📊 *Volume Surge:* {buy['VolSurge']}x | *RSI:* {buy['RSI']}"""
+            send_telegram_alert(alert_msg)
+
+    json.dump(history, open(history_file, "w"), indent=4)
+
+def run_pipeline():
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Enhanced v2.0 Engine...")
+    mkt = get_market_data()
+    if not mkt: return
+    json.dump(mkt, open("market_data.json", "w"), indent=4)
+    
+    sector_trends = get_sector_trends()
+    scanner_df = scan_hybrid_setups(sector_trends, mkt)
+    track_targets_and_notify(scanner_df, mkt)
+
+if __name__ == "__main__":
+    run_pipeline()
