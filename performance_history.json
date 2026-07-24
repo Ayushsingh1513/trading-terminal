@@ -90,6 +90,16 @@
             "Date": "2026-07-24",
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "BHARTIARTL.NS",
+            "Entry": 1898.2,
+            "Target1": 1948.49,
+            "Target2": 2015.54,
+            "SL": 1857.97,
+            "Date": "2026-07-24",
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
