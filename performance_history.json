@@ -80,6 +80,16 @@
             "Date": "2026-07-24",
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "MARUTI.NS",
+            "Entry": 13459.0,
+            "Target1": 13906.0,
+            "Target2": 14502.0,
+            "SL": 13101.4,
+            "Date": "2026-07-24",
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
