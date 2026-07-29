@@ -1,5 +1,32 @@
 {
-    "closed_trades": [],
+    "closed_trades": [
+        {
+            "Stock": "POWERGRID.NS",
+            "Entry": 288.85,
+            "Target1": 296.16,
+            "Target2": 305.9,
+            "SL": 283.0,
+            "Date": "2026-07-24",
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "ADANIPORTS.NS",
+            "Entry": 1768.3,
+            "Target1": 1823.31,
+            "Target2": 1896.65,
+            "SL": 1724.29,
+            "Status": "CLOSED - SL HIT \ud83d\udd34"
+        },
+        {
+            "Stock": "PHOENIXLTD.NS",
+            "Entry": 2010.7,
+            "Target1": 2096.23,
+            "Target2": 2210.27,
+            "SL": 1942.27,
+            "Status": "CLOSED - SL HIT \ud83d\udd34"
+        }
+    ],
     "active_trades": [
         {
             "Stock": "ICICIBANK.NS",
@@ -16,20 +43,10 @@
             "Entry": 4654.7,
             "Target1": 4765.58,
             "Target2": 4913.43,
-            "SL": 4565.99,
+            "SL": 4654.7,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
-            "Stock": "POWERGRID.NS",
-            "Entry": 288.85,
-            "Target1": 296.16,
-            "Target2": 305.9,
-            "SL": 283.0,
-            "Date": "2026-07-24",
-            "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "SUNPHARMA.NS",
@@ -56,10 +73,10 @@
             "Entry": 2632.3,
             "Target1": 2705.99,
             "Target2": 2804.25,
-            "SL": 2573.35,
+            "SL": 2632.3,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "ADANIENT.NS",
@@ -86,20 +103,20 @@
             "Entry": 13459.0,
             "Target1": 13906.0,
             "Target2": 14502.0,
-            "SL": 13101.4,
+            "SL": 13459.0,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "BHARTIARTL.NS",
             "Entry": 1898.2,
             "Target1": 1948.49,
             "Target2": 2015.54,
-            "SL": 1857.97,
+            "SL": 1898.2,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "APOLLOHOSP.NS",
@@ -114,8 +131,9 @@
             "Entry": 7248.5,
             "Target1": 7482.6,
             "Target2": 7794.73,
-            "SL": 7061.22,
-            "Status": "ACTIVE"
+            "SL": 7248.5,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "SIEMENS.NS",
@@ -150,20 +168,13 @@
             "Status": "ACTIVE"
         },
         {
-            "Stock": "ADANIPORTS.NS",
-            "Entry": 1768.3,
-            "Target1": 1823.31,
-            "Target2": 1896.65,
-            "SL": 1724.29,
-            "Status": "ACTIVE"
-        },
-        {
             "Stock": "CHOLAFIN.NS",
             "Entry": 1724.4,
             "Target1": 1795.37,
             "Target2": 1890.0,
-            "SL": 1667.62,
-            "Status": "ACTIVE"
+            "SL": 1724.4,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "NAM-INDIA.NS",
@@ -171,14 +182,6 @@
             "Target1": 1172.18,
             "Target2": 1251.75,
             "SL": 1064.76,
-            "Status": "ACTIVE"
-        },
-        {
-            "Stock": "PHOENIXLTD.NS",
-            "Entry": 2010.7,
-            "Target1": 2096.23,
-            "Target2": 2210.27,
-            "SL": 1942.27,
             "Status": "ACTIVE"
         },
         {
@@ -194,8 +197,9 @@
             "Entry": 1410.6,
             "Target1": 1461.32,
             "Target2": 1528.95,
-            "SL": 1370.02,
-            "Status": "ACTIVE"
+            "SL": 1410.6,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "GRASIM.NS",
@@ -218,16 +222,18 @@
             "Entry": 4985.0,
             "Target1": 5204.16,
             "Target2": 5496.38,
-            "SL": 4809.67,
-            "Status": "ACTIVE"
+            "SL": 4985.0,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "AUROPHARMA.NS",
             "Entry": 1532.0,
             "Target1": 1587.77,
             "Target2": 1662.12,
-            "SL": 1487.39,
-            "Status": "ACTIVE"
+            "SL": 1532.0,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "LUPIN.NS",
@@ -282,8 +288,9 @@
             "Entry": 10652.0,
             "Target1": 11342.21,
             "Target2": 12262.5,
-            "SL": 10099.83,
-            "Status": "ACTIVE"
+            "SL": 10652.0,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "OBEROIRLTY.NS",
@@ -292,6 +299,69 @@
             "Target2": 2017.58,
             "SL": 1753.87,
             "Status": "ACTIVE"
+        },
+        {
+            "Stock": "FEDERALBNK.NS",
+            "Entry": 359.15,
+            "Target1": 370.04,
+            "Target2": 384.56,
+            "SL": 350.44,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "PNB.NS",
+            "Entry": 111.08,
+            "Target1": 114.46,
+            "Target2": 118.97,
+            "SL": 108.37,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "JKCEMENT.NS",
+            "Entry": 5642.0,
+            "Target1": 5874.02,
+            "Target2": 6183.38,
+            "SL": 5456.39,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BIOCON.NS",
+            "Entry": 431.1,
+            "Target1": 449.38,
+            "Target2": 473.75,
+            "SL": 416.48,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "HAL.NS",
+            "Entry": 4592.0,
+            "Target1": 4726.16,
+            "Target2": 4905.05,
+            "SL": 4484.67,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "PHOENIXLTD.NS",
+            "Entry": 1910.5,
+            "Target1": 1991.46,
+            "Target2": 2099.4,
+            "SL": 1845.73,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BOSCHLTD.NS",
+            "Entry": 41065.0,
+            "Target1": 42412.86,
+            "Target2": 44210.0,
+            "SL": 39986.71,
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
