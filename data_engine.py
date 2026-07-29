@@ -8,18 +8,22 @@ from datetime import datetime
 import pytz
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. CONFIGURATION & LISTS
+# 1. CONFIGURATION & SECTOR MAP
 # ══════════════════════════════════════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
 TELEGRAM_CHAT_ID = "-1003707574219"
 IST = pytz.timezone('Asia/Kolkata')
 
 SECTOR_MAP = {
-    'Financials': 'BANKBEES.NS', 'Tech': 'ITBEES.NS', 'Auto': 'AUTOBEES.NS',
-    'Pharma': 'PHARMABEES.NS', 'FMCG': 'CONSUMBEES.NS', 'PSU Bank': 'PSUBNKBEES.NS'
+    'Nifty Bank': 'BANKBEES.NS',
+    'Nifty IT': 'ITBEES.NS',
+    'Nifty Auto': 'AUTOBEES.NS',
+    'Nifty Pharma': 'PHARMABEES.NS',
+    'Nifty FMCG': 'CONSUMBEES.NS',
+    'PSU Bank': 'PSUBNKBEES.NS',
+    'Nifty Infra': 'INFRABEES.NS'
 }
 
-# 200+ Liquid Large & Midcap Universe
 STOCK_UNIVERSE = [
     "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS", 
     "BHARTIARTL.NS", "ITC.NS", "LARSEN.NS", "BAJFINANCE.NS", "AXISBANK.NS", 
@@ -62,9 +66,6 @@ STOCK_UNIVERSE = [
     "DALBHARAT.NS", "RAMCOCEM.NS", "INDIACEM.NS", "JKCEMENT.NS"
 ]
 
-# Broker-approved MTF List (Top highly-liquid names usually eligible)
-MTF_APPROVED = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS", "ITC.NS", "LARSEN.NS", "TATAMOTORS.NS"]
-
 def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
@@ -74,7 +75,7 @@ def send_telegram_alert(message):
         print(f"Telegram Error: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. MARKET DATA & PCR FETCH
+# 2. MARKET DATA & PCR
 # ══════════════════════════════════════════════════════════════════════════════
 def get_market_data():
     nifty = yf.Ticker('^NSEI').history(period='1y')
@@ -87,7 +88,6 @@ def get_market_data():
     sensex_chg = float((c_sensex - sensex['Close'].iloc[-2]) / sensex['Close'].iloc[-2] * 100)
     nifty_200 = float(nifty['Close'].ewm(span=200).mean().iloc[-1])
     
-    # Safe PCR Fallback
     pcr_value = 1.05 
     pcr_status = "⚠️ OVERBOUGHT" if pcr_value > 1.5 else ("🟢 OVERSOLD" if pcr_value < 0.7 else "⚪ NEUTRAL")
 
@@ -95,13 +95,12 @@ def get_market_data():
         "nifty": c_nifty, "nifty_chg": nifty_chg,
         "sensex": c_sensex, "sensex_chg": sensex_chg,
         "pcr": pcr_value, "pcr_status": pcr_status,
-        "ma200": nifty_200, "nifty_rs": float(nifty['Close'].pct_change(21).iloc[-1] * 100),
-        "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH",
+        "ma200": nifty_200, "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH",
         "timestamp": datetime.now(IST).strftime("%Y-%m-%d %I:%M %p IST")
     }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. SECTOR TREND & SMART MONEY
+# 3. SECTOR INTELLIGENCE & HERO SECTOR
 # ══════════════════════════════════════════════════════════════════════════════
 def get_sector_trends():
     sector_data = {}
@@ -113,6 +112,8 @@ def get_sector_trends():
             if sdf.empty or len(sdf) < 20: continue
             
             c_price = float(sdf['Close'].iloc[-1])
+            p_price = float(sdf['Close'].iloc[-2])
+            today_chg = round(((c_price - p_price) / p_price) * 100, 2)
             m1_ret = float(((c_price - sdf['Close'].iloc[-21]) / sdf['Close'].iloc[-21]) * 100)
             
             delta = sdf['Close'].diff()
@@ -123,20 +124,23 @@ def get_sector_trends():
             flow_label = "Big Money Buying 🟢" if ud_ratio >= 1.3 else ("Big Money Selling 🔴" if ud_ratio <= 0.7 else "Neutral / Sideways ⚪")
             is_uptrend = m1_ret > 0 and c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
             
-            sector_data[sec_name] = {"uptrend": is_uptrend, "m1_ret": m1_ret, "flow": flow_label}
+            sector_data[sec_name] = {"uptrend": is_uptrend, "today_chg": today_chg, "m1_ret": m1_ret, "flow": flow_label}
             sector_rows.append({
-                "Sector": sec_name, "Today%": round(((c_price - sdf['Close'].iloc[-2]) / sdf['Close'].iloc[-2]) * 100, 2),
-                "1M%": round(m1_ret, 2), "Smart Money Flow": flow_label,
-                "Score": 80 if is_uptrend else 40
+                "Sector": sec_name, "Today%": today_chg, "1M%": round(m1_ret, 2),
+                "Smart Money Flow": flow_label, "Score": 80 if is_uptrend else 40
             })
         except:
             pass
             
-    pd.DataFrame(sector_rows).to_csv("sector_data.csv", index=False)
-    return sector_data
+    sec_df = pd.DataFrame(sector_rows)
+    if not sec_df.empty:
+        sec_df = sec_df.sort_values("Today%", ascending=False)
+        sec_df.to_csv("sector_data.csv", index=False)
+        
+    return sector_data, sec_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4. ADVANCED SCANNER (Weekly MTF Alignment + Daily Setup)
+# 4. ADVANCED SCANNER
 # ══════════════════════════════════════════════════════════════════════════════
 def scan_hybrid_setups(sector_trends, mkt):
     scanner_results = []
@@ -167,7 +171,7 @@ def scan_hybrid_setups(sector_trends, mkt):
             rsi = float(latest['RSI'])
             atr = float(latest['ATR'])
             
-            sec_name = "Financials" if "BANK" in ticker else ("Tech" if "TCS" in ticker or "INFY" in ticker else "Auto")
+            sec_name = "Nifty Bank" if "BANK" in ticker else ("Nifty IT" if "TCS" in ticker or "INFY" in ticker else "Nifty Auto")
             sec_trend = sector_trends.get(sec_name, {}).get("uptrend", False)
             
             is_oversold_rebound = (rsi < 42) and (price >= float(latest['EMA_50']) * 0.98)
@@ -184,7 +188,7 @@ def scan_hybrid_setups(sector_trends, mkt):
             if mkt['pcr'] > 1.5: score = min(score, 79) 
             
             signal = "BUY" if score >= 80 else ("WATCH" if score >= 50 else "AVOID")
-            mtf_status = "✅ MTF Eligible" if ticker in MTF_APPROVED else "❌ Cash Only"
+            mtf_status = "✅ MTF Eligible (Dhan)"
             
             sl = round(price - (atr * 1.2), 2)
             t1 = round(price + (atr * 1.5), 2)
@@ -205,82 +209,73 @@ def scan_hybrid_setups(sector_trends, mkt):
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. STRUCTURED TELEGRAM ALERTS & TRADE TRACKER
+# 5. TELEGRAM ALERTS WITH SECTOR INTELLIGENCE
 # ══════════════════════════════════════════════════════════════════════════════
-def track_targets_and_notify(scanner_df, mkt):
+def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
     history = json.load(open(history_file, "r")) if os.path.exists(history_file) else {"closed_trades": [], "active_trades": []}
     
-    c_time = datetime.now(IST)
-    
-    # ── 1. CHECK ACTIVE TRADES FOR EXITS ──
+    # ── 1. ACTIVE TRADE MONITOR ──
     still_active = []
     for trade in history.get('active_trades', []):
         try:
             stock = trade['Stock']
             curr_df = yf.Ticker(stock).history(period="1d")
-            
             if not curr_df.empty:
                 c_price = float(curr_df['Close'].iloc[-1])
-                
-                # Condition A: Stop Loss Hit
                 if c_price <= trade['SL']:
                     trade['Status'] = "CLOSED - SL HIT 🔴"
-                    trade['Exit_Price'] = c_price
                     history['closed_trades'].append(trade)
                     loss_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
                     send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{trade['Entry']}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
-                    continue # Skip adding back to active list
-                    
-                # Condition B: Target 2 Hit (Full Exit)
+                    continue
                 elif c_price >= trade['Target2']:
                     trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
-                    trade['Exit_Price'] = c_price
                     history['closed_trades'].append(trade)
                     profit_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
                     send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{trade['Entry']}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
-                    continue # Skip adding back to active list
-                    
-                # Condition C: Target 1 Hit (Partial Exit & Trail SL)
+                    continue
                 elif c_price >= trade['Target1'] and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
-                    trade['SL'] = trade['Entry']  # Trail SL to Breakeven
-                    send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. Stop Loss moved to Entry (₹{trade['SL']:.2f}) to secure a risk-free trade.")
+                    trade['SL'] = trade['Entry']
+                    send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. SL moved to Entry (₹{trade['SL']:.2f}).")
         except Exception as e:
-            print(f"Error checking trade {trade.get('Stock', 'Unknown')}: {e}")
             pass
-            
-        # Keep trade in active list if neither SL nor T2 was hit
         still_active.append(trade)
         
     history['active_trades'] = still_active
+
+    # ── 2. HERO SECTOR & SECTOR INTELLIGENCE ──
+    hero_msg = ""
+    if not sector_df.empty:
+        hero_sec = sector_df.iloc[0]
+        lagging_sec = sector_df.iloc[-1]
+        hero_msg = f"""
+🏆 *HERO SECTOR TODAY:* {hero_sec['Sector']} ({hero_sec['Today%']:+.2f}%)
+📊 *Smart Money:* {hero_sec['Smart Money Flow']}
+📉 *Weakest Sector:* {lagging_sec['Sector']} ({lagging_sec['Today%']:+.2f}%)"""
+
+    # ── 3. ALWAYS BROADCAST MARKET & SECTOR PULSE ──
+    top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
     
-    # ── 2. WIDENED MORNING ALERT WINDOW (9:15 AM to 9:55 AM IST) ──
-    if c_time.hour == 9 and 15 <= c_time.minute <= 55:
-        pulse_msg = f"""📊 *DAILY MARKET PULSE*
+    pulse_msg = f"""📊 *MARKET & SECTOR INTELLIGENCE*
 ━━━━━━━━━━━━━━━━━━━
 🏛️ *Nifty 50:* {mkt['nifty']:,.0f} ({mkt['nifty_chg']:+.2f}%)
 🏛️ *Sensex:* {mkt['sensex']:,.0f} ({mkt['sensex_chg']:+.2f}%)
-⚖️ *PCR Filter:* {mkt['pcr']} ({mkt['pcr_status']})
-🛡️ *Market Regime:* {mkt['mood']}
-━━━━━━━━━━━━━━━━━━━"""
-        send_telegram_alert(pulse_msg)
-        
-    # ── 3. WIDENED CLOSE SUMMARY WINDOW (3:15 PM to 3:55 PM IST) ──
-    elif c_time.hour == 15 and 15 <= c_time.minute <= 55:
-        top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
-        msg = f"📊 *MARKET CLOSE SUMMARY*\n\n🟢 *Qualified BUY Setups ({len(top_buys)}):*\n"
-        for _, r in top_buys.iterrows(): msg += f"• *{r['Stock']}* ({r['Setup']})\n"
-        send_telegram_alert(msg if not top_buys.empty else msg + "None today.")
+⚖️ *PCR:* {mkt['pcr']} ({mkt['pcr_status']})
+🛡️ *Regime:* {mkt['mood']}
+{hero_msg}
+━━━━━━━━━━━━━━━━━━━
+🟢 *Qualified BUY Setups Today:* {len(top_buys)}"""
+    
+    send_telegram_alert(pulse_msg)
 
     # ── 4. RECORD & NOTIFY NEW SETUPS ──
-    for buy in scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records'):
-        # Only add if not already in active trades
+    for buy in top_buys.to_dict('records'):
         if not any(t['Stock'] == buy['Stock'] for t in history['active_trades']):
             history['active_trades'].append({
                 "Stock": buy["Stock"], "Entry": float(buy["Entry"]), "Target1": float(buy["Target1"]),
-                "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE",
-                "T1_Hit": False
+                "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE", "T1_Hit": False
             })
             
             alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
@@ -299,5 +294,17 @@ def track_targets_and_notify(scanner_df, mkt):
 📊 *Volume Surge:* {buy['VolSurge']}x | *RSI:* {buy['RSI']}"""
             send_telegram_alert(alert_msg)
 
-    # Save everything back to the ledger
     json.dump(history, open(history_file, "w"), indent=4)
+
+def run_pipeline():
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Engine with Sector Intelligence...")
+    mkt = get_market_data()
+    if not mkt: return
+    json.dump(mkt, open("market_data.json", "w"), indent=4)
+    
+    sector_trends, sector_df = get_sector_trends()
+    scanner_df = scan_hybrid_setups(sector_trends, mkt)
+    track_targets_and_notify(scanner_df, sector_df, mkt)
+
+if __name__ == "__main__":
+    run_pipeline()
