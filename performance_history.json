@@ -25,6 +25,15 @@
             "Target2": 2210.27,
             "SL": 1942.27,
             "Status": "CLOSED - SL HIT \ud83d\udd34"
+        },
+        {
+            "Stock": "DIVISLAB.NS",
+            "Entry": 7248.5,
+            "Target1": 7482.6,
+            "Target2": 7794.73,
+            "SL": 7248.5,
+            "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
+            "T1_Hit": true
         }
     ],
     "active_trades": [
@@ -53,10 +62,10 @@
             "Entry": 1949.5,
             "Target1": 1996.61,
             "Target2": 2059.43,
-            "SL": 1911.81,
+            "SL": 1949.5,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "ITC.NS",
@@ -127,15 +136,6 @@
             "Status": "ACTIVE"
         },
         {
-            "Stock": "DIVISLAB.NS",
-            "Entry": 7248.5,
-            "Target1": 7482.6,
-            "Target2": 7794.73,
-            "SL": 7248.5,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
             "Stock": "SIEMENS.NS",
             "Entry": 3689.8,
             "Target1": 3838.43,
@@ -148,8 +148,9 @@
             "Entry": 5633.5,
             "Target1": 5821.38,
             "Target2": 6071.88,
-            "SL": 5483.2,
-            "Status": "ACTIVE"
+            "SL": 5633.5,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "SHREECEM.NS",
@@ -360,6 +361,60 @@
             "Target1": 42412.86,
             "Target2": 44210.0,
             "SL": 39986.71,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "ULTRACEMCO.NS",
+            "Entry": 11809.0,
+            "Target1": 12133.36,
+            "Target2": 12565.83,
+            "SL": 11549.51,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "GLENMARK.NS",
+            "Entry": 2225.3,
+            "Target1": 2300.39,
+            "Target2": 2400.5,
+            "SL": 2165.23,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "INDUSINDBK.NS",
+            "Entry": 1000.0,
+            "Target1": 1036.92,
+            "Target2": 1086.15,
+            "SL": 970.46,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "NAVINFLUOR.NS",
+            "Entry": 7461.0,
+            "Target1": 7737.7,
+            "Target2": 8106.62,
+            "SL": 7239.64,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "CDSL.NS",
+            "Entry": 1332.2,
+            "Target1": 1385.24,
+            "Target2": 1455.95,
+            "SL": 1289.77,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "CUMMINSIND.NS",
+            "Entry": 5369.5,
+            "Target1": 5547.15,
+            "Target2": 5784.02,
+            "SL": 5227.38,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
