@@ -436,6 +436,24 @@
             "SL": 1002.61,
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "BHARATFORG.NS",
+            "Entry": 2164.7,
+            "Target1": 2236.26,
+            "Target2": 2331.67,
+            "SL": 2107.45,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "AUBANK.NS",
+            "Entry": 1030.7,
+            "Target1": 1072.73,
+            "Target2": 1128.77,
+            "SL": 997.07,
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
