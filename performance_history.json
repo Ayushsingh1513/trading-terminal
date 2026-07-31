@@ -34,6 +34,15 @@
             "SL": 7248.5,
             "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
             "T1_Hit": true
+        },
+        {
+            "Stock": "JKCEMENT.NS",
+            "Entry": 5642.0,
+            "Target1": 5874.02,
+            "Target2": 6183.38,
+            "SL": 5456.39,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false
         }
     ],
     "active_trades": [
@@ -318,15 +327,6 @@
             "Target1": 114.46,
             "Target2": 118.97,
             "SL": 108.37,
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
-            "Stock": "JKCEMENT.NS",
-            "Entry": 5642.0,
-            "Target1": 5874.02,
-            "Target2": 6183.38,
-            "SL": 5456.39,
             "Status": "ACTIVE",
             "T1_Hit": false
         },
