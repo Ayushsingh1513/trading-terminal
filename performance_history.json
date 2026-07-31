@@ -491,6 +491,42 @@
             "SL": 164.75,
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "HDFCAMC.NS",
+            "Entry": 2620.0,
+            "Target1": 2730.04,
+            "Target2": 2876.75,
+            "SL": 2531.97,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "MRF.NS",
+            "Entry": 133190.0,
+            "Target1": 136123.01,
+            "Target2": 140033.7,
+            "SL": 130843.59,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "KEI.NS",
+            "Entry": 4983.0,
+            "Target1": 5173.61,
+            "Target2": 5427.75,
+            "SL": 4830.51,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "CHALET.NS",
+            "Entry": 810.55,
+            "Target1": 846.43,
+            "Target2": 894.26,
+            "SL": 781.85,
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
