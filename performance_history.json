@@ -282,8 +282,9 @@
             "Entry": 170.02,
             "Target1": 175.5,
             "Target2": 182.8,
-            "SL": 165.64,
-            "Status": "ACTIVE"
+            "SL": 170.02,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "OFSS.NS",
@@ -452,6 +453,42 @@
             "Target1": 1072.73,
             "Target2": 1128.77,
             "SL": 997.07,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BPCL.NS",
+            "Entry": 317.7,
+            "Target1": 328.58,
+            "Target2": 343.08,
+            "SL": 309.0,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "PAYTM.NS",
+            "Entry": 1346.7,
+            "Target1": 1410.96,
+            "Target2": 1496.65,
+            "SL": 1295.29,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "IPCALAB.NS",
+            "Entry": 1757.8,
+            "Target1": 1844.62,
+            "Target2": 1960.38,
+            "SL": 1688.35,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "UNIONBANK.NS",
+            "Entry": 170.8,
+            "Target1": 178.36,
+            "Target2": 188.45,
+            "SL": 164.75,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
