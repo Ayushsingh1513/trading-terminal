@@ -3,96 +3,152 @@ import pandas as pd
 import json
 import os
 
-st.set_page_config(page_title="Momentum Frenzy v2.0", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE CONFIGURATION
+# ══════════════════════════════════════════════════════════════════════════════
+st.set_page_config(page_title="Momentum Frenzy v2.0", layout="wide", page_icon="⚡")
+st.title("⚡ Momentum Frenzy | Quantitative Terminal")
+st.markdown("Automated NSE Swing Trading Setups, Sector Intelligence & Algorithmic Ledger")
 
-@st.cache_data(ttl=30)
-def load_data():
-    if not os.path.exists("market_data.json") or not os.path.exists("scanner_data.csv") or not os.path.exists("sector_data.csv"): 
-        return None, None, None
-    try: 
-        return json.load(open("market_data.json")), pd.read_csv("scanner_data.csv"), pd.read_csv("sector_data.csv")
-    except: 
-        return None, None, None
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA LOADER FUNCTIONS
+# ══════════════════════════════════════════════════════════════════════════════
+def load_json(filepath):
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    return None
 
-market_data, scanner_df, sector_df = load_data()
+def load_csv(filepath):
+    if os.path.exists(filepath):
+        return pd.read_csv(filepath)
+    return None
 
-if market_data is None:
-    st.markdown("<div style='text-align:center; padding:100px; color:#06B6D4;'><h2>⚙️ Initializing Engine v2.0...</h2></div>", unsafe_allow_html=True)
-    st.stop()
+# Load the engine outputs from GitHub
+mkt = load_json("market_data.json")
+history = load_json("performance_history.json") or {"active_trades": [], "closed_trades": []}
+scan_df = load_csv("scanner_data.csv")
+sector_df = load_csv("sector_data.csv")
 
-st.markdown("""<style>
-.stApp{background:#07091A !important; color:#CBD5E1;} 
-header[data-testid="stHeader"],#MainMenu,footer{display:none;}
-.block-container{padding:0 1rem 3rem 1rem !important;}
-.ticker-bar{background:rgba(13,17,32,0.8); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,0.08); padding:8px 20px; display:flex; gap:20px; align-items:center; font-family:monospace; font-size:12px; margin-bottom:20px;}
-.pick-card{background:rgba(13,17,35,0.5); border:1px solid rgba(0,214,143,0.3); border-radius:14px; padding:16px; margin-bottom:16px;}
-.pick-head{display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px; margin-bottom:12px;}
-.pick-stock{font-size:20px; font-weight:800; color:#FFF;}
-.pick-badge{background:rgba(0,214,143,0.15); color:#00D68F; font-size:10px; font-weight:800; padding:4px 8px; border-radius:4px; border:1px solid rgba(0,214,143,0.4);}
-.pick-grid{display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; text-align:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;}
-.pick-lbl{font-size:9px; color:#64748B; text-transform:uppercase;} 
-.pick-val{font-size:14px; font-weight:700;}
-</style>""", unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+# TOP BAR: MARKET PULSE & PCR
+# ══════════════════════════════════════════════════════════════════════════════
+if mkt:
+    cols = st.columns(5)
+    cols[0].metric("🏛️ NIFTY 50", f"{mkt.get('nifty', 0):,.0f}", f"{mkt.get('nifty_chg', 0):.2f}%")
+    cols[1].metric("🏛️ SENSEX", f"{mkt.get('sensex', 0):,.0f}", f"{mkt.get('sensex_chg', 0):.2f}%")
+    cols[2].metric("🛡️ Market Regime", mkt.get('mood', 'N/A'))
+    
+    # Color-code PCR
+    pcr_status = mkt.get('pcr_status', '')
+    cols[3].metric("⚖️ PCR (Put-Call Ratio)", mkt.get('pcr', 'N/A'), pcr_status)
+    cols[4].write(f"**Last Engine Update:**\n{mkt.get('timestamp', 'Unknown')}")
 
-nl, nchg = market_data.get('nifty', 0), market_data.get('nifty_chg', 0)
-sl, schg = market_data.get('sensex', 0), market_data.get('sensex_chg', 0)
-tc = "color:#00D68F;" if nchg >= 0 else "color:#FF4C4C;"
-sc = "color:#00D68F;" if schg >= 0 else "color:#FF4C4C;"
+st.divider()
 
-st.markdown(f"""<div class="ticker-bar">
-<div><b>NIFTY:</b> {nl:,.0f} <span style="{tc}">{nchg:+.2f}%</span></div>
-<div><b>SENSEX:</b> {sl:,.0f} <span style="{sc}">{schg:+.2f}%</span></div>
-<div><b>REGIME:</b> <span style="color:#00D68F;">{market_data.get('mood', 'N/A')}</span></div>
-<div><b>PCR:</b> {market_data.get('pcr', 1.0)} ({market_data.get('pcr_status', 'NEUTRAL')})</div>
-<div style="margin-left:auto; color:#64748B;">Updated: {market_data.get('timestamp', '')}</div>
-</div>""", unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+# TERMINAL TABS
+# ══════════════════════════════════════════════════════════════════════════════
+tab1, tab2, tab3 = st.tabs(["⚡ Live Scanner", "📊 Sector Intelligence", "🏆 Performance History"])
 
-st.title("⚡ Momentum Frenzy v2.0")
+# ─── TAB 1: LIVE SCANNER ───────────────────────────────────────────────────────
+with tab1:
+    st.subheader("🟢 High-Confluence Breakout Setups")
+    if scan_df is not None and not scan_df.empty:
+        # Filter strictly for BUY signals
+        buy_df = scan_df[scan_df['Signal'] == 'BUY']
+        
+        if not buy_df.empty:
+            st.dataframe(
+                buy_df[['Stock', 'Score', 'Setup', 'Sector', 'Entry', 'SL', 'Target1', 'Target2', 'RR', 'VolSurge']], 
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("No 'BUY' signals triggered in the most recent scan. Waiting for high-probability setups...")
+        
+        with st.expander("View Full Market Scan (All Analyzed Stocks)"):
+            st.dataframe(scan_df, use_container_width=True)
+    else:
+        st.warning("Scanner data is currently unavailable. Ensure the Python engine is running.")
 
-st.subheader("🎯 Top Rated Setups (MTF & Weekly Trend Aligned)")
-top_buys = scanner_df[scanner_df['Signal'] == 'BUY'].to_dict('records') if 'Signal' in scanner_df.columns else []
+# ─── TAB 2: SECTOR INTELLIGENCE ───────────────────────────────────────────────
+with tab2:
+    st.subheader("🔥 Institutional Flow & Sector Leadership")
+    if sector_df is not None and not sector_df.empty:
+        # Style the dataframe to highlight Smart Money Flow
+        def highlight_flow(val):
+            if "Big Money Buying" in str(val): return 'color: #00FF00; font-weight: bold;'
+            if "Big Money Selling" in str(val): return 'color: #FF0000; font-weight: bold;'
+            return ''
+            
+        styled_sector = sector_df.style.map(highlight_flow, subset=['Smart Money Flow'])
+        st.dataframe(styled_sector, use_container_width=True, hide_index=True)
+    else:
+        st.warning("Sector Intelligence data is not available yet.")
 
-if top_buys:
-    cols_per_row = 3
-    for i in range(0, len(top_buys), cols_per_row):
-        cols = st.columns(cols_per_row)
-        for col, pk in zip(cols, top_buys[i:i+cols_per_row]):
-            mtf_val = pk.get('MTF', 'Cash Only')
-            weekly_val = pk.get('WeeklyTrend', 'N/A')
-            with col:
-                st.markdown(f"""<div class="pick-card">
-<div class="pick-head">
-<div><div class="pick-stock">{pk.get('Stock', '')}</div><div style="font-size:11px; color:#94A3B8;">{mtf_val} · Weekly: {weekly_val}</div></div>
-<div class="pick-badge">SCORE {pk.get('Score', 0)}/100</div>
-</div>
-<div class="pick-grid">
-<div><div class="pick-lbl">Entry</div><div class="pick-val" style="color:#E2E8F0;">₹{pk.get('Entry', 0)}</div></div>
-<div><div class="pick-lbl">Stop Loss</div><div class="pick-val" style="color:#FF4C4C;">₹{pk.get('SL', 0)}</div></div>
-<div><div class="pick-lbl">Target 1</div><div class="pick-val" style="color:#00D68F;">₹{pk.get('Target1', 0)}</div></div>
-<div><div class="pick-lbl">Target 2</div><div class="pick-val" style="color:#06B6D4;">₹{pk.get('Target2', 0)}</div></div>
-</div>
-<div style="margin-top:10px; font-size:11px; display:flex; justify-content:space-between; color:#94A3B8;">
-<span>R:R = 1:{pk.get('RR', 0)}</span><span>{pk.get('Setup', '')}</span>
-</div>
-</div>""", unsafe_allow_html=True)
-else:
-    st.info("No stocks meet the strict institutional criteria right now. Cash is a position.")
-
-st.subheader("🔍 Institutional Scanner Database")
-def style_sig(val):
-    if val == "BUY": return "background:rgba(0, 214, 143, 0.15); color:#00D68F; font-weight:700;"
-    if val == "WATCH": return "background:rgba(255, 176, 32, 0.15); color:#FFB020; font-weight:700;"
-    return "background:rgba(255, 76, 76, 0.15); color:#FF4C4C; font-weight:700;"
-
-available_cols = [col for col in ["Stock", "Signal", "MTF", "WeeklyTrend", "Setup", "Price", "Score", "RSI", "VolSurge"] if col in scanner_df.columns]
-clean_table = scanner_df[available_cols]
-
-st.dataframe(
-    clean_table.style.map(style_sig, subset=["Signal"]) if "Signal" in clean_table.columns else clean_table,
-    column_config={
-        "Price": st.column_config.NumberColumn(format="₹%.2f"),
-        "Score": st.column_config.ProgressColumn("Confluence", format="%.0f", min_value=0, max_value=100),
-        "RSI": st.column_config.ProgressColumn("RSI", format="%.1f", min_value=0, max_value=100),
-        "VolSurge": st.column_config.NumberColumn("Volume Surge", format="%.2fx"),
-    }, hide_index=True, use_container_width=True, height=360
-)
+# ─── TAB 3: PERFORMANCE HISTORY (THE LEDGER) ──────────────────────────────────
+with tab3:
+    st.subheader("📈 Trade Ledger & System Accuracy")
+    
+    active_trades = history.get("active_trades", [])
+    closed_trades = history.get("closed_trades", [])
+    
+    # Math for Win Rate
+    total_closed = len(closed_trades)
+    wins = sum(1 for t in closed_trades if "TARGET" in t.get("Status", ""))
+    losses = total_closed - wins
+    win_rate = round((wins / total_closed) * 100, 1) if total_closed > 0 else 0
+    
+    # Key Performance Indicators
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🟢 Active Open Trades", len(active_trades))
+    m2.metric("🔒 Total Closed Trades", total_closed)
+    m3.metric("🎯 System Win Rate", f"{win_rate}%")
+    m4.metric("⚖️ Wins vs Losses", f"{wins}W - {losses}L")
+    
+    st.divider()
+    
+    # ── Closed Trades (Final Results) ──
+    st.markdown("### 🔴 Closed Trades Log")
+    if closed_trades:
+        df_closed = pd.DataFrame(closed_trades)
+        
+        # Calculate actual profit/loss percentage mathematically
+        def calc_result(row):
+            if pd.notna(row.get('Exit_Price')) and pd.notna(row.get('Entry')):
+                return round(((row['Exit_Price'] - row['Entry']) / row['Entry']) * 100, 2)
+            return 0.0
+            
+        df_closed['Result %'] = df_closed.apply(calc_result, axis=1)
+        
+        # Color Code Profits Green and Losses Red
+        def color_returns(val):
+            color = '#00FF00' if val > 0 else '#FF4B4B'
+            return f'color: {color}; font-weight: bold;'
+            
+        cols_to_show = ["Stock", "Status", "Entry", "Exit_Price", "Result %"]
+        
+        styled_closed = df_closed[cols_to_show].style.map(color_returns, subset=['Result %'])
+        st.dataframe(styled_closed, use_container_width=True, hide_index=True)
+    else:
+        st.info("No closed trades recorded in the ledger yet.")
+        
+    st.divider()
+    
+    # ── Active Trades (Currently Live) ──
+    st.markdown("### 🟢 Active Trades Log (Live Monitoring)")
+    if active_trades:
+        df_active = pd.DataFrame(active_trades)
+        
+        # Clean up the T1_Hit boolean for better readability
+        if 'T1_Hit' in df_active.columns:
+            df_active['Risk Status'] = df_active['T1_Hit'].apply(lambda x: "✅ Risk Free (SL Trailed)" if x else "⏳ Standard Risk")
+            
+        cols_to_show_active = ["Stock", "Status", "Entry", "SL", "Target1", "Target2", "Risk Status"]
+        # Ensure we only show columns that actually exist in the data
+        cols_to_show_active = [c for c in cols_to_show_active if c in df_active.columns]
+        
+        st.dataframe(df_active[cols_to_show_active], use_container_width=True, hide_index=True)
+    else:
+        st.info("No active trades currently running in the market.")
