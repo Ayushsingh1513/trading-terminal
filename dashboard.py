@@ -105,12 +105,13 @@ with tab3:
     
     st.divider()
     
-    st.markdown("### 🔴 Closed Trades Log")
+        st.markdown("### 🔴 Closed Trades Log")
     if closed_trades:
         df_closed = pd.DataFrame(closed_trades)
         
         def calc_result(row):
-            if pd.notna(row.get('Exit_Price')) and pd.notna(row.get('Entry')):
+            # Safe check in case old trades don't have Exit_Price
+            if 'Exit_Price' in row and pd.notna(row['Exit_Price']) and pd.notna(row['Entry']):
                 return round(((row['Exit_Price'] - row['Entry']) / row['Entry']) * 100, 2)
             return 0.0
             
@@ -121,10 +122,15 @@ with tab3:
             return f'color: {color}; font-weight: bold;'
             
         cols_to_show = ["Stock", "Status", "Entry", "Exit_Price", "Result %"]
+        
+        # 🔥 THE FIX: Only try to display columns that actually exist in the JSON
+        cols_to_show = [c for c in cols_to_show if c in df_closed.columns]
+        
         styled_closed = df_closed[cols_to_show].style.map(color_returns, subset=['Result %'])
         st.dataframe(styled_closed, use_container_width=True, hide_index=True)
     else:
         st.info("No closed trades recorded in the ledger yet.")
+
         
     st.divider()
     
