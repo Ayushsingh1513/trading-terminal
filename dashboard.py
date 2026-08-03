@@ -108,8 +108,21 @@ with tab3:
         df_closed = pd.DataFrame(closed_trades)
         
         def calc_result(row):
-            if 'Exit_Price' in row and pd.notna(row['Exit_Price']) and pd.notna(row['Entry']):
-                return round(((row['Exit_Price'] - row['Entry']) / row['Entry']) * 100, 2)
+            entry = row.get('Entry', 0)
+            if not entry or entry <= 0:
+                return 0.0
+                
+            # 1. Direct exit price calculation if recorded
+            if 'Exit_Price' in row and pd.notna(row['Exit_Price']):
+                return round(((row['Exit_Price'] - entry) / entry) * 100, 2)
+                
+            # 2. Smart fallback for historical trades
+            status = str(row.get('Status', ''))
+            if "TARGET 2 HIT" in status and 'Target2' in row and pd.notna(row['Target2']):
+                return round(((row['Target2'] - entry) / entry) * 100, 2)
+            elif "SL HIT" in status and 'SL' in row and pd.notna(row['SL']):
+                return round(((row['SL'] - entry) / entry) * 100, 2)
+                
             return 0.0
             
         df_closed['Result %'] = df_closed.apply(calc_result, axis=1)
@@ -118,9 +131,11 @@ with tab3:
             color = '#00FF00' if val > 0 else '#FF4B4B'
             return f'color: {color}; font-weight: bold;'
             
-        cols_to_show = ["Stock", "Status", "Entry", "Exit_Price", "Result %"]
+        cols_to_show = ["Stock", "Status", "Entry", "Result %"]
+        if 'Exit_Price' in df_closed.columns:
+            cols_to_show.insert(3, "Exit_Price")
+            
         cols_to_show = [c for c in cols_to_show if c in df_closed.columns]
-        
         styled_closed = df_closed[cols_to_show].style.map(color_returns, subset=['Result %'])
         st.dataframe(styled_closed, use_container_width=True, hide_index=True)
     else:
