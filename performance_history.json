@@ -43,6 +43,15 @@
             "SL": 5456.39,
             "Status": "CLOSED - SL HIT \ud83d\udd34",
             "T1_Hit": false
+        },
+        {
+            "Stock": "CHOLAFIN.NS",
+            "Entry": 1724.4,
+            "Target1": 1795.37,
+            "Target2": 1890.0,
+            "SL": 1724.4,
+            "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
+            "T1_Hit": true
         }
     ],
     "active_trades": [
@@ -81,10 +90,10 @@
             "Entry": 282.5,
             "Target1": 288.83,
             "Target2": 297.28,
-            "SL": 277.43,
+            "SL": 282.5,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "ASIANPAINT.NS",
@@ -149,8 +158,9 @@
             "Entry": 3689.8,
             "Target1": 3838.43,
             "Target2": 4036.6,
-            "SL": 3570.9,
-            "Status": "ACTIVE"
+            "SL": 3689.8,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "ALKEM.NS",
@@ -174,15 +184,7 @@
             "Entry": 1005.1,
             "Target1": 1056.16,
             "Target2": 1124.25,
-            "SL": 964.25,
-            "Status": "ACTIVE"
-        },
-        {
-            "Stock": "CHOLAFIN.NS",
-            "Entry": 1724.4,
-            "Target1": 1795.37,
-            "Target2": 1890.0,
-            "SL": 1724.4,
+            "SL": 1005.1,
             "Status": "ACTIVE",
             "T1_Hit": true
         },
@@ -191,16 +193,18 @@
             "Entry": 1112.5,
             "Target1": 1172.18,
             "Target2": 1251.75,
-            "SL": 1064.76,
-            "Status": "ACTIVE"
+            "SL": 1112.5,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "ABCAPITAL.NS",
             "Entry": 393.85,
             "Target1": 410.37,
             "Target2": 432.39,
-            "SL": 380.64,
-            "Status": "ACTIVE"
+            "SL": 393.85,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "CIPLA.NS",
@@ -525,6 +529,60 @@
             "Target1": 846.43,
             "Target2": 894.26,
             "SL": 781.85,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "SBILIFE.NS",
+            "Entry": 1892.7,
+            "Target1": 1949.16,
+            "Target2": 2024.45,
+            "SL": 1847.53,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "VOLTAS.NS",
+            "Entry": 1328.8,
+            "Target1": 1378.88,
+            "Target2": 1445.65,
+            "SL": 1288.74,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "ADANIGREEN.NS",
+            "Entry": 1409.9,
+            "Target1": 1484.66,
+            "Target2": 1584.35,
+            "SL": 1350.09,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "ADANIPOWER.NS",
+            "Entry": 213.08,
+            "Target1": 221.39,
+            "Target2": 232.46,
+            "SL": 206.43,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "POLYCAB.NS",
+            "Entry": 9100.5,
+            "Target1": 9426.0,
+            "Target2": 9860.0,
+            "SL": 8840.1,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "KOTAKBANK.NS",
+            "Entry": 391.95,
+            "Target1": 403.05,
+            "Target2": 417.86,
+            "SL": 383.07,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
