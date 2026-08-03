@@ -474,9 +474,9 @@
             "Entry": 1346.7,
             "Target1": 1410.96,
             "Target2": 1496.65,
-            "SL": 1295.29,
+            "SL": 1346.7,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "IPCALAB.NS",
