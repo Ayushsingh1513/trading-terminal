@@ -39,7 +39,6 @@ if mkt:
     cols[1].metric("🏛️ SENSEX", f"{mkt.get('sensex', 0):,.0f}", f"{mkt.get('sensex_chg', 0):.2f}%")
     cols[2].metric("🛡️ Market Regime", mkt.get('mood', 'N/A'))
     
-    # Color-code PCR
     pcr_status = mkt.get('pcr_status', '')
     cols[3].metric("⚖️ PCR (Put-Call Ratio)", mkt.get('pcr', 'N/A'), pcr_status)
     cols[4].write(f"**Last Engine Update:**\n{mkt.get('timestamp', 'Unknown')}")
@@ -76,7 +75,6 @@ with tab1:
 with tab2:
     st.subheader("🔥 Institutional Flow & Sector Leadership")
     if sector_df is not None and not sector_df.empty:
-        # Style the dataframe to highlight Smart Money Flow
         def highlight_flow(val):
             if "Big Money Buying" in str(val): return 'color: #00FF00; font-weight: bold;'
             if "Big Money Selling" in str(val): return 'color: #FF0000; font-weight: bold;'
@@ -94,13 +92,11 @@ with tab3:
     active_trades = history.get("active_trades", [])
     closed_trades = history.get("closed_trades", [])
     
-    # Math for Win Rate
     total_closed = len(closed_trades)
     wins = sum(1 for t in closed_trades if "TARGET" in t.get("Status", ""))
     losses = total_closed - wins
     win_rate = round((wins / total_closed) * 100, 1) if total_closed > 0 else 0
     
-    # Key Performance Indicators
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("🟢 Active Open Trades", len(active_trades))
     m2.metric("🔒 Total Closed Trades", total_closed)
@@ -109,12 +105,10 @@ with tab3:
     
     st.divider()
     
-    # ── Closed Trades (Final Results) ──
     st.markdown("### 🔴 Closed Trades Log")
     if closed_trades:
         df_closed = pd.DataFrame(closed_trades)
         
-        # Calculate actual profit/loss percentage mathematically
         def calc_result(row):
             if pd.notna(row.get('Exit_Price')) and pd.notna(row.get('Entry')):
                 return round(((row['Exit_Price'] - row['Entry']) / row['Entry']) * 100, 2)
@@ -122,13 +116,11 @@ with tab3:
             
         df_closed['Result %'] = df_closed.apply(calc_result, axis=1)
         
-        # Color Code Profits Green and Losses Red
         def color_returns(val):
             color = '#00FF00' if val > 0 else '#FF4B4B'
             return f'color: {color}; font-weight: bold;'
             
         cols_to_show = ["Stock", "Status", "Entry", "Exit_Price", "Result %"]
-        
         styled_closed = df_closed[cols_to_show].style.map(color_returns, subset=['Result %'])
         st.dataframe(styled_closed, use_container_width=True, hide_index=True)
     else:
@@ -136,17 +128,13 @@ with tab3:
         
     st.divider()
     
-    # ── Active Trades (Currently Live) ──
     st.markdown("### 🟢 Active Trades Log (Live Monitoring)")
     if active_trades:
         df_active = pd.DataFrame(active_trades)
-        
-        # Clean up the T1_Hit boolean for better readability
         if 'T1_Hit' in df_active.columns:
             df_active['Risk Status'] = df_active['T1_Hit'].apply(lambda x: "✅ Risk Free (SL Trailed)" if x else "⏳ Standard Risk")
             
         cols_to_show_active = ["Stock", "Status", "Entry", "SL", "Target1", "Target2", "Risk Status"]
-        # Ensure we only show columns that actually exist in the data
         cols_to_show_active = [c for c in cols_to_show_active if c in df_active.columns]
         
         st.dataframe(df_active[cols_to_show_active], use_container_width=True, hide_index=True)
