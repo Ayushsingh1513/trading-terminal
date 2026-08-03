@@ -87,7 +87,7 @@ def get_market_data():
     c_sensex = float(sensex['Close'].iloc[-1])
     sensex_chg = float((c_sensex - sensex['Close'].iloc[-2]) / sensex['Close'].iloc[-2] * 100)
     nifty_200 = float(nifty['Close'].ewm(span=200).mean().iloc[-1])
-    
+
     pcr_value = 1.05 
     pcr_status = "⚠️ OVERBOUGHT" if pcr_value > 1.5 else ("🟢 OVERSOLD" if pcr_value < 0.7 else "⚪ NEUTRAL")
 
@@ -105,25 +105,25 @@ def get_market_data():
 def get_sector_trends():
     sector_data = {}
     sector_rows = []
-    
+
     for sec_name, etf_symbol in SECTOR_MAP.items():
         try:
             sdf = yf.Ticker(etf_symbol).history(period="6mo")
             if sdf.empty or len(sdf) < 20: continue
-            
+
             c_price = float(sdf['Close'].iloc[-1])
             p_price = float(sdf['Close'].iloc[-2])
             today_chg = round(((c_price - p_price) / p_price) * 100, 2)
             m1_ret = float(((c_price - sdf['Close'].iloc[-21]) / sdf['Close'].iloc[-21]) * 100)
-            
+
             delta = sdf['Close'].diff()
             up_v = sdf['Volume'].where(delta > 0, 0).rolling(14).sum().iloc[-1]
             dn_v = sdf['Volume'].where(delta < 0, 0).rolling(14).sum().iloc[-1]
             ud_ratio = (up_v / dn_v) if dn_v > 0 else 1.0
-            
+
             flow_label = "Big Money Buying 🟢" if ud_ratio >= 1.3 else ("Big Money Selling 🔴" if ud_ratio <= 0.7 else "Neutral / Sideways ⚪")
             is_uptrend = m1_ret > 0 and c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
-            
+
             sector_data[sec_name] = {"uptrend": is_uptrend, "today_chg": today_chg, "m1_ret": m1_ret, "flow": flow_label}
             sector_rows.append({
                 "Sector": sec_name, "Today%": today_chg, "1M%": round(m1_ret, 2),
@@ -131,12 +131,12 @@ def get_sector_trends():
             })
         except:
             pass
-            
+
     sec_df = pd.DataFrame(sector_rows)
     if not sec_df.empty:
         sec_df = sec_df.sort_values("Today%", ascending=False)
         sec_df.to_csv("sector_data.csv", index=False)
-        
+
     return sector_data, sec_df
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -144,56 +144,56 @@ def get_sector_trends():
 # ══════════════════════════════════════════════════════════════════════════════
 def scan_hybrid_setups(sector_trends, mkt):
     scanner_results = []
-    
+
     for ticker in STOCK_UNIVERSE:
         try:
             df = yf.Ticker(ticker).history(period="1y")
             if df.empty or len(df) < 50: continue
-            
+
             weekly_df = df['Close'].resample('W').last()
             weekly_20_ema = weekly_df.ewm(span=20).mean().iloc[-1]
             is_weekly_uptrend = float(df['Close'].iloc[-1]) > float(weekly_20_ema)
 
             df['EMA_20'] = df['Close'].ewm(span=20).mean()
             df['EMA_50'] = df['Close'].ewm(span=50).mean()
-            
+
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
             df['RSI'] = 100 - (100 / (1 + (gain / loss)))
-            
+
             df['TR'] = np.maximum(df['High'] - df['Low'], np.maximum(abs(df['High'] - df['Close'].shift()), abs(df['Low'] - df['Close'].shift())))
             df['ATR'] = df['TR'].rolling(14).mean()
             df['Vol_20'] = df['Volume'].rolling(20).mean()
-            
+
             latest = df.iloc[-1]
             price = float(latest['Close'])
             rsi = float(latest['RSI'])
             atr = float(latest['ATR'])
-            
+
             sec_name = "Nifty Bank" if "BANK" in ticker else ("Nifty IT" if "TCS" in ticker or "INFY" in ticker else "Nifty Auto")
             sec_trend = sector_trends.get(sec_name, {}).get("uptrend", False)
-            
+
             is_oversold_rebound = (rsi < 42) and (price >= float(latest['EMA_50']) * 0.98)
             range_pct = ((df['High'].tail(5).max() - df['Low'].tail(5).min()) / df['Low'].tail(5).min()) * 100
             is_compression = (range_pct <= 3.5) and (float(latest['Volume']) < float(latest['Vol_20']) * 0.95)
-            
+
             setup_type = "Oversold Rebound ↩" if is_oversold_rebound else ("Tight Flag 🗜️" if is_compression else "Consolidating")
             score = 30
             if is_oversold_rebound or is_compression: score += 40
             if sec_trend: score += 20 
             if price > float(latest['EMA_20']): score += 10
-            
+
             if not is_weekly_uptrend: score = min(score, 49) 
             if mkt['pcr'] > 1.5: score = min(score, 79) 
-            
+
             signal = "BUY" if score >= 80 else ("WATCH" if score >= 50 else "AVOID")
             mtf_status = "✅ MTF Eligible (Dhan)"
-            
+
             sl = round(price - (atr * 1.2), 2)
             t1 = round(price + (atr * 1.5), 2)
             t2 = round(price + (atr * 3.5), 2)
-            
+
             scanner_results.append({
                 "Stock": ticker, "Signal": signal, "Setup": setup_type, "WeeklyTrend": "UP" if is_weekly_uptrend else "DOWN",
                 "MTF": mtf_status, "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
@@ -205,7 +205,20 @@ def scan_hybrid_setups(sector_trends, mkt):
             pass
 
     scan_df = pd.DataFrame(scanner_results).sort_values("Score", ascending=False)
+    
+    # Save daily scanner for live dashboard
     scan_df.to_csv("scanner_data.csv", index=False)
+
+    # Save to permanent historical log with timestamp
+    scan_df_history = scan_df.copy()
+    scan_df_history['Scan_Date'] = datetime.now(IST).strftime("%Y-%m-%d")
+
+    historical_file = "historical_scans.csv"
+    if os.path.exists(historical_file):
+        scan_df_history.to_csv(historical_file, mode='a', header=False, index=False)
+    else:
+        scan_df_history.to_csv(historical_file, index=False)
+
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -214,7 +227,7 @@ def scan_hybrid_setups(sector_trends, mkt):
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
     history = json.load(open(history_file, "r")) if os.path.exists(history_file) else {"closed_trades": [], "active_trades": []}
-    
+
     # ── 1. ACTIVE TRADE MONITOR ──
     still_active = []
     for trade in history.get('active_trades', []):
@@ -225,12 +238,14 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 c_price = float(curr_df['Close'].iloc[-1])
                 if c_price <= trade['SL']:
                     trade['Status'] = "CLOSED - SL HIT 🔴"
+                    trade['Exit_Price'] = c_price
                     history['closed_trades'].append(trade)
                     loss_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
                     send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{trade['Entry']}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
                     continue
                 elif c_price >= trade['Target2']:
                     trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
+                    trade['Exit_Price'] = c_price
                     history['closed_trades'].append(trade)
                     profit_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
                     send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{trade['Entry']}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
@@ -242,7 +257,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
         except Exception as e:
             pass
         still_active.append(trade)
-        
+
     history['active_trades'] = still_active
 
     # ── 2. HERO SECTOR & SECTOR INTELLIGENCE ──
@@ -257,7 +272,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     # ── 3. ALWAYS BROADCAST MARKET & SECTOR PULSE ──
     top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
-    
+
     pulse_msg = f"""📊 *MARKET & SECTOR INTELLIGENCE*
 ━━━━━━━━━━━━━━━━━━━
 🏛️ *Nifty 50:* {mkt['nifty']:,.0f} ({mkt['nifty_chg']:+.2f}%)
@@ -267,7 +282,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 {hero_msg}
 ━━━━━━━━━━━━━━━━━━━
 🟢 *Qualified BUY Setups Today:* {len(top_buys)}"""
-    
+
     send_telegram_alert(pulse_msg)
 
     # ── 4. RECORD & NOTIFY NEW SETUPS ──
@@ -277,7 +292,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 "Stock": buy["Stock"], "Entry": float(buy["Entry"]), "Target1": float(buy["Target1"]),
                 "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE", "T1_Hit": False
             })
-            
+
             alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
 ━━━━━━━━━━━━━━━━━━━
 🎯 *Stock:* {buy['Stock']}
@@ -301,7 +316,7 @@ def run_pipeline():
     mkt = get_market_data()
     if not mkt: return
     json.dump(mkt, open("market_data.json", "w"), indent=4)
-    
+
     sector_trends, sector_df = get_sector_trends()
     scanner_df = scan_hybrid_setups(sector_trends, mkt)
     track_targets_and_notify(scanner_df, sector_df, mkt)
