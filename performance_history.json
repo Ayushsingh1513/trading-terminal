@@ -74,6 +74,16 @@
             "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
             "T1_Hit": true,
             "Exit_Price": 2810.0
+        },
+        {
+            "Stock": "FEDERALBNK.NS",
+            "Entry": 359.15,
+            "Target1": 370.04,
+            "Target2": 384.56,
+            "SL": 359.15,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 358.6499938964844
         }
     ],
     "active_trades": [
@@ -320,15 +330,6 @@
             "Status": "ACTIVE"
         },
         {
-            "Stock": "FEDERALBNK.NS",
-            "Entry": 359.15,
-            "Target1": 370.04,
-            "Target2": 384.56,
-            "SL": 359.15,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
             "Stock": "PNB.NS",
             "Entry": 111.08,
             "Target1": 114.46,
@@ -522,9 +523,9 @@
             "Entry": 4983.0,
             "Target1": 5173.61,
             "Target2": 5427.75,
-            "SL": 4830.51,
+            "SL": 4983.0,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "CHALET.NS",
@@ -586,6 +587,33 @@
             "Target1": 403.05,
             "Target2": 417.86,
             "SL": 383.07,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "PFC.NS",
+            "Entry": 421.75,
+            "Target1": 434.04,
+            "Target2": 450.43,
+            "SL": 411.92,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "FEDERALBNK.NS",
+            "Entry": 358.85,
+            "Target1": 369.52,
+            "Target2": 383.74,
+            "SL": 350.32,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "UBL.NS",
+            "Entry": 1428.2,
+            "Target1": 1482.5,
+            "Target2": 1554.9,
+            "SL": 1384.76,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
