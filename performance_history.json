@@ -114,6 +114,26 @@
             "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
             "T1_Hit": true,
             "Exit_Price": 5500.0
+        },
+        {
+            "Stock": "SUNPHARMA.NS",
+            "Entry": 1949.5,
+            "Target1": 1996.61,
+            "Target2": 2059.43,
+            "SL": 1949.5,
+            "Date": "2026-07-24",
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 1945.0999755859375
+        },
+        {
+            "Stock": "FORTIS.NS",
+            "Entry": 948.7,
+            "Target1": 978.95,
+            "Target2": 1019.29,
+            "SL": 924.5,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "Exit_Price": 922.2999877929688
         }
     ],
     "active_trades": [
@@ -126,16 +146,6 @@
             "Date": "2026-07-23",
             "Status": "ACTIVE",
             "T1_Hit": false
-        },
-        {
-            "Stock": "SUNPHARMA.NS",
-            "Entry": 1949.5,
-            "Target1": 1996.61,
-            "Target2": 2059.43,
-            "SL": 1949.5,
-            "Date": "2026-07-24",
-            "Status": "ACTIVE",
-            "T1_Hit": true
         },
         {
             "Stock": "ITC.NS",
@@ -293,14 +303,6 @@
             "Status": "ACTIVE"
         },
         {
-            "Stock": "FORTIS.NS",
-            "Entry": 948.7,
-            "Target1": 978.95,
-            "Target2": 1019.29,
-            "SL": 924.5,
-            "Status": "ACTIVE"
-        },
-        {
             "Stock": "PAGEIND.NS",
             "Entry": 40275.0,
             "Target1": 41829.11,
@@ -383,18 +385,18 @@
             "Entry": 41065.0,
             "Target1": 42412.86,
             "Target2": 44210.0,
-            "SL": 39986.71,
+            "SL": 41065.0,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "ULTRACEMCO.NS",
             "Entry": 11809.0,
             "Target1": 12133.36,
             "Target2": 12565.83,
-            "SL": 11549.51,
+            "SL": 11809.0,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "GLENMARK.NS",
@@ -663,6 +665,51 @@
             "Target1": 929.88,
             "Target2": 996.31,
             "SL": 840.19,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "JSWSTEEL.NS",
+            "Entry": 1302.3,
+            "Target1": 1339.96,
+            "Target2": 1390.18,
+            "SL": 1272.17,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BRITANNIA.NS",
+            "Entry": 5454.0,
+            "Target1": 5610.91,
+            "Target2": 5820.11,
+            "SL": 5328.48,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "CONCOR.NS",
+            "Entry": 518.2,
+            "Target1": 538.18,
+            "Target2": 564.81,
+            "SL": 502.22,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BHEL.NS",
+            "Entry": 412.25,
+            "Target1": 428.83,
+            "Target2": 450.93,
+            "SL": 398.99,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "AARTIIND.NS",
+            "Entry": 482.85,
+            "Target1": 505.14,
+            "Target2": 534.85,
+            "SL": 465.02,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
