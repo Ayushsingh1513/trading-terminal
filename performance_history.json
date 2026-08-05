@@ -457,9 +457,9 @@
             "Entry": 1024.9,
             "Target1": 1052.76,
             "Target2": 1089.9,
-            "SL": 1002.61,
+            "SL": 1024.9,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "BHARATFORG.NS",
