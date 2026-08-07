@@ -714,9 +714,9 @@
             "Entry": 482.85,
             "Target1": 505.14,
             "Target2": 534.85,
-            "SL": 465.02,
+            "SL": 482.85,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "ASIANPAINT.NS",
