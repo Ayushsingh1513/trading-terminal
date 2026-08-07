@@ -184,6 +184,35 @@
             "Status": "CLOSED - SL HIT \ud83d\udd34",
             "T1_Hit": false,
             "Exit_Price": 1571.0
+        },
+        {
+            "Stock": "SHREECEM.NS",
+            "Entry": 26740.0,
+            "Target1": 27597.51,
+            "Target2": 28740.86,
+            "SL": 26053.99,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "Exit_Price": 26010.0
+        },
+        {
+            "Stock": "GRASIM.NS",
+            "Entry": 3089.4,
+            "Target1": 3182.96,
+            "Target2": 3307.7,
+            "SL": 3089.4,
+            "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
+            "T1_Hit": true,
+            "Exit_Price": 3323.0
+        },
+        {
+            "Stock": "SBIN.NS",
+            "Entry": 1024.9,
+            "Target1": 1052.76,
+            "Target2": 1089.9,
+            "SL": 1024.9,
+            "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
+            "T1_Hit": true,
+            "Exit_Price": 1097.199951171875
         }
     ],
     "active_trades": [
@@ -266,14 +295,6 @@
             "T1_Hit": true
         },
         {
-            "Stock": "SHREECEM.NS",
-            "Entry": 26740.0,
-            "Target1": 27597.51,
-            "Target2": 28740.86,
-            "SL": 26053.99,
-            "Status": "ACTIVE"
-        },
-        {
             "Stock": "NAM-INDIA.NS",
             "Entry": 1112.5,
             "Target1": 1172.18,
@@ -297,15 +318,6 @@
             "Target1": 1461.32,
             "Target2": 1528.95,
             "SL": 1410.6,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
-            "Stock": "GRASIM.NS",
-            "Entry": 3089.4,
-            "Target1": 3182.96,
-            "Target2": 3307.7,
-            "SL": 3089.4,
             "Status": "ACTIVE",
             "T1_Hit": true
         },
@@ -390,9 +402,9 @@
             "Entry": 111.08,
             "Target1": 114.46,
             "Target2": 118.97,
-            "SL": 108.37,
+            "SL": 111.08,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "BIOCON.NS",
@@ -476,22 +488,13 @@
             "T1_Hit": false
         },
         {
-            "Stock": "SBIN.NS",
-            "Entry": 1024.9,
-            "Target1": 1052.76,
-            "Target2": 1089.9,
-            "SL": 1024.9,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
             "Stock": "BHARATFORG.NS",
             "Entry": 2164.7,
             "Target1": 2236.26,
             "Target2": 2331.67,
-            "SL": 2107.45,
+            "SL": 2164.7,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "AUBANK.NS",
@@ -796,6 +799,33 @@
             "Target1": 408.62,
             "Target2": 427.25,
             "SL": 383.47,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "DIXON.NS",
+            "Entry": 14200.0,
+            "Target1": 14806.54,
+            "Target2": 15615.25,
+            "SL": 13714.77,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "INDIACEM.NS",
+            "Entry": 398.15,
+            "Target1": 417.19,
+            "Target2": 442.57,
+            "SL": 382.92,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "MAXHEALTH.NS",
+            "Entry": 1070.0,
+            "Target1": 1106.14,
+            "Target2": 1154.33,
+            "SL": 1041.09,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
