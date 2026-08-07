@@ -828,6 +828,15 @@
             "SL": 1041.09,
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "SHREECEM.NS",
+            "Entry": 26010.0,
+            "Target1": 26944.29,
+            "Target2": 28190.0,
+            "SL": 25262.57,
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
