@@ -687,9 +687,9 @@
             "Entry": 5454.0,
             "Target1": 5610.91,
             "Target2": 5820.11,
-            "SL": 5328.48,
+            "SL": 5454.0,
             "Status": "ACTIVE",
-            "T1_Hit": false
+            "T1_Hit": true
         },
         {
             "Stock": "CONCOR.NS",
@@ -751,6 +751,51 @@
             "Target1": 286.35,
             "Target2": 298.88,
             "SL": 269.43,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "SUNPHARMA.NS",
+            "Entry": 1954.3,
+            "Target1": 2006.16,
+            "Target2": 2075.3,
+            "SL": 1912.81,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "M&M.NS",
+            "Entry": 3451.7,
+            "Target1": 3579.7,
+            "Target2": 3750.37,
+            "SL": 3349.3,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BAJAJ-AUTO.NS",
+            "Entry": 11644.0,
+            "Target1": 12056.45,
+            "Target2": 12606.38,
+            "SL": 11314.04,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "HAVELLS.NS",
+            "Entry": 1286.0,
+            "Target1": 1319.72,
+            "Target2": 1364.68,
+            "SL": 1259.03,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "HINDPETRO.NS",
+            "Entry": 394.65,
+            "Target1": 408.62,
+            "Target2": 427.25,
+            "SL": 383.47,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
