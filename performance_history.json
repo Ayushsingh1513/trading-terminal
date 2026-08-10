@@ -303,6 +303,25 @@
             "Status": "CLOSED - SL HIT \ud83d\udd34",
             "T1_Hit": false,
             "Exit_Price": 501.45001220703125
+        },
+        {
+            "Stock": "PAGEIND.NS",
+            "Entry": 40275.0,
+            "Target1": 41829.11,
+            "Target2": 43901.25,
+            "SL": 39031.71,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "Exit_Price": 38660.0
+        },
+        {
+            "Stock": "BHARATFORG.NS",
+            "Entry": 2164.7,
+            "Target1": 2236.26,
+            "Target2": 2331.67,
+            "SL": 2164.7,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 2093.10009765625
         }
     ],
     "active_trades": [
@@ -428,14 +447,6 @@
             "T1_Hit": true
         },
         {
-            "Stock": "PAGEIND.NS",
-            "Entry": 40275.0,
-            "Target1": 41829.11,
-            "Target2": 43901.25,
-            "SL": 39031.71,
-            "Status": "ACTIVE"
-        },
-        {
             "Stock": "ZYDUSLIFE.NS",
             "Entry": 1108.7,
             "Target1": 1146.23,
@@ -547,15 +558,6 @@
             "Target1": 5547.15,
             "Target2": 5784.02,
             "SL": 5369.5,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
-            "Stock": "BHARATFORG.NS",
-            "Entry": 2164.7,
-            "Target1": 2236.26,
-            "Target2": 2331.67,
-            "SL": 2164.7,
             "Status": "ACTIVE",
             "T1_Hit": true
         },
@@ -907,6 +909,15 @@
             "Target1": 5616.73,
             "Target2": 5880.38,
             "SL": 5260.81,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "BHARATFORG.NS",
+            "Entry": 2093.1,
+            "Target1": 2180.99,
+            "Target2": 2298.18,
+            "SL": 2022.79,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
