@@ -213,6 +213,96 @@
             "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
             "T1_Hit": true,
             "Exit_Price": 1097.199951171875
+        },
+        {
+            "Stock": "NTPC.NS",
+            "Entry": 347.1,
+            "Target1": 356.11,
+            "Target2": 368.11,
+            "SL": 339.9,
+            "Date": "2026-07-24",
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 339.8500061035156
+        },
+        {
+            "Stock": "LUPIN.NS",
+            "Entry": 2370.5,
+            "Target1": 2453.1,
+            "Target2": 2563.22,
+            "SL": 2304.42,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "Exit_Price": 2254.0
+        },
+        {
+            "Stock": "GODREJCP.NS",
+            "Entry": 1067.9,
+            "Target1": 1101.63,
+            "Target2": 1146.6,
+            "SL": 1040.92,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 1032.4000244140625
+        },
+        {
+            "Stock": "PAYTM.NS",
+            "Entry": 1346.7,
+            "Target1": 1410.96,
+            "Target2": 1496.65,
+            "SL": 1346.7,
+            "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
+            "T1_Hit": true,
+            "Exit_Price": 1581.0
+        },
+        {
+            "Stock": "IPCALAB.NS",
+            "Entry": 1757.8,
+            "Target1": 1844.62,
+            "Target2": 1960.38,
+            "SL": 1688.35,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 1679.5999755859375
+        },
+        {
+            "Stock": "PFC.NS",
+            "Entry": 421.75,
+            "Target1": 434.04,
+            "Target2": 450.43,
+            "SL": 411.92,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 386.04998779296875
+        },
+        {
+            "Stock": "UBL.NS",
+            "Entry": 1428.2,
+            "Target1": 1482.5,
+            "Target2": 1554.9,
+            "SL": 1384.76,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 1382.9000244140625
+        },
+        {
+            "Stock": "RECLTD.NS",
+            "Entry": 368.0,
+            "Target1": 379.54,
+            "Target2": 394.93,
+            "SL": 358.77,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 344.8500061035156
+        },
+        {
+            "Stock": "CONCOR.NS",
+            "Entry": 518.2,
+            "Target1": 538.18,
+            "Target2": 564.81,
+            "SL": 502.22,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 501.45001220703125
         }
     ],
     "active_trades": [
@@ -242,16 +332,6 @@
             "Target1": 3120.84,
             "Target2": 3274.1,
             "SL": 2913.95,
-            "Date": "2026-07-24",
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
-            "Stock": "NTPC.NS",
-            "Entry": 347.1,
-            "Target1": 356.11,
-            "Target2": 368.11,
-            "SL": 339.9,
             "Date": "2026-07-24",
             "Status": "ACTIVE",
             "T1_Hit": false
@@ -346,14 +426,6 @@
             "SL": 1532.0,
             "Status": "ACTIVE",
             "T1_Hit": true
-        },
-        {
-            "Stock": "LUPIN.NS",
-            "Entry": 2370.5,
-            "Target1": 2453.1,
-            "Target2": 2563.22,
-            "SL": 2304.42,
-            "Status": "ACTIVE"
         },
         {
             "Stock": "PAGEIND.NS",
@@ -479,15 +551,6 @@
             "T1_Hit": true
         },
         {
-            "Stock": "GODREJCP.NS",
-            "Entry": 1067.9,
-            "Target1": 1101.63,
-            "Target2": 1146.6,
-            "SL": 1040.92,
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
             "Stock": "BHARATFORG.NS",
             "Entry": 2164.7,
             "Target1": 2236.26,
@@ -513,24 +576,6 @@
             "SL": 317.7,
             "Status": "ACTIVE",
             "T1_Hit": true
-        },
-        {
-            "Stock": "PAYTM.NS",
-            "Entry": 1346.7,
-            "Target1": 1410.96,
-            "Target2": 1496.65,
-            "SL": 1346.7,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
-            "Stock": "IPCALAB.NS",
-            "Entry": 1757.8,
-            "Target1": 1844.62,
-            "Target2": 1960.38,
-            "SL": 1688.35,
-            "Status": "ACTIVE",
-            "T1_Hit": false
         },
         {
             "Stock": "UNIONBANK.NS",
@@ -614,38 +659,11 @@
             "T1_Hit": false
         },
         {
-            "Stock": "PFC.NS",
-            "Entry": 421.75,
-            "Target1": 434.04,
-            "Target2": 450.43,
-            "SL": 411.92,
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
             "Stock": "FEDERALBNK.NS",
             "Entry": 358.85,
             "Target1": 369.52,
             "Target2": 383.74,
             "SL": 350.32,
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
-            "Stock": "UBL.NS",
-            "Entry": 1428.2,
-            "Target1": 1482.5,
-            "Target2": 1554.9,
-            "SL": 1384.76,
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
-            "Stock": "RECLTD.NS",
-            "Entry": 368.0,
-            "Target1": 379.54,
-            "Target2": 394.93,
-            "SL": 358.77,
             "Status": "ACTIVE",
             "T1_Hit": false
         },
@@ -693,15 +711,6 @@
             "SL": 5454.0,
             "Status": "ACTIVE",
             "T1_Hit": true
-        },
-        {
-            "Stock": "CONCOR.NS",
-            "Entry": 518.2,
-            "Target1": 538.18,
-            "Target2": 564.81,
-            "SL": 502.22,
-            "Status": "ACTIVE",
-            "T1_Hit": false
         },
         {
             "Stock": "BHEL.NS",
@@ -835,6 +844,69 @@
             "Target1": 26944.29,
             "Target2": 28190.0,
             "SL": 25262.57,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "TECHM.NS",
+            "Entry": 1636.6,
+            "Target1": 1696.11,
+            "Target2": 1775.45,
+            "SL": 1588.99,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "DIVISLAB.NS",
+            "Entry": 8277.0,
+            "Target1": 8591.28,
+            "Target2": 9010.32,
+            "SL": 8025.58,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "TVSMOTOR.NS",
+            "Entry": 4451.5,
+            "Target1": 4602.56,
+            "Target2": 4803.98,
+            "SL": 4330.65,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "JINDALSTEL.NS",
+            "Entry": 1123.0,
+            "Target1": 1159.04,
+            "Target2": 1207.1,
+            "SL": 1094.17,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "PERSISTENT.NS",
+            "Entry": 5515.5,
+            "Target1": 5777.71,
+            "Target2": 6127.31,
+            "SL": 5305.74,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "IPCALAB.NS",
+            "Entry": 1680.0,
+            "Target1": 1762.33,
+            "Target2": 1872.1,
+            "SL": 1614.14,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "JKCEMENT.NS",
+            "Entry": 5419.0,
+            "Target1": 5616.73,
+            "Target2": 5880.38,
+            "SL": 5260.81,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
