@@ -248,7 +248,35 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
         except Exception as e:
             print(f"JSON Load Warning: {e}. Starting fresh.")
 
-    # ── 1. ACTIVE TRADE MONITOR ──
+    # ── 1. RETROACTIVE PRUNING OF ACTIVE TRADES TO MAX 5 ──
+    # If history contains more than 5 active trades, prune down to top 5 based on R:R
+    if len(history['active_trades']) > MAX_ACTIVE_TRADES:
+        def calc_rr(trade):
+            try:
+                e = float(trade.get('Entry', 0))
+                s = float(trade.get('SL', 0))
+                t = float(trade.get('Target2', trade.get('Target', 0)))
+                risk = abs(e - s)
+                reward = abs(t - e)
+                return reward / risk if risk > 0 else 0
+            except:
+                return 0
+        
+        # Sort active trades by Risk-to-Reward descending
+        history['active_trades'].sort(key=calc_rr, reverse=True)
+        
+        # Keep only top 5, move excess active trades into closed/archived
+        excess_trades = history['active_trades'][MAX_ACTIVE_TRADES:]
+        history['active_trades'] = history['active_trades'][:MAX_ACTIVE_TRADES]
+        
+        for ext in excess_trades:
+            ext['Status'] = "CLOSED - PRUNED (EXCESS RISK)"
+            ext['Exit Price'] = ext.get('Entry', 0)
+            history['closed_trades'].append(ext)
+            
+        print(f"Pruned portfolio down to top {MAX_ACTIVE_TRADES} active setups by R:R ratio.")
+
+    # ── 2. ACTIVE TRADE MONITOR ──
     still_active = []
     for trade in history.get('active_trades', []):
         try:
@@ -286,7 +314,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     history['active_trades'] = still_active
 
-    # ── 2. HERO SECTOR & SECTOR INTELLIGENCE ──
+    # ── 3. HERO SECTOR & SECTOR INTELLIGENCE ──
     hero_msg = ""
     if not sector_df.empty:
         hero_sec = sector_df.iloc[0]
@@ -296,7 +324,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 📊 *Smart Money:* {hero_sec['Smart Money Flow']}
 📉 *Weakest Sector:* {lagging_sec['Sector']} ({lagging_sec['Today%']:+.2f}%)"""
 
-    # ── 3. BROADCAST MARKET PULSE ──
+    # ── 4. BROADCAST MARKET PULSE ──
     top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
 
     pulse_msg = f"""📊 *MARKET & SECTOR INTELLIGENCE*
@@ -311,8 +339,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     send_telegram_alert(pulse_msg)
 
-    # ── 4. RECORD & NOTIFY NEW SETUPS (WITH PORTFOLIO MAX CAP) ──
-    # Sort by R:R ratio descending to prioritize the highest payout setups
+    # ── 5. RECORD & NOTIFY NEW SETUPS (WITH STRICT 5 MAX CAP) ──
     if not top_buys.empty:
         top_buys = top_buys.sort_values("RR", ascending=False)
     
@@ -340,7 +367,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 "Lot Size": 1,
                 "T1_Hit": False
             })
-            available_slots -= 1 # Decrement available slot after taking trade
+            available_slots -= 1
 
             alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
 ━━━━━━━━━━━━━━━━━━━
@@ -358,7 +385,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 📊 *Volume Surge:* {buy['VolSurge']}x | *RSI:* {buy['RSI']}"""
             send_telegram_alert(alert_msg)
 
-    # ── 5. FLATTEN & SAVE JSON DATA FOR STREAMLIT ──
+    # ── 6. FLATTEN & SAVE JSON DATA FOR STREAMLIT ──
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     
     with open(history_file, "w") as f:
