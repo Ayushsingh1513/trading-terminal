@@ -11,6 +11,13 @@ try:
 except ImportError:
     HAS_PLOTLY = False
 
+# Safe import for Alerts
+try:
+    from alert import send_trade_alert
+    HAS_ALERTS = True
+except ImportError:
+    HAS_ALERTS = False
+
 st.set_page_config(page_title="Momentum Frenzy | Terminal", layout="wide", page_icon="⚡")
 
 # --- SIDEBAR RISK CONTROLS ---
@@ -24,6 +31,21 @@ with st.sidebar:
     
     st.markdown("---")
     st.info("Applies only to 100/100 Score trades in Performance History.")
+    
+    st.markdown("---")
+    # Telegram Test Button
+    if HAS_ALERTS:
+        if st.button("🔔 Test Telegram Alert"):
+            send_trade_alert(
+                symbol="TEST_RELIANCE", 
+                entry=2500, 
+                sl=2450, 
+                target=2600, 
+                lot_size=50
+            )
+            st.success("Test alert sent! Check your phone.")
+    else:
+        st.warning("alert.py not found. Create it to enable Telegram alerts.")
 
 # --- TABS LAYOUT ---
 tab1, tab2 = st.tabs(["📊 Live Screener", "📈 Performance History (Risk Ledger)"])
