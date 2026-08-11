@@ -322,6 +322,87 @@
             "Status": "CLOSED - SL HIT \ud83d\udd34",
             "T1_Hit": true,
             "Exit_Price": 2093.10009765625
+        },
+        {
+            "Stock": "ITC.NS",
+            "Entry": 282.5,
+            "Target1": 288.83,
+            "Target2": 297.28,
+            "SL": 282.5,
+            "Date": "2026-07-24",
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 281.1000061035156
+        },
+        {
+            "Stock": "APOLLOHOSP.NS",
+            "Entry": 8805.5,
+            "Target1": 9004.14,
+            "Target2": 9269.0,
+            "SL": 8805.5,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 8765.0
+        },
+        {
+            "Stock": "BOSCHLTD.NS",
+            "Entry": 41065.0,
+            "Target1": 42412.86,
+            "Target2": 44210.0,
+            "SL": 41065.0,
+            "Status": "CLOSED - TARGET 2 HIT \ud83d\ude80",
+            "T1_Hit": true,
+            "Exit_Price": 45025.0
+        },
+        {
+            "Stock": "ULTRACEMCO.NS",
+            "Entry": 11809.0,
+            "Target1": 12133.36,
+            "Target2": 12565.83,
+            "SL": 11809.0,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 11775.0
+        },
+        {
+            "Stock": "CUMMINSIND.NS",
+            "Entry": 5369.5,
+            "Target1": 5547.15,
+            "Target2": 5784.02,
+            "SL": 5369.5,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 5365.0
+        },
+        {
+            "Stock": "BPCL.NS",
+            "Entry": 317.7,
+            "Target1": 328.58,
+            "Target2": 343.08,
+            "SL": 317.7,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": true,
+            "Exit_Price": 316.79998779296875
+        },
+        {
+            "Stock": "HDFCAMC.NS",
+            "Entry": 2620.0,
+            "Target1": 2730.04,
+            "Target2": 2876.75,
+            "SL": 2531.97,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 2523.89990234375
+        },
+        {
+            "Stock": "SBILIFE.NS",
+            "Entry": 1892.7,
+            "Target1": 1949.16,
+            "Target2": 2024.45,
+            "SL": 1847.53,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 1824.0999755859375
         }
     ],
     "active_trades": [
@@ -334,16 +415,6 @@
             "Date": "2026-07-23",
             "Status": "ACTIVE",
             "T1_Hit": false
-        },
-        {
-            "Stock": "ITC.NS",
-            "Entry": 282.5,
-            "Target1": 288.83,
-            "Target2": 297.28,
-            "SL": 282.5,
-            "Date": "2026-07-24",
-            "Status": "ACTIVE",
-            "T1_Hit": true
         },
         {
             "Stock": "ADANIENT.NS",
@@ -372,15 +443,6 @@
             "Target2": 2015.54,
             "SL": 1898.2,
             "Date": "2026-07-24",
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
-            "Stock": "APOLLOHOSP.NS",
-            "Entry": 8805.5,
-            "Target1": 9004.14,
-            "Target2": 9269.0,
-            "SL": 8805.5,
             "Status": "ACTIVE",
             "T1_Hit": true
         },
@@ -508,24 +570,6 @@
             "T1_Hit": false
         },
         {
-            "Stock": "BOSCHLTD.NS",
-            "Entry": 41065.0,
-            "Target1": 42412.86,
-            "Target2": 44210.0,
-            "SL": 41065.0,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
-            "Stock": "ULTRACEMCO.NS",
-            "Entry": 11809.0,
-            "Target1": 12133.36,
-            "Target2": 12565.83,
-            "SL": 11809.0,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
             "Stock": "GLENMARK.NS",
             "Entry": 2225.3,
             "Target1": 2300.39,
@@ -553,29 +597,11 @@
             "T1_Hit": false
         },
         {
-            "Stock": "CUMMINSIND.NS",
-            "Entry": 5369.5,
-            "Target1": 5547.15,
-            "Target2": 5784.02,
-            "SL": 5369.5,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
             "Stock": "AUBANK.NS",
             "Entry": 1030.7,
             "Target1": 1072.73,
             "Target2": 1128.77,
             "SL": 1030.7,
-            "Status": "ACTIVE",
-            "T1_Hit": true
-        },
-        {
-            "Stock": "BPCL.NS",
-            "Entry": 317.7,
-            "Target1": 328.58,
-            "Target2": 343.08,
-            "SL": 317.7,
             "Status": "ACTIVE",
             "T1_Hit": true
         },
@@ -587,15 +613,6 @@
             "SL": 170.8,
             "Status": "ACTIVE",
             "T1_Hit": true
-        },
-        {
-            "Stock": "HDFCAMC.NS",
-            "Entry": 2620.0,
-            "Target1": 2730.04,
-            "Target2": 2876.75,
-            "SL": 2531.97,
-            "Status": "ACTIVE",
-            "T1_Hit": false
         },
         {
             "Stock": "MRF.NS",
@@ -614,15 +631,6 @@
             "SL": 810.55,
             "Status": "ACTIVE",
             "T1_Hit": true
-        },
-        {
-            "Stock": "SBILIFE.NS",
-            "Entry": 1892.7,
-            "Target1": 1949.16,
-            "Target2": 2024.45,
-            "SL": 1847.53,
-            "Status": "ACTIVE",
-            "T1_Hit": false
         },
         {
             "Stock": "ADANIGREEN.NS",
@@ -918,6 +926,60 @@
             "Target1": 2180.99,
             "Target2": 2298.18,
             "SL": 2022.79,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "INFY.NS",
+            "Entry": 1187.0,
+            "Target1": 1235.95,
+            "Target2": 1301.23,
+            "SL": 1147.84,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "LAURUSLABS.NS",
+            "Entry": 1835.1,
+            "Target1": 1900.05,
+            "Target2": 1986.65,
+            "SL": 1783.14,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "ABB.NS",
+            "Entry": 7591.0,
+            "Target1": 7909.57,
+            "Target2": 8334.34,
+            "SL": 7336.14,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "CUMMINSIND.NS",
+            "Entry": 5368.5,
+            "Target1": 5577.8,
+            "Target2": 5856.88,
+            "SL": 5201.06,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "DATAPATTNS.NS",
+            "Entry": 4401.5,
+            "Target1": 4687.9,
+            "Target2": 5069.78,
+            "SL": 4172.38,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "TORNTPHARM.NS",
+            "Entry": 4861.0,
+            "Target1": 5051.38,
+            "Target2": 5305.22,
+            "SL": 4708.69,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
