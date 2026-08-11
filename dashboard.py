@@ -109,12 +109,22 @@ with tab2:
         ledger = []
         chart_data = [{"Date": "Start", "Corpus": total_corpus}]
 
+        # Helper function to prevent NaN (Not a Number) poisoning in calculations
+        def safe_num(val, default):
+            if pd.isna(val) or val in ["", None]:
+                return default
+            try:
+                return float(val)
+            except:
+                return default
+
         for idx, row in history_df.iterrows():
-            entry = float(row.get("Entry", row.get("entry", 0)) or 0)
-            sl = float(row.get("SL", row.get("Stoploss", row.get("sl", entry * 0.98))) or (entry * 0.98))
-            target = float(row.get("Target", row.get("target", entry * 1.04)) or (entry * 1.04))
-            actual_exit = float(row.get("Exit Price", row.get("Exit", row.get("exit", entry))) or entry)
-            contract_lot = int(row.get("Lot Size", row.get("lot_size", 1)) or 1)
+            # Safely extract values, replacing missing/NaN cells with defaults
+            entry = safe_num(row.get("Entry", row.get("entry")), 0.0)
+            sl = safe_num(row.get("SL", row.get("Stoploss", row.get("sl"))), entry * 0.98)
+            target = safe_num(row.get("Target", row.get("target")), entry * 1.04)
+            actual_exit = safe_num(row.get("Exit Price", row.get("Exit", row.get("exit"))), entry)
+            contract_lot = int(safe_num(row.get("Lot Size", row.get("lot_size")), 1))
             date_val = row.get("Date", row.get("date", f"Trade #{idx}"))
 
             if entry <= 0:
@@ -124,10 +134,15 @@ with tab2:
             reward_per_share = abs(target - entry)
             rr_ratio = reward_per_share / risk_per_share if risk_per_share > 0 else 0.0
             
+            # Failsafe in case corpus math got corrupted
+            if pd.isna(current_corpus) or current_corpus <= 0:
+                current_corpus = total_corpus 
+
             max_risk_allowed = current_corpus * risk_pct
             
+            # Guarded division to prevent math errors
             qty_allowed_by_risk = int(max_risk_allowed / risk_per_share) if risk_per_share > 0 else 0
-            qty_allowed_by_capital = int(max_trade_capital / entry)
+            qty_allowed_by_capital = int(max_trade_capital / entry) if entry > 0 else 0
             
             max_qty = min(qty_allowed_by_risk, qty_allowed_by_capital)
             number_of_lots = max_qty // contract_lot if contract_lot > 0 else 0
