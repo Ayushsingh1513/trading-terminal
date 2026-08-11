@@ -6,6 +6,7 @@ import streamlit as st
 # Safe import for Plotly
 try:
     import plotly.express as px
+    import plotly.graph_objects as go
     HAS_PLOTLY = True
 except ImportError:
     HAS_PLOTLY = False
@@ -59,7 +60,6 @@ with tab2:
                     try:
                         history_df = pd.DataFrame(data)
                     except ValueError:
-                        # Pad shorter columns with None so Pandas doesn't crash
                         max_len = max([len(v) for v in data.values() if isinstance(v, list)], default=0)
                         padded_data = {
                             k: (v + [None] * (max_len - len(v)) if isinstance(v, list) else [v] * max_len)
@@ -88,7 +88,6 @@ with tab2:
         chart_data = [{"Date": "Start", "Corpus": total_corpus}]
 
         for idx, row in history_df.iterrows():
-            # Safely extract prices, falling back to 0 if data is missing/padded
             entry = float(row.get("Entry", row.get("entry", 0)) or 0)
             sl = float(row.get("SL", row.get("Stoploss", row.get("sl", entry * 0.98))) or (entry * 0.98))
             target = float(row.get("Target", row.get("target", entry * 1.04)) or (entry * 1.04))
@@ -99,7 +98,6 @@ with tab2:
             if entry <= 0:
                 continue
 
-            # Risk Math
             risk_per_share = abs(entry - sl)
             reward_per_share = abs(target - entry)
             rr_ratio = reward_per_share / risk_per_share if risk_per_share > 0 else 0.0
@@ -109,7 +107,6 @@ with tab2:
             qty_allowed_by_risk = int(max_risk_allowed / risk_per_share) if risk_per_share > 0 else 0
             qty_allowed_by_capital = int(max_trade_capital / entry)
             
-            # Quantity Calculation
             max_qty = min(qty_allowed_by_risk, qty_allowed_by_capital)
             number_of_lots = max_qty // contract_lot if contract_lot > 0 else 0
             executed_qty = number_of_lots * contract_lot
@@ -120,7 +117,6 @@ with tab2:
             
             current_corpus += actual_pnl
             
-            # Combine the OLD row data with the NEW calculated columns
             new_row = row.to_dict()
             new_row.update({
                 "R:R Ratio": f"1:{rr_ratio:.2f}",
@@ -134,76 +130,94 @@ with tab2:
             ledger.append(new_row)
             chart_data.append({"Date": str(date_val), "Corpus": current_corpus})
 
-        # 4. RENDER DASHBOARD
+        # 4. ADVANCED MATH & DATAFRAMES
         df_ledger = pd.DataFrame(ledger)
         df_chart = pd.DataFrame(chart_data)
         
-        # --- KPIs & EXPECTANCY MATH ---
-        # 1. Expand to 5 columns to fit the new metric
-        col1, col2, col3, col4, col5 = st.columns(5)
+        # Calculate Drawdowns
+        if not df_chart.empty:
+            df_chart["Peak"] = df_chart["Corpus"].cummax()
+            df_chart["Drawdown"] = df_chart["Corpus"] - df_chart["Peak"]
+            df_chart["Drawdown_Pct"] = (df_chart["Drawdown"] / df_chart["Peak"]) * 100
         
-        # 2. Base metrics
+        # --- KPIs ---
         total_pnl = current_corpus - total_corpus
         pnl_pct = (total_pnl / total_corpus) * 100
         
-        # 3. Expectancy calculations
         if not df_ledger.empty:
             win_count = len(df_ledger[df_ledger["Net PnL"] > 0])
             total_trades = len(df_ledger)
             win_rate = win_count / total_trades
             loss_rate = 1.0 - win_rate
             
-            # Calculate averages
             winning_trades = df_ledger[df_ledger["Net PnL"] > 0]
             losing_trades = df_ledger[df_ledger["Net PnL"] < 0]
             
             avg_win = winning_trades["Net PnL"].mean() if not winning_trades.empty else 0.0
             avg_loss = abs(losing_trades["Net PnL"].mean()) if not losing_trades.empty else 0.0
             
-            # Final Expectancy formula
+            gross_profit = winning_trades["Net PnL"].sum() if not winning_trades.empty else 0.0
+            gross_loss = abs(losing_trades["Net PnL"].sum()) if not losing_trades.empty else 0.0
+            profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0.0
+            
             expectancy = (win_rate * avg_win) - (loss_rate * avg_loss)
-            win_rate_display = win_rate * 100
+            
+            max_dd_pct = df_chart["Drawdown_Pct"].min()
+            max_dd_val = df_chart["Drawdown"].min()
         else:
-            win_rate_display = 0.0
-            expectancy = 0.0
+            win_rate = expectancy = profit_factor = max_dd_pct = max_dd_val = 0.0
             total_trades = 0
 
-        # 4. Render Metric Cards
-        col1.metric("Current Corpus", f"₹{current_corpus:,.2f}", f"{pnl_pct:+.2f}%")
-        col2.metric("Total Net PnL", f"₹{total_pnl:,.2f}")
-        col3.metric("Win Rate", f"{win_rate_display:.1f}%")
-        col4.metric("Trades Executed", f"{total_trades}")
+        # --- RENDER KPI CARDS (2 ROWS) ---
+        st.subheader("Quantitative System Metrics")
         
-        # Expectancy Metric (Green if positive, Red if negative)
-        expectancy_color = "normal" if expectancy >= 0 else "inverse"
-        col5.metric("Expectancy / Trade", f"₹{expectancy:,.2f}", delta=f"Per setup", delta_color=expectancy_color)
+        row1_col1, row1_col2, row1_col3, row1_col4 = st.columns(4)
+        row1_col1.metric("Current Corpus", f"₹{current_corpus:,.2f}", f"{pnl_pct:+.2f}%")
+        row1_col2.metric("Total Net PnL", f"₹{total_pnl:,.2f}")
+        row1_col3.metric("Win Rate", f"{win_rate * 100:.1f}%")
+        row1_col4.metric("Trades Executed", f"{total_trades}")
+        
+        st.write("") # Spacing
+        
+        row2_col1, row2_col2, row2_col3, row2_col4 = st.columns(4)
+        exp_color = "normal" if expectancy >= 0 else "inverse"
+        row2_col1.metric("Expectancy / Trade", f"₹{expectancy:,.2f}", delta="Per setup", delta_color=exp_color)
+        row2_col2.metric("Profit Factor", f"{profit_factor:.2f}", delta="Gross Profit / Gross Loss", delta_color="off")
+        row2_col3.metric("Max Drawdown (%)", f"{max_dd_pct:.2f}%", delta="Peak-to-Trough", delta_color="inverse")
+        row2_col4.metric("Max Drawdown (₹)", f"₹{max_dd_val:,.2f}")
 
         st.markdown("---")
 
-        # Chart
-        st.subheader("Corpus Growth Curve")
-        if HAS_PLOTLY and not df_chart.empty:
-            if len(df_chart) > 1:
-                fig = px.line(df_chart, x="Date", y="Corpus", markers=True)
-                fig.update_traces(line_color="#00FFAA", marker=dict(size=8))
-                fig.add_hline(y=total_corpus, line_dash="dash", line_color="#FF4444", annotation_text="Initial Capital")
-                fig.update_layout(yaxis_title="Corpus Balance (₹)", height=350)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Not enough data to draw a growth curve yet.")
-        elif not df_chart.empty:
-            if len(df_chart) > 1:
-                chart_df = df_chart.set_index("Date")[["Corpus"]]
-                st.line_chart(chart_df, height=300)
-            else:
-                st.info("Not enough data to draw a growth curve yet.")
+        # --- CHARTS ---
+        st.subheader("Corpus Growth & Drawdown Analysis")
+        
+        if HAS_PLOTLY and not df_chart.empty and len(df_chart) > 1:
+            col_chart1, col_chart2 = st.columns([2, 1]) # Split width for charts
+            
+            with col_chart1:
+                # Main Growth Curve
+                fig1 = px.line(df_chart, x="Date", y="Corpus", markers=True, title="Account Equity Curve")
+                fig1.update_traces(line_color="#00FFAA", marker=dict(size=6))
+                fig1.add_hline(y=total_corpus, line_dash="dash", line_color="#FF4444", annotation_text="Initial Capital")
+                fig1.update_layout(yaxis_title="Corpus Balance (₹)", height=350, margin=dict(l=0, r=0, t=30, b=0))
+                st.plotly_chart(fig1, use_container_width=True)
+                
+            with col_chart2:
+                # Drawdown Underwater Chart
+                fig2 = px.area(df_chart, x="Date", y="Drawdown_Pct", title="Underwater Drawdown (%)")
+                fig2.update_traces(line_color="#FF4444", fillcolor="rgba(255, 68, 68, 0.3)")
+                fig2.update_layout(yaxis_title="Drawdown %", height=350, margin=dict(l=0, r=0, t=30, b=0))
+                st.plotly_chart(fig2, use_container_width=True)
+                
+        elif not df_chart.empty and len(df_chart) > 1:
+            st.line_chart(df_chart.set_index("Date")[["Corpus"]], height=300)
+        else:
+            st.info("Not enough data to draw charts yet.")
 
         st.markdown("---")
         
-        # Ledger
+        # --- LEDGER ---
         st.subheader("Combined Historical Trade Ledger")
-        
-        # Only style and render the table IF it has data
         if not df_ledger.empty:
             format_dict = {
                 "Deployed Capital": "₹{:,.2f}",
@@ -211,7 +225,6 @@ with tab2:
                 "Updated Corpus": "₹{:,.2f}"
             }
             
-            # Add formatting for old columns if they exist
             for col in ["Entry", "SL", "Target", "Exit Price", "Stoploss"]:
                 if col in df_ledger.columns:
                     format_dict[col] = "₹{:,.2f}"
