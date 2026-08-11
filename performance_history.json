@@ -993,6 +993,15 @@
             "SL": 83.21,
             "Status": "ACTIVE",
             "T1_Hit": false
+        },
+        {
+            "Stock": "APOLLOHOSP.NS",
+            "Entry": 8750.5,
+            "Target1": 8983.91,
+            "Target2": 9295.12,
+            "SL": 8563.77,
+            "Status": "ACTIVE",
+            "T1_Hit": false
         }
     ]
 }
