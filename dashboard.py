@@ -89,18 +89,19 @@ with tab2:
     if history_df.empty:
         st.warning("No historical data found in performance_history.json.")
     else:
-        # 2. FILTERING LOGIC
-        # Filter for 100/100 Score
+        # 2. STRICT WHITELIST FILTERING
+        # Rule A: Must be a 100/100 Score trade
         score_col = next((col for col in history_df.columns if col.lower() == 'score'), None)
         if score_col:
             history_df = history_df[history_df[score_col].astype(str).str.contains('100', na=False)]
             
-        # Hide "PRUNED" margin-rejected trades from the ledger
+        # Rule B: STRICT WHITELIST (Only show trades that are ACTIVE, or explicitly HIT a target/SL)
         status_col = next((col for col in history_df.columns if col.lower() == 'status'), None)
         if status_col:
-            history_df = history_df[~history_df[status_col].astype(str).str.contains('PRUNE', na=False, case=False)]
+            valid_mask = history_df[status_col].astype(str).str.contains('ACTIVE|HIT', case=False, regex=True, na=False)
+            history_df = history_df[valid_mask]
             
-        st.success(f"Loaded high-conviction setups. Hiding rejected margin trades.")
+        st.success(f"Loaded valid setups. Ghost/Aborted trades hidden.")
 
         # 3. CORPUS ENGINE LOOP
         current_corpus = total_corpus
@@ -142,7 +143,7 @@ with tab2:
             actual_pnl = executed_qty * (actual_exit - entry)
             actual_pnl = max(actual_pnl, -max_risk_allowed) 
             
-            # Only update corpus if trade is actually closed
+            # Only update corpus if trade is actually closed (HIT)
             status_text = str(row.get("Status", ""))
             if "CLOSED" in status_text:
                 current_corpus += actual_pnl
