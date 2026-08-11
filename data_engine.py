@@ -226,33 +226,60 @@ def scan_hybrid_setups(sector_trends, mkt):
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
-    history = json.load(open(history_file, "r")) if os.path.exists(history_file) else {"closed_trades": [], "active_trades": []}
+    
+    # ── 0. LOAD & ADAPT JSON DATA (Fixes the AttributeError) ──
+    history = {"active_trades": [], "closed_trades": []}
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, "r") as f:
+                raw_data = json.load(f)
+                
+            # If dashboard formatted it as a flat list, dynamically convert it back
+            if isinstance(raw_data, list):
+                for t in raw_data:
+                    if t.get("Status") == "ACTIVE":
+                        history["active_trades"].append(t)
+                    else:
+                        history["closed_trades"].append(t)
+            # If it's already a dictionary, just use it
+            elif isinstance(raw_data, dict):
+                history = raw_data
+        except Exception as e:
+            print(f"JSON Load Warning: {e}. Starting fresh.")
 
     # ── 1. ACTIVE TRADE MONITOR ──
     still_active = []
     for trade in history.get('active_trades', []):
         try:
-            stock = trade['Stock']
+            # Re-map Symbol vs Stock so the engine knows what to search for
+            stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
+            
             if not curr_df.empty:
                 c_price = float(curr_df['Close'].iloc[-1])
-                if c_price <= trade['SL']:
+                # Ensure float conversions safely
+                entry = float(trade.get('Entry', 0))
+                sl = float(trade.get('SL', 0))
+                target2 = float(trade.get('Target2', trade.get('Target', 0)))
+                target1 = float(trade.get('Target1', target2 * 0.9)) # Fallback if T1 missing
+
+                if c_price <= sl:
                     trade['Status'] = "CLOSED - SL HIT 🔴"
-                    trade['Exit_Price'] = c_price
+                    trade['Exit Price'] = c_price # Formatted for dashboard
                     history['closed_trades'].append(trade)
-                    loss_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
-                    send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{trade['Entry']}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
+                    loss_pct = ((c_price - entry) / entry) * 100
+                    send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{entry}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
                     continue
-                elif c_price >= trade['Target2']:
+                elif c_price >= target2:
                     trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
-                    trade['Exit_Price'] = c_price
+                    trade['Exit Price'] = c_price # Formatted for dashboard
                     history['closed_trades'].append(trade)
-                    profit_pct = ((c_price - trade['Entry']) / trade['Entry']) * 100
-                    send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{trade['Entry']}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
+                    profit_pct = ((c_price - entry) / entry) * 100
+                    send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{entry}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
                     continue
-                elif c_price >= trade['Target1'] and not trade.get('T1_Hit', False):
+                elif c_price >= target1 and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
-                    trade['SL'] = trade['Entry']
+                    trade['SL'] = entry
                     send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. SL moved to Entry (₹{trade['SL']:.2f}).")
         except Exception as e:
             pass
@@ -287,10 +314,24 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     # ── 4. RECORD & NOTIFY NEW SETUPS ──
     for buy in top_buys.to_dict('records'):
-        if not any(t['Stock'] == buy['Stock'] for t in history['active_trades']):
+        # Check if already active (by Stock or Symbol)
+        is_active = any(t.get('Stock', t.get('Symbol')) == buy['Stock'] for t in history['active_trades'])
+        
+        if not is_active:
+            # We save with new dashboard formatting (Symbol, Score)
             history['active_trades'].append({
-                "Stock": buy["Stock"], "Entry": float(buy["Entry"]), "Target1": float(buy["Target1"]),
-                "Target2": float(buy["Target2"]), "SL": float(buy["SL"]), "Status": "ACTIVE", "T1_Hit": False
+                "Symbol": buy["Stock"], 
+                "Stock": buy["Stock"], # Keeping both for backwards compatibility
+                "Date": datetime.now(IST).strftime("%Y-%m-%d"),
+                "Entry": float(buy["Entry"]), 
+                "Target1": float(buy["Target1"]),
+                "Target2": float(buy["Target2"]), 
+                "Target": float(buy["Target2"]),
+                "SL": float(buy["SL"]), 
+                "Status": "ACTIVE", 
+                "Score": f"{buy['Score']}/100",
+                "Lot Size": 1,
+                "T1_Hit": False
             })
 
             alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
@@ -309,7 +350,14 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 📊 *Volume Surge:* {buy['VolSurge']}x | *RSI:* {buy['RSI']}"""
             send_telegram_alert(alert_msg)
 
-    json.dump(history, open(history_file, "w"), indent=4)
+    # ── 5. FLATTEN & SAVE JSON DATA FOR STREAMLIT ──
+    # This recombines active and closed trades back into a single flat list!
+    flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
+    
+    with open(history_file, "w") as f:
+        json.dump(flat_history, f, indent=4)
+        
+    print("Market tracking complete. History successfully flattened and saved for the dashboard.")
 
 def run_pipeline():
     print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Engine with Sector Intelligence...")
