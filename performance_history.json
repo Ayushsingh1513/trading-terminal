@@ -403,6 +403,16 @@
             "Status": "CLOSED - SL HIT \ud83d\udd34",
             "T1_Hit": false,
             "Exit_Price": 1824.0999755859375
+        },
+        {
+            "Stock": "MAXHEALTH.NS",
+            "Entry": 1070.0,
+            "Target1": 1106.14,
+            "Target2": 1154.33,
+            "SL": 1041.09,
+            "Status": "CLOSED - SL HIT \ud83d\udd34",
+            "T1_Hit": false,
+            "Exit_Price": 1040.0
         }
     ],
     "active_trades": [
@@ -513,8 +523,9 @@
             "Entry": 1108.7,
             "Target1": 1146.23,
             "Target2": 1196.28,
-            "SL": 1078.67,
-            "Status": "ACTIVE"
+            "SL": 1108.7,
+            "Status": "ACTIVE",
+            "T1_Hit": true
         },
         {
             "Stock": "GAIL.NS",
@@ -840,15 +851,6 @@
             "T1_Hit": false
         },
         {
-            "Stock": "MAXHEALTH.NS",
-            "Entry": 1070.0,
-            "Target1": 1106.14,
-            "Target2": 1154.33,
-            "SL": 1041.09,
-            "Status": "ACTIVE",
-            "T1_Hit": false
-        },
-        {
             "Stock": "SHREECEM.NS",
             "Entry": 26010.0,
             "Target1": 26944.29,
@@ -980,6 +982,15 @@
             "Target1": 5051.38,
             "Target2": 5305.22,
             "SL": 4708.69,
+            "Status": "ACTIVE",
+            "T1_Hit": false
+        },
+        {
+            "Stock": "NMDC.NS",
+            "Entry": 85.23,
+            "Target1": 87.75,
+            "Target2": 91.11,
+            "SL": 83.21,
             "Status": "ACTIVE",
             "T1_Hit": false
         }
