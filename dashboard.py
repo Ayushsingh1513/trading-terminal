@@ -45,7 +45,7 @@ with tab1:
 # TAB 2: PERFORMANCE HISTORY (CORPUS TRACKER)
 # ==========================================
 with tab2:
-    st.header("Historical Performance & Corpus Growth")
+    st.header("Historical Performance & Quantitative Growth")
     
     # 1. Load the old results with safe padding for uneven arrays
     history_df = pd.DataFrame()
@@ -138,24 +138,51 @@ with tab2:
         df_ledger = pd.DataFrame(ledger)
         df_chart = pd.DataFrame(chart_data)
         
-        # KPIs
-        col1, col2, col3, col4 = st.columns(4)
+        # --- KPIs & EXPECTANCY MATH ---
+        # 1. Expand to 5 columns to fit the new metric
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        # 2. Base metrics
         total_pnl = current_corpus - total_corpus
         pnl_pct = (total_pnl / total_corpus) * 100
-        win_count = len(df_ledger[df_ledger["Net PnL"] > 0]) if not df_ledger.empty else 0
-        win_rate = (win_count / len(df_ledger)) * 100 if not df_ledger.empty else 0.0
+        
+        # 3. Expectancy calculations
+        if not df_ledger.empty:
+            win_count = len(df_ledger[df_ledger["Net PnL"] > 0])
+            total_trades = len(df_ledger)
+            win_rate = win_count / total_trades
+            loss_rate = 1.0 - win_rate
+            
+            # Calculate averages
+            winning_trades = df_ledger[df_ledger["Net PnL"] > 0]
+            losing_trades = df_ledger[df_ledger["Net PnL"] < 0]
+            
+            avg_win = winning_trades["Net PnL"].mean() if not winning_trades.empty else 0.0
+            avg_loss = abs(losing_trades["Net PnL"].mean()) if not losing_trades.empty else 0.0
+            
+            # Final Expectancy formula
+            expectancy = (win_rate * avg_win) - (loss_rate * avg_loss)
+            win_rate_display = win_rate * 100
+        else:
+            win_rate_display = 0.0
+            expectancy = 0.0
+            total_trades = 0
 
+        # 4. Render Metric Cards
         col1.metric("Current Corpus", f"₹{current_corpus:,.2f}", f"{pnl_pct:+.2f}%")
         col2.metric("Total Net PnL", f"₹{total_pnl:,.2f}")
-        col3.metric("Win Rate (100/100 Trades)", f"{win_rate:.1f}%")
-        col4.metric("Trades Executed", f"{len(df_ledger)}")
+        col3.metric("Win Rate", f"{win_rate_display:.1f}%")
+        col4.metric("Trades Executed", f"{total_trades}")
+        
+        # Expectancy Metric (Green if positive, Red if negative)
+        expectancy_color = "normal" if expectancy >= 0 else "inverse"
+        col5.metric("Expectancy / Trade", f"₹{expectancy:,.2f}", delta=f"Per setup", delta_color=expectancy_color)
 
         st.markdown("---")
 
         # Chart
         st.subheader("Corpus Growth Curve")
         if HAS_PLOTLY and not df_chart.empty:
-            # Only draw chart if there is data
             if len(df_chart) > 1:
                 fig = px.line(df_chart, x="Date", y="Corpus", markers=True)
                 fig.update_traces(line_color="#00FFAA", marker=dict(size=8))
