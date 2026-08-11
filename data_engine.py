@@ -8,23 +8,22 @@ from datetime import datetime
 import pytz
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. CONFIGURATION & SECTOR MAP
+# 1. INSTITUTIONAL RISK & MARGIN CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
 TELEGRAM_CHAT_ID = "-1003707574219"
 IST = pytz.timezone('Asia/Kolkata')
 
-# Max simultaneous active trades allowed across the portfolio
-MAX_ACTIVE_TRADES = 5
+# strict portfolio rules
+MAX_ACTIVE_TRADES = 3
+TOTAL_CORPUS = 100000.0        # Total Account Capital
+MAX_TRADE_CAPITAL = 50000.0    # Max allowed per single trade
+MAX_RISK_PCT = 0.01            # 1% Max Risk per trade
 
 SECTOR_MAP = {
-    'Nifty Bank': 'BANKBEES.NS',
-    'Nifty IT': 'ITBEES.NS',
-    'Nifty Auto': 'AUTOBEES.NS',
-    'Nifty Pharma': 'PHARMABEES.NS',
-    'Nifty FMCG': 'CONSUMBEES.NS',
-    'PSU Bank': 'PSUBNKBEES.NS',
-    'Nifty Infra': 'INFRABEES.NS'
+    'Nifty Bank': 'BANKBEES.NS', 'Nifty IT': 'ITBEES.NS', 'Nifty Auto': 'AUTOBEES.NS',
+    'Nifty Pharma': 'PHARMABEES.NS', 'Nifty FMCG': 'CONSUMBEES.NS', 
+    'PSU Bank': 'PSUBNKBEES.NS', 'Nifty Infra': 'INFRABEES.NS'
 }
 
 STOCK_UNIVERSE = [
@@ -74,8 +73,17 @@ def send_telegram_alert(message):
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
     try:
         requests.post(url, json=payload, timeout=10)
-    except Exception as e:
-        print(f"Telegram Error: {e}")
+    except:
+        pass
+
+def calculate_position_size(entry, sl):
+    """Calculates safe margin lot size based on 1% rule."""
+    if entry <= 0 or sl >= entry: return 0
+    risk_per_share = entry - sl
+    max_risk_allowed = TOTAL_CORPUS * MAX_RISK_PCT
+    qty_risk = int(max_risk_allowed / risk_per_share)
+    qty_cap = int(MAX_TRADE_CAPITAL / entry)
+    return min(qty_risk, qty_cap)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 2. MARKET DATA & PCR
@@ -103,7 +111,7 @@ def get_market_data():
     }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. SECTOR INTELLIGENCE & HERO SECTOR
+# 3. SECTOR INTELLIGENCE
 # ══════════════════════════════════════════════════════════════════════════════
 def get_sector_trends():
     sector_data = {}
@@ -208,87 +216,74 @@ def scan_hybrid_setups(sector_trends, mkt):
             pass
 
     scan_df = pd.DataFrame(scanner_results).sort_values("Score", ascending=False)
-    
-    # Save daily scanner for live dashboard
     scan_df.to_csv("scanner_data.csv", index=False)
-
-    # Save to permanent historical log with timestamp
-    scan_df_history = scan_df.copy()
-    scan_df_history['Scan_Date'] = datetime.now(IST).strftime("%Y-%m-%d")
-
-    historical_file = "historical_scans.csv"
-    if os.path.exists(historical_file):
-        scan_df_history.to_csv(historical_file, mode='a', header=False, index=False)
-    else:
-        scan_df_history.to_csv(historical_file, index=False)
-
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. TELEGRAM ALERTS WITH SECTOR INTELLIGENCE
+# 5. RISK ENGINE, MARGIN CHECK & NOTIFICATIONS
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
-    
-    # ── 0. LOAD & ADAPT JSON DATA ──
     history = {"active_trades": [], "closed_trades": []}
+    
     if os.path.exists(history_file):
         try:
             with open(history_file, "r") as f:
                 raw_data = json.load(f)
-                
             if isinstance(raw_data, list):
                 for t in raw_data:
-                    if t.get("Status") == "ACTIVE":
-                        history["active_trades"].append(t)
-                    else:
-                        history["closed_trades"].append(t)
+                    if t.get("Status") == "ACTIVE": history["active_trades"].append(t)
+                    else: history["closed_trades"].append(t)
             elif isinstance(raw_data, dict):
                 history = raw_data
-        except Exception as e:
-            print(f"JSON Load Warning: {e}. Starting fresh.")
+        except: pass
 
-    # ── 1. RETROACTIVE PRUNING OF ACTIVE TRADES TO MAX 5 ──
-    # If history contains more than 5 active trades, prune down to top 5 based on R:R
+    # ── 1. RETROACTIVE PRUNING: Keep Top 3 Highest Probability Trades ──
     if len(history['active_trades']) > MAX_ACTIVE_TRADES:
-        def calc_rr(trade):
+        def rank_trade(trade):
             try:
+                score_str = str(trade.get('Score', '0')).replace('/100', '')
+                score = int(score_str)
                 e = float(trade.get('Entry', 0))
                 s = float(trade.get('SL', 0))
                 t = float(trade.get('Target2', trade.get('Target', 0)))
-                risk = abs(e - s)
-                reward = abs(t - e)
-                return reward / risk if risk > 0 else 0
+                rr = (t - e) / (e - s) if e > s else 0
+                return (score, rr) # Prioritize High Score, then High RR
             except:
-                return 0
-        
-        # Sort active trades by Risk-to-Reward descending
-        history['active_trades'].sort(key=calc_rr, reverse=True)
-        
-        # Keep only top 5, move excess active trades into closed/archived
+                return (0, 0)
+                
+        history['active_trades'].sort(key=rank_trade, reverse=True)
         excess_trades = history['active_trades'][MAX_ACTIVE_TRADES:]
         history['active_trades'] = history['active_trades'][:MAX_ACTIVE_TRADES]
         
         for ext in excess_trades:
-            ext['Status'] = "CLOSED - PRUNED (EXCESS RISK)"
+            ext['Status'] = "CLOSED - MARGIN/RISK PRUNE (NO LOSS)"
             ext['Exit Price'] = ext.get('Entry', 0)
             history['closed_trades'].append(ext)
             
-        print(f"Pruned portfolio down to top {MAX_ACTIVE_TRADES} active setups by R:R ratio.")
+        send_telegram_alert(f"🧹 *PORTFOLIO OPTIMIZED*\nPruned excess active trades down to the top {MAX_ACTIVE_TRADES} highest-probability setups to protect margin limit.")
 
-    # ── 2. ACTIVE TRADE MONITOR ──
+    # ── 2. ACTIVE TRADE MONITOR & MARGIN CALCULATOR ──
     still_active = []
+    used_margin = 0.0
+
     for trade in history.get('active_trades', []):
         try:
             stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
             
+            entry = float(trade.get('Entry', 0))
+            sl = float(trade.get('SL', 0))
+            target2 = float(trade.get('Target2', trade.get('Target', 0)))
+            target1 = float(trade.get('Target1', target2 * 0.9))
+            
+            # Calculate Margin Used for this active trade
+            qty = float(trade.get('Lot Size', calculate_position_size(entry, sl)))
+            if qty <= 0: qty = calculate_position_size(entry, sl)
+            trade_margin = qty * entry
+
             if not curr_df.empty:
                 c_price = float(curr_df['Close'].iloc[-1])
-                entry = float(trade.get('Entry', 0))
-                sl = float(trade.get('SL', 0))
-                target2 = float(trade.get('Target2', trade.get('Target', 0)))
-                target1 = float(trade.get('Target1', target2 * 0.9)) 
 
                 if c_price <= sl:
                     trade['Status'] = "CLOSED - SL HIT 🔴"
@@ -307,98 +302,85 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 elif c_price >= target1 and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
                     trade['SL'] = entry
-                    send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. SL moved to Entry (₹{trade['SL']:.2f}).")
+                    send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. SL moved to Entry.")
+            
+            # If trade is still open, it consumes margin
+            used_margin += trade_margin
+            still_active.append(trade)
+            
         except Exception as e:
-            pass
-        still_active.append(trade)
+            still_active.append(trade)
 
     history['active_trades'] = still_active
 
-    # ── 3. HERO SECTOR & SECTOR INTELLIGENCE ──
-    hero_msg = ""
-    if not sector_df.empty:
-        hero_sec = sector_df.iloc[0]
-        lagging_sec = sector_df.iloc[-1]
-        hero_msg = f"""
-🏆 *HERO SECTOR TODAY:* {hero_sec['Sector']} ({hero_sec['Today%']:+.2f}%)
-📊 *Smart Money:* {hero_sec['Smart Money Flow']}
-📉 *Weakest Sector:* {lagging_sec['Sector']} ({lagging_sec['Today%']:+.2f}%)"""
-
-    # ── 4. BROADCAST MARKET PULSE ──
-    top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
-
-    pulse_msg = f"""📊 *MARKET & SECTOR INTELLIGENCE*
-━━━━━━━━━━━━━━━━━━━
-🏛️ *Nifty 50:* {mkt['nifty']:,.0f} ({mkt['nifty_chg']:+.2f}%)
-🏛️ *Sensex:* {mkt['sensex']:,.0f} ({mkt['sensex_chg']:+.2f}%)
-⚖️ *PCR:* {mkt['pcr']} ({mkt['pcr_status']})
-🛡️ *Regime:* {mkt['mood']}
-{hero_msg}
-━━━━━━━━━━━━━━━━━━━
-🟢 *Qualified BUY Setups Today:* {len(top_buys)}"""
-
-    send_telegram_alert(pulse_msg)
-
-    # ── 5. RECORD & NOTIFY NEW SETUPS (WITH STRICT 5 MAX CAP) ──
+    # ── 3. PROCESS NEW ALERTS (WITH MARGIN CHECKING) ──
+    top_buys = scanner_df[scanner_df['Signal'] == 'BUY'].copy()
+    
     if not top_buys.empty:
-        top_buys = top_buys.sort_values("RR", ascending=False)
+        # Sort by best algorithmic score first, then best risk-to-reward
+        top_buys = top_buys.sort_values(by=["Score", "RR"], ascending=[False, False])
     
     current_active_count = len(history['active_trades'])
     available_slots = max(0, MAX_ACTIVE_TRADES - current_active_count)
-    
-    if len(top_buys) > 0 and available_slots == 0:
-        send_telegram_alert(f"⚠️ *MAX TRADES REACHED ({MAX_ACTIVE_TRADES}/{MAX_ACTIVE_TRADES})*\nFound {len(top_buys)} new setups today, but taking no new positions to manage risk. Protect your capital!")
+    available_margin = TOTAL_CORPUS - used_margin
 
     for buy in top_buys.to_dict('records'):
-        is_active = any(t.get('Stock', t.get('Symbol')) == buy['Stock'] for t in history['active_trades'])
+        stock = buy['Stock']
+        entry = float(buy["Entry"])
+        sl = float(buy["SL"])
         
-        if not is_active and available_slots > 0:
-            history['active_trades'].append({
-                "Symbol": buy["Stock"], 
-                "Stock": buy["Stock"], 
-                "Date": datetime.now(IST).strftime("%Y-%m-%d"),
-                "Entry": float(buy["Entry"]), 
-                "Target1": float(buy["Target1"]),
-                "Target2": float(buy["Target2"]), 
-                "Target": float(buy["Target2"]),
-                "SL": float(buy["SL"]), 
-                "Status": "ACTIVE", 
-                "Score": f"{buy['Score']}/100",
-                "Lot Size": 1,
-                "T1_Hit": False
-            })
-            available_slots -= 1
+        is_active = any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades'])
+        if is_active: continue
 
-            alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
+        if available_slots <= 0:
+            send_telegram_alert(f"⚠️ *CAPACITY FULL*\nIgnored highly rated {stock} to respect {MAX_ACTIVE_TRADES} max trades limit.")
+            break
+            
+        # Margin Math
+        required_qty = calculate_position_size(entry, sl)
+        required_margin = required_qty * entry
+        
+        if required_qty <= 0 or available_margin < required_margin:
+            send_telegram_alert(f"⚠️ *MARGIN REJECT*\nIgnored {stock} - Insufficient free margin (Need ₹{required_margin:,.2f}, Free: ₹{available_margin:,.2f}).")
+            continue
+
+        # Trade Passes all Margin & Risk Checks -> Take it
+        history['active_trades'].append({
+            "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
+            "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
+            "Target": float(buy["Target2"]), "SL": sl, "Status": "ACTIVE", 
+            "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
+        })
+        
+        available_slots -= 1
+        available_margin -= required_margin
+
+        alert_msg = f"""⚡ *MOMENTUM SETUP EXECUTED*
 ━━━━━━━━━━━━━━━━━━━
-🎯 *Stock:* {buy['Stock']}
+🎯 *Stock:* {stock}
 ⭐ *Algorithmic Rating:* STRONG BUY ({buy['Score']}/100)
 🛠️ *Setup:* {buy['Setup']}
-📈 *Weekly Trend:* {buy['WeeklyTrend']} | {buy['MTF']}
 
-🟢 *Entry Zone:* ₹{buy['Entry']}
-🔴 *Stop Loss:* ₹{buy['SL']}
-🎯 *Target 1 (Lock 50%):* ₹{buy['Target1']}
+🟢 *Entry Zone:* ₹{entry}
+🔴 *Stop Loss:* ₹{sl}
 🚀 *Target 2 (Runner):* ₹{buy['Target2']}
 ⚖️ *Risk:Reward:* 1 : {buy['RR']}
 ━━━━━━━━━━━━━━━━━━━
-📊 *Volume Surge:* {buy['VolSurge']}x | *RSI:* {buy['RSI']}"""
-            send_telegram_alert(alert_msg)
+📦 *Capital Allocated:* ₹{required_margin:,.2f}
+🔢 *Calculated Qty:* {required_qty} shares"""
+        send_telegram_alert(alert_msg)
 
-    # ── 6. FLATTEN & SAVE JSON DATA FOR STREAMLIT ──
+    # ── 4. FLATTEN & SAVE ──
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
-    
     with open(history_file, "w") as f:
         json.dump(flat_history, f, indent=4)
         
-    print("Market tracking complete. History successfully flattened and saved for the dashboard.")
+    print(f"Tracking complete. Free Margin: ₹{available_margin:,.2f} | Active Slots: {MAX_ACTIVE_TRADES - available_slots}/{MAX_ACTIVE_TRADES}")
 
 def run_pipeline():
-    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Engine with Sector Intelligence...")
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Engine with Institutional Controls...")
     mkt = get_market_data()
     if not mkt: return
-    json.dump(mkt, open("market_data.json", "w"), indent=4)
-
     sector_trends, sector_df = get_sector_trends()
     scanner_df = scan_hybrid_setups(sector_trends, mkt)
     track_targets_and_notify(scanner_df, sector_df, mkt)
