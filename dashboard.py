@@ -154,35 +154,46 @@ with tab2:
 
         # Chart
         st.subheader("Corpus Growth Curve")
-        if HAS_PLOTLY:
-            fig = px.line(df_chart, x="Date", y="Corpus", markers=True)
-            fig.update_traces(line_color="#00FFAA", marker=dict(size=8))
-            fig.add_hline(y=total_corpus, line_dash="dash", line_color="#FF4444", annotation_text="Initial Capital")
-            fig.update_layout(yaxis_title="Corpus Balance (₹)", height=350)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            chart_df = df_chart.set_index("Date")[["Corpus"]]
-            st.line_chart(chart_df, height=300)
+        if HAS_PLOTLY and not df_chart.empty:
+            # Only draw chart if there is data
+            if len(df_chart) > 1:
+                fig = px.line(df_chart, x="Date", y="Corpus", markers=True)
+                fig.update_traces(line_color="#00FFAA", marker=dict(size=8))
+                fig.add_hline(y=total_corpus, line_dash="dash", line_color="#FF4444", annotation_text="Initial Capital")
+                fig.update_layout(yaxis_title="Corpus Balance (₹)", height=350)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Not enough data to draw a growth curve yet.")
+        elif not df_chart.empty:
+            if len(df_chart) > 1:
+                chart_df = df_chart.set_index("Date")[["Corpus"]]
+                st.line_chart(chart_df, height=300)
+            else:
+                st.info("Not enough data to draw a growth curve yet.")
 
         st.markdown("---")
         
         # Ledger
         st.subheader("Combined Historical Trade Ledger")
         
-        # Formatting specific financial columns while leaving your original columns intact
-        format_dict = {
-            "Deployed Capital": "₹{:,.2f}",
-            "Net PnL": "₹{:,.2f}",
-            "Updated Corpus": "₹{:,.2f}"
-        }
-        # Add formatting for old columns if they exist
-        for col in ["Entry", "SL", "Target", "Exit Price", "Stoploss"]:
-            if col in df_ledger.columns:
-                format_dict[col] = "₹{:,.2f}"
-                
-        styled_df = df_ledger.style.format(format_dict).map(
-            lambda x: 'color: #00FF00' if x > 0 else ('color: #FF4444' if x < 0 else ''), 
-            subset=['Net PnL']
-        )
-        
-        st.dataframe(styled_df, use_container_width=True, height=400)
+        # Only style and render the table IF it has data
+        if not df_ledger.empty:
+            format_dict = {
+                "Deployed Capital": "₹{:,.2f}",
+                "Net PnL": "₹{:,.2f}",
+                "Updated Corpus": "₹{:,.2f}"
+            }
+            
+            # Add formatting for old columns if they exist
+            for col in ["Entry", "SL", "Target", "Exit Price", "Stoploss"]:
+                if col in df_ledger.columns:
+                    format_dict[col] = "₹{:,.2f}"
+                    
+            styled_df = df_ledger.style.format(format_dict).map(
+                lambda x: 'color: #00FF00' if x > 0 else ('color: #FF4444' if x < 0 else ''), 
+                subset=['Net PnL']
+            )
+            
+            st.dataframe(styled_df, use_container_width=True, height=400)
+        else:
+            st.info("No trades matching the 100/100 Score filter were found. The ledger is currently empty.")
