@@ -14,6 +14,9 @@ TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
 TELEGRAM_CHAT_ID = "-1003707574219"
 IST = pytz.timezone('Asia/Kolkata')
 
+# Max simultaneous active trades allowed across the portfolio
+MAX_ACTIVE_TRADES = 5
+
 SECTOR_MAP = {
     'Nifty Bank': 'BANKBEES.NS',
     'Nifty IT': 'ITBEES.NS',
@@ -227,21 +230,19 @@ def scan_hybrid_setups(sector_trends, mkt):
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
     
-    # ── 0. LOAD & ADAPT JSON DATA (Fixes the AttributeError) ──
+    # ── 0. LOAD & ADAPT JSON DATA ──
     history = {"active_trades": [], "closed_trades": []}
     if os.path.exists(history_file):
         try:
             with open(history_file, "r") as f:
                 raw_data = json.load(f)
                 
-            # If dashboard formatted it as a flat list, dynamically convert it back
             if isinstance(raw_data, list):
                 for t in raw_data:
                     if t.get("Status") == "ACTIVE":
                         history["active_trades"].append(t)
                     else:
                         history["closed_trades"].append(t)
-            # If it's already a dictionary, just use it
             elif isinstance(raw_data, dict):
                 history = raw_data
         except Exception as e:
@@ -251,28 +252,26 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
     still_active = []
     for trade in history.get('active_trades', []):
         try:
-            # Re-map Symbol vs Stock so the engine knows what to search for
             stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
             
             if not curr_df.empty:
                 c_price = float(curr_df['Close'].iloc[-1])
-                # Ensure float conversions safely
                 entry = float(trade.get('Entry', 0))
                 sl = float(trade.get('SL', 0))
                 target2 = float(trade.get('Target2', trade.get('Target', 0)))
-                target1 = float(trade.get('Target1', target2 * 0.9)) # Fallback if T1 missing
+                target1 = float(trade.get('Target1', target2 * 0.9)) 
 
                 if c_price <= sl:
                     trade['Status'] = "CLOSED - SL HIT 🔴"
-                    trade['Exit Price'] = c_price # Formatted for dashboard
+                    trade['Exit Price'] = c_price 
                     history['closed_trades'].append(trade)
                     loss_pct = ((c_price - entry) / entry) * 100
                     send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{entry}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
                     continue
                 elif c_price >= target2:
                     trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
-                    trade['Exit Price'] = c_price # Formatted for dashboard
+                    trade['Exit Price'] = c_price 
                     history['closed_trades'].append(trade)
                     profit_pct = ((c_price - entry) / entry) * 100
                     send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{entry}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
@@ -297,7 +296,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 📊 *Smart Money:* {hero_sec['Smart Money Flow']}
 📉 *Weakest Sector:* {lagging_sec['Sector']} ({lagging_sec['Today%']:+.2f}%)"""
 
-    # ── 3. ALWAYS BROADCAST MARKET & SECTOR PULSE ──
+    # ── 3. BROADCAST MARKET PULSE ──
     top_buys = scanner_df[scanner_df['Signal'] == 'BUY']
 
     pulse_msg = f"""📊 *MARKET & SECTOR INTELLIGENCE*
@@ -312,16 +311,24 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     send_telegram_alert(pulse_msg)
 
-    # ── 4. RECORD & NOTIFY NEW SETUPS ──
+    # ── 4. RECORD & NOTIFY NEW SETUPS (WITH PORTFOLIO MAX CAP) ──
+    # Sort by R:R ratio descending to prioritize the highest payout setups
+    if not top_buys.empty:
+        top_buys = top_buys.sort_values("RR", ascending=False)
+    
+    current_active_count = len(history['active_trades'])
+    available_slots = max(0, MAX_ACTIVE_TRADES - current_active_count)
+    
+    if len(top_buys) > 0 and available_slots == 0:
+        send_telegram_alert(f"⚠️ *MAX TRADES REACHED ({MAX_ACTIVE_TRADES}/{MAX_ACTIVE_TRADES})*\nFound {len(top_buys)} new setups today, but taking no new positions to manage risk. Protect your capital!")
+
     for buy in top_buys.to_dict('records'):
-        # Check if already active (by Stock or Symbol)
         is_active = any(t.get('Stock', t.get('Symbol')) == buy['Stock'] for t in history['active_trades'])
         
-        if not is_active:
-            # We save with new dashboard formatting (Symbol, Score)
+        if not is_active and available_slots > 0:
             history['active_trades'].append({
                 "Symbol": buy["Stock"], 
-                "Stock": buy["Stock"], # Keeping both for backwards compatibility
+                "Stock": buy["Stock"], 
                 "Date": datetime.now(IST).strftime("%Y-%m-%d"),
                 "Entry": float(buy["Entry"]), 
                 "Target1": float(buy["Target1"]),
@@ -333,6 +340,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 "Lot Size": 1,
                 "T1_Hit": False
             })
+            available_slots -= 1 # Decrement available slot after taking trade
 
             alert_msg = f"""⚡ *MOMENTUM SETUP DETECTED*
 ━━━━━━━━━━━━━━━━━━━
@@ -351,7 +359,6 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             send_telegram_alert(alert_msg)
 
     # ── 5. FLATTEN & SAVE JSON DATA FOR STREAMLIT ──
-    # This recombines active and closed trades back into a single flat list!
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     
     with open(history_file, "w") as f:
