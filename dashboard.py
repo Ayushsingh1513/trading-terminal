@@ -1,157 +1,160 @@
-import streamlit as st
-import pandas as pd
-import json
 import os
+import json
+import pandas as pd
+import plotly.express as px
+import streamlit as st
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE CONFIGURATION
-# ══════════════════════════════════════════════════════════════════════════════
-st.set_page_config(page_title="Momentum Frenzy v2.0", layout="wide", page_icon="⚡")
-st.title("⚡ Momentum Frenzy | Quantitative Terminal")
-st.markdown("Automated NSE Swing Trading Setups, Sector Intelligence & Algorithmic Ledger")
+# --- 1. PAGE SETUP ---
+st.set_page_config(page_title="Momentum Frenzy | Terminal", layout="wide", page_icon="⚡")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DATA LOADER FUNCTIONS
-# ══════════════════════════════════════════════════════════════════════════════
-def load_json(filepath):
-    if os.path.exists(filepath):
-        with open(filepath, 'r') as f:
-            return json.load(f)
-    return None
-
-def load_csv(filepath):
-    if os.path.exists(filepath):
-        return pd.read_csv(filepath)
-    return None
-
-mkt = load_json("market_data.json")
-history = load_json("performance_history.json") or {"active_trades": [], "closed_trades": []}
-scan_df = load_csv("scanner_data.csv")
-sector_df = load_csv("sector_data.csv")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TOP BAR: MARKET PULSE & PCR
-# ══════════════════════════════════════════════════════════════════════════════
-if mkt:
-    cols = st.columns(5)
-    cols[0].metric("🏛️ NIFTY 50", f"{mkt.get('nifty', 0):,.0f}", f"{mkt.get('nifty_chg', 0):.2f}%")
-    cols[1].metric("🏛️ SENSEX", f"{mkt.get('sensex', 0):,.0f}", f"{mkt.get('sensex_chg', 0):.2f}%")
-    cols[2].metric("🛡️ Market Regime", mkt.get('mood', 'N/A'))
+# --- 2. SIDEBAR RISK CONTROLS ---
+with st.sidebar:
+    st.title("⚡ Momentum Frenzy")
+    st.header("Risk Engine Parameters")
     
-    pcr_status = mkt.get('pcr_status', '')
-    cols[3].metric("⚖️ PCR (Put-Call Ratio)", mkt.get('pcr', 'N/A'), pcr_status)
-    cols[4].write(f"**Last Engine Update:**\n{mkt.get('timestamp', 'Unknown')}")
+    total_corpus = st.number_input("Starting Corpus (₹)", value=100000.0, step=10000.0)
+    max_trade_capital = st.number_input("Max Allocation / Trade (₹)", value=50000.0, step=5000.0)
+    risk_pct = st.slider("Max Risk / Trade (%)", 0.5, 5.0, 1.0, 0.1) / 100
+    
+    st.markdown("---")
+    st.info("Adjusting parameters updates position sizing, lot counts, and corpus growth across historical trades.")
 
-st.divider()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TERMINAL TABS
-# ══════════════════════════════════════════════════════════════════════════════
-tab1, tab2, tab3 = st.tabs(["⚡ Live Scanner", "📊 Sector Intelligence", "🏆 Performance History"])
-
-# ─── TAB 1: LIVE SCANNER ───────────────────────────────────────────────────────
-with tab1:
-    st.subheader("🟢 High-Confluence Breakout Setups")
-    if scan_df is not None and not scan_df.empty:
-        buy_df = scan_df[scan_df['Signal'] == 'BUY']
-        
-        if not buy_df.empty:
-            st.dataframe(
-                buy_df[['Stock', 'Score', 'Setup', 'Sector', 'Entry', 'SL', 'Target1', 'Target2', 'RR', 'VolSurge']], 
-                use_container_width=True,
-                hide_index=True
-            )
-        else:
-            st.info("No 'BUY' signals triggered in the most recent scan. Waiting for high-probability setups...")
-        
-        with st.expander("View Full Market Scan (All Analyzed Stocks)"):
-            st.dataframe(scan_df, use_container_width=True)
-    else:
-        st.warning("Scanner data is currently unavailable. Ensure the Python engine is running.")
-
-# ─── TAB 2: SECTOR INTELLIGENCE ───────────────────────────────────────────────
-with tab2:
-    st.subheader("🔥 Institutional Flow & Sector Leadership")
-    if sector_df is not None and not sector_df.empty:
-        def highlight_flow(val):
-            if "Big Money Buying" in str(val): return 'color: #00FF00; font-weight: bold;'
-            if "Big Money Selling" in str(val): return 'color: #FF0000; font-weight: bold;'
-            return ''
+# --- 3. DATA LOADER ---
+@st.cache_data(ttl=60)
+def load_trade_history():
+    # Primary source: performance_history.json
+    if os.path.exists("performance_history.json"):
+        try:
+            with open("performance_history.json", "r") as f:
+                data = json.load(f)
+                if data:
+                    return pd.DataFrame(data)
+        except Exception:
+            pass
             
-        styled_sector = sector_df.style.map(highlight_flow, subset=['Smart Money Flow'])
-        st.dataframe(styled_sector, use_container_width=True, hide_index=True)
-    else:
-        st.warning("Sector Intelligence data is not available yet.")
+    # Fallback source: scanner_data.csv
+    if os.path.exists("scanner_data.csv"):
+        try:
+            df = pd.read_csv("scanner_data.csv")
+            if not df.empty:
+                return df
+        except Exception:
+            pass
+            
+    # Default fallback data if files are empty/missing
+    return pd.DataFrame([
+        {"trade_id": 1, "date": "2026-08-01", "symbol": "RELIANCE", "entry": 2500.0, "sl": 2450.0, "target": 2600.0, "exit": 2600.0, "lot_size": 1},
+        {"trade_id": 2, "date": "2026-08-02", "symbol": "TATASTEEL", "entry": 150.0, "sl": 145.0, "target": 165.0, "exit": 145.0, "lot_size": 1},
+        {"trade_id": 3, "date": "2026-08-05", "symbol": "NIFTY_FUT", "entry": 24000.0, "sl": 23960.0, "target": 24120.0, "exit": 24120.0, "lot_size": 25},
+    ])
 
-# ─── TAB 3: PERFORMANCE HISTORY (THE LEDGER) ──────────────────────────────────
-with tab3:
-    st.subheader("📈 Trade Ledger & System Accuracy")
-    
-    active_trades = history.get("active_trades", [])
-    closed_trades = history.get("closed_trades", [])
-    
-    total_closed = len(closed_trades)
-    wins = sum(1 for t in closed_trades if "TARGET" in t.get("Status", ""))
-    losses = total_closed - wins
-    win_rate = round((wins / total_closed) * 100, 1) if total_closed > 0 else 0
-    
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("🟢 Active Open Trades", len(active_trades))
-    m2.metric("🔒 Total Closed Trades", total_closed)
-    m3.metric("🎯 System Win Rate", f"{win_rate}%")
-    m4.metric("⚖️ Wins vs Losses", f"{wins}W - {losses}L")
-    
-    st.divider()
-    
-    st.markdown("### 🔴 Closed Trades Log")
-    if closed_trades:
-        df_closed = pd.DataFrame(closed_trades)
+raw_df = load_trade_history()
+
+# --- 4. SEQUENTIAL RISK & POSITION SIZING ENGINE ---
+current_corpus = total_corpus
+ledger = []
+chart_data = [{"Date": "Start", "Corpus": total_corpus}]
+
+if not raw_df.empty:
+    for idx, row in raw_df.iterrows():
+        trade_id = row.get("trade_id", idx + 1)
+        date = row.get("date", f"Trade #{idx + 1}")
+        symbol = str(row.get("symbol", "UNKNOWN"))
+        entry = float(row.get("entry", 0))
+        sl = float(row.get("sl", entry * 0.98))
+        target = float(row.get("target", entry * 1.04))
+        actual_exit = float(row.get("exit", entry))
+        contract_lot = int(row.get("lot_size", 1))
         
-        def calc_result(row):
-            entry = row.get('Entry', 0)
-            if not entry or entry <= 0:
-                return 0.0
-                
-            # 1. Direct exit price calculation if recorded
-            if 'Exit_Price' in row and pd.notna(row['Exit_Price']):
-                return round(((row['Exit_Price'] - entry) / entry) * 100, 2)
-                
-            # 2. Smart fallback for historical trades
-            status = str(row.get('Status', ''))
-            if "TARGET 2 HIT" in status and 'Target2' in row and pd.notna(row['Target2']):
-                return round(((row['Target2'] - entry) / entry) * 100, 2)
-            elif "SL HIT" in status and 'SL' in row and pd.notna(row['SL']):
-                return round(((row['SL'] - entry) / entry) * 100, 2)
-                
-            return 0.0
-            
-        df_closed['Result %'] = df_closed.apply(calc_result, axis=1)
+        if entry <= 0:
+            continue
+
+        # Points & R:R Ratio
+        risk_per_share = abs(entry - sl)
+        reward_per_share = abs(target - entry)
+        rr_ratio = reward_per_share / risk_per_share if risk_per_share > 0 else 0
         
-        def color_returns(val):
-            color = '#00FF00' if val > 0 else '#FF4B4B'
-            return f'color: {color}; font-weight: bold;'
-            
-        cols_to_show = ["Stock", "Status", "Entry", "Result %"]
-        if 'Exit_Price' in df_closed.columns:
-            cols_to_show.insert(3, "Exit_Price")
-            
-        cols_to_show = [c for c in cols_to_show if c in df_closed.columns]
-        styled_closed = df_closed[cols_to_show].style.map(color_returns, subset=['Result %'])
-        st.dataframe(styled_closed, use_container_width=True, hide_index=True)
-    else:
-        st.info("No closed trades recorded in the ledger yet.")
+        # Max Allowed Risk (1% of current active corpus = ₹1,000 baseline)
+        max_risk_allowed = current_corpus * risk_pct
         
-    st.divider()
-    
-    st.markdown("### 🟢 Active Trades Log (Live Monitoring)")
-    if active_trades:
-        df_active = pd.DataFrame(active_trades)
-        if 'T1_Hit' in df_active.columns:
-            df_active['Risk Status'] = df_active['T1_Hit'].apply(lambda x: "✅ Risk Free (SL Trailed)" if x else "⏳ Standard Risk")
-            
-        cols_to_show_active = ["Stock", "Status", "Entry", "SL", "Target1", "Target2", "Risk Status"]
-        cols_to_show_active = [c for c in cols_to_show_active if c in df_active.columns]
+        # Quantity capping rules
+        qty_allowed_by_risk = int(max_risk_allowed / risk_per_share) if risk_per_share > 0 else 0
+        qty_allowed_by_capital = int(max_trade_capital / entry)
         
-        st.dataframe(df_active[cols_to_show_active], use_container_width=True, hide_index=True)
-    else:
-        st.info("No active trades currently running in the market.")
+        # Final selected quantity & lot sizing
+        max_qty = min(qty_allowed_by_risk, qty_allowed_by_capital)
+        number_of_lots = max_qty // contract_lot if contract_lot > 0 else 0
+        executed_qty = number_of_lots * contract_lot
+        
+        # Capital Deployment & PnL
+        capital_deployed = executed_qty * entry
+        actual_pnl = executed_qty * (actual_exit - entry)
+        
+        # Enforce max stop loss cap
+        actual_pnl = max(actual_pnl, -max_risk_allowed)
+        
+        # Corpus update
+        current_corpus += actual_pnl
+        remaining_funds = current_corpus - capital_deployed
+        
+        ledger.append({
+            "ID": trade_id,
+            "Date": date,
+            "Symbol": symbol,
+            "Entry": entry,
+            "SL": sl,
+            "Target": target,
+            "R:R": f"1:{rr_ratio:.2f}",
+            "Lots": number_of_lots,
+            "Qty": executed_qty,
+            "Deployed Capital": capital_deployed,
+            "Trade PnL": actual_pnl,
+            "Updated Corpus": current_corpus,
+            "Available Funds": remaining_funds
+        })
+        chart_data.append({"Date": str(date), "Corpus": current_corpus})
+
+df_ledger = pd.DataFrame(ledger)
+df_chart = pd.DataFrame(chart_data)
+
+# --- 5. UI DISPLAY ---
+st.title("Momentum Frenzy | Risk & Performance Ledger")
+
+col1, col2, col3, col4 = st.columns(4)
+total_pnl = current_corpus - total_corpus
+pnl_pct = (total_pnl / total_corpus) * 100
+win_count = len(df_ledger[df_ledger["Trade PnL"] > 0]) if not df_ledger.empty else 0
+win_rate = (win_count / len(df_ledger)) * 100 if not df_ledger.empty else 0
+
+col1.metric("Current Corpus", f"₹{current_corpus:,.2f}", f"{pnl_pct:+.2f}%")
+col2.metric("Total Net PnL", f"₹{total_pnl:,.2f}")
+col3.metric("Win Rate", f"{win_rate:.1f}%")
+col4.metric("Trades Executed", f"{len(df_ledger)}")
+
+st.markdown("---")
+
+# Growth Curve
+st.subheader("Account Growth Curve")
+fig = px.line(df_chart, x="Date", y="Corpus", markers=True)
+fig.update_traces(line_color="#00FFAA", marker=dict(size=8))
+fig.add_hline(y=total_corpus, line_dash="dash", line_color="#FF4444", annotation_text="Initial Capital")
+fig.update_layout(yaxis_title="Corpus Balance (₹)", height=350)
+st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("---")
+
+# Trade Ledger
+st.subheader("Sequential Trade Ledger")
+if not df_ledger.empty:
+    styled_df = df_ledger.style.format({
+        "Entry": "₹{:,.2f}",
+        "SL": "₹{:,.2f}",
+        "Target": "₹{:,.2f}",
+        "Deployed Capital": "₹{:,.2f}",
+        "Trade PnL": "₹{:,.2f}",
+        "Updated Corpus": "₹{:,.2f}",
+        "Available Funds": "₹{:,.2f}",
+    }).map(lambda x: 'color: #00FF00' if x > 0 else ('color: #FF4444' if x < 0 else ''), subset=['Trade PnL'])
+    st.dataframe(styled_df, use_container_width=True, height=380)
+else:
+    st.warning("No historical trade records found.")
