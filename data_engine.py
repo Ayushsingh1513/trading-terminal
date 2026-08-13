@@ -103,7 +103,6 @@ def get_ai_news_sentiment(ticker):
         compound_score = 0
         article_count = 0
         
-        # Analyze top 4 most recent headlines
         for article in news_data[:4]:
             title = article.get('title', '')
             if title:
@@ -228,7 +227,7 @@ def scan_hybrid_setups(sector_trends, mkt):
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. RISK ENGINE & AI NOTIFICATIONS
+# 5. RISK ENGINE & AI NOTIFICATIONS (ANTI-SPAM UPDATE)
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
@@ -296,32 +295,48 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
     available_slots = max(0, MAX_ACTIVE_TRADES - current_active_count)
     available_margin = TOTAL_CORPUS - used_margin
 
-    # ── 2. PROCESS NEW ALERTS (WITH AI NEWS JUDGE) ──
+    # Lists to collect blocked trades for consolidated anti-spam messages
+    capacity_blocked_stocks = []
+    ai_vetoed_stocks = []
+
+    # ── 2. PROCESS NEW ALERTS (WITH ANTI-SPAM LOGIC) ──
     for buy in top_buys.to_dict('records'):
         stock = buy['Stock']
         entry, sl = float(buy["Entry"]), float(buy["SL"])
+        
+        # KEY FIX: If the stock is ALREADY in the history (Active OR Watchlist), skip it entirely!
         if any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades']): continue
 
         required_qty = calculate_position_size(entry, sl)
         required_margin = required_qty * entry
         
-        # --- THE AI NEWS JUDGE KICKS IN ---
+        # AI News Check
         ai_score, ai_label = get_ai_news_sentiment(stock)
         is_bad_news = ai_score <= -0.15
 
-        # If bad news, margin is blocked, or portfolio is full -> Sent to Watchlist
-        if is_bad_news or available_slots <= 0 or required_qty <= 0 or available_margin < required_margin:
+        # Condition 1: Vetoed by AI
+        if is_bad_news:
             history['active_trades'].append({
                 "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
                 "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
                 "Target": float(buy["Target2"]), "SL": sl, "Status": f"WATCHLIST ({ai_label})", 
                 "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
             })
-            if is_bad_news and available_slots > 0:
-                send_telegram_alert(f"🛑 *AI VETO: TRADE BLOCKED*\nIgnored highly rated setup on {stock} due to 🔴 BEARISH NEWS sentiment. Sent to Watchlist.")
+            ai_vetoed_stocks.append(stock)
             continue 
+            
+        # Condition 2: Blocked by Margin/Capacity Limit
+        if available_slots <= 0 or required_qty <= 0 or available_margin < required_margin:
+            history['active_trades'].append({
+                "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
+                "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
+                "Target": float(buy["Target2"]), "SL": sl, "Status": "WATCHLIST (CAPACITY FULL)", 
+                "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
+            })
+            capacity_blocked_stocks.append(stock)
+            continue
 
-        # Trade Passes AI Judge + Margin Checks -> Executed in Portfolio
+        # Condition 3: Trade Executes Successfully
         history['active_trades'].append({
             "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
             "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
@@ -347,10 +362,17 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 🔢 *Calculated Qty:* {required_qty} shares"""
         send_telegram_alert(alert_msg)
 
-    # ── 3. FLATTEN & SAVE ──
+    # ── 3. SEND CONSOLIDATED ALERTS (NO MORE SPAM) ──
+    if capacity_blocked_stocks:
+        send_telegram_alert(f"⚠️ *CAPACITY / MARGIN FULL*\nMoved to Watchlist: {', '.join(capacity_blocked_stocks)}\nMax trades ({MAX_ACTIVE_TRADES}) reached or insufficient margin.")
+        
+    if ai_vetoed_stocks:
+        send_telegram_alert(f"🛑 *AI VETO: TRADES BLOCKED*\nIgnored setups due to 🔴 BEARISH NEWS: {', '.join(ai_vetoed_stocks)}. Sent to Watchlist.")
+
+    # ── 4. FLATTEN & SAVE ──
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     with open(history_file, "w") as f: json.dump(flat_history, f, indent=4)
-    print(f"Tracking complete. AI Veto Engine Active. Free Margin: ₹{available_margin:,.2f}")
+    print(f"Tracking complete. Anti-spam active. Free Margin: ₹{available_margin:,.2f}")
 
 def run_pipeline():
     print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing AI Engine...")
