@@ -2,27 +2,35 @@ name: Market Close Telegram Alert
 
 on:
   schedule:
-    # Runs at exactly 3:20 PM IST (9:50 AM UTC) every Monday-Friday
-    - cron: '50 9 * * 1-5'
-  workflow_dispatch: 
-
-permissions:
-  contents: write
+    # This runs at Market Close (adjust the cron time if you had a specific one)
+    - cron: '0 10 * * 1-5' 
+  workflow_dispatch: # Allows you to run it manually
 
 jobs:
   send-alert:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install yfinance pandas numpy requests pytz
+      - name: Install dependencies (Including AI NLP)
+        run: |
+          python -m pip install --upgrade pip
+          pip install yfinance pandas numpy requests pytz nltk
 
-      - name: Run Data Engine (Triggers Alert)
+      - name: Engine (Triggers Alert)
         run: python data_engine.py
+
+      - name: Commit and Push Updated Ledger
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add performance_history.json scanner_data.csv sector_data.csv historical_scans.csv || true
+          git commit -m "🤖 AI Engine Update: Market Close" || true
+          git push
