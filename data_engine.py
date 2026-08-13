@@ -16,17 +16,17 @@ nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. INSTITUTIONAL RISK & MARGIN CONFIGURATION
+# 1. CONFIGURATION (UNLIMITED MODE)
 # ══════════════════════════════════════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
 TELEGRAM_CHAT_ID = "-1003707574219"
 IST = pytz.timezone('Asia/Kolkata')
 
-# strict portfolio rules
-MAX_ACTIVE_TRADES = 3
-TOTAL_CORPUS = 100000.0        # Total Account Capital
-MAX_TRADE_CAPITAL = 50000.0    # Max allowed per single trade
-MAX_RISK_PCT = 0.01            # 1% Max Risk per trade
+# We keep the corpus just to calculate a realistic lot size, 
+# but we will NO LONGER block trades if you run out of margin.
+TOTAL_CORPUS = 100000.0        
+MAX_TRADE_CAPITAL = 50000.0    
+MAX_RISK_PCT = 0.01            
 
 SECTOR_MAP = {
     'Nifty Bank': 'BANKBEES.NS', 'Nifty IT': 'ITBEES.NS', 'Nifty Auto': 'AUTOBEES.NS',
@@ -94,7 +94,6 @@ def calculate_position_size(entry, sl):
 # 2. FREE AI NEWS JUDGE (VADER NLP)
 # ══════════════════════════════════════════════════════════════════════════════
 def get_ai_news_sentiment(ticker):
-    """Fetches recent news from Yahoo Finance and uses AI to grade the sentiment."""
     try:
         news_data = yf.Ticker(ticker).news
         if not news_data: 
@@ -227,7 +226,7 @@ def scan_hybrid_setups(sector_trends, mkt):
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. RISK ENGINE & AI NOTIFICATIONS (ANTI-SPAM UPDATE)
+# 5. RISK ENGINE & AI NOTIFICATIONS (UNLIMITED MODE)
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
@@ -246,7 +245,6 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     # ── 1. ACTIVE TRADE & WATCHLIST MONITOR ──
     still_active = []
-    used_margin = 0.0
 
     for trade in history.get('active_trades', []):
         try:
@@ -256,11 +254,6 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             target2 = float(trade.get('Target2', trade.get('Target', 0)))
             target1 = float(trade.get('Target1', target2 * 0.9))
             is_watchlist = "WATCHLIST" in str(trade.get('Status', ''))
-            
-            if not is_watchlist:
-                qty = float(trade.get('Lot Size', calculate_position_size(entry, sl)))
-                if qty <= 0: qty = calculate_position_size(entry, sl)
-                used_margin += qty * entry
 
             if not curr_df.empty:
                 c_price = float(curr_df['Close'].iloc[-1])
@@ -291,30 +284,26 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
     top_buys = scanner_df[scanner_df['Signal'] == 'BUY'].copy()
     if not top_buys.empty: top_buys = top_buys.sort_values(by=["Score", "RR"], ascending=[False, False])
     
-    current_active_count = len([t for t in history['active_trades'] if "ACTIVE" in str(t.get("Status", ""))])
-    available_slots = max(0, MAX_ACTIVE_TRADES - current_active_count)
-    available_margin = TOTAL_CORPUS - used_margin
-
-    # Lists to collect blocked trades for consolidated anti-spam messages
-    capacity_blocked_stocks = []
     ai_vetoed_stocks = []
 
-    # ── 2. PROCESS NEW ALERTS (WITH ANTI-SPAM LOGIC) ──
+    # ── 2. PROCESS NEW ALERTS (NO MARGIN LIMITS, ONLY AI VETO) ──
     for buy in top_buys.to_dict('records'):
         stock = buy['Stock']
         entry, sl = float(buy["Entry"]), float(buy["SL"])
         
-        # KEY FIX: If the stock is ALREADY in the history (Active OR Watchlist), skip it entirely!
+        # Skip if already in active trades
         if any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades']): continue
 
+        # Calculate a realistic lot size for PnL tracking, even though we ignore total margin
         required_qty = calculate_position_size(entry, sl)
+        if required_qty <= 0: required_qty = 1 
         required_margin = required_qty * entry
         
         # AI News Check
         ai_score, ai_label = get_ai_news_sentiment(stock)
         is_bad_news = ai_score <= -0.15
 
-        # Condition 1: Vetoed by AI
+        # Only block the trade if the AI literally detects bad news
         if is_bad_news:
             history['active_trades'].append({
                 "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
@@ -325,26 +314,13 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             ai_vetoed_stocks.append(stock)
             continue 
             
-        # Condition 2: Blocked by Margin/Capacity Limit
-        if available_slots <= 0 or required_qty <= 0 or available_margin < required_margin:
-            history['active_trades'].append({
-                "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
-                "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
-                "Target": float(buy["Target2"]), "SL": sl, "Status": "WATCHLIST (CAPACITY FULL)", 
-                "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
-            })
-            capacity_blocked_stocks.append(stock)
-            continue
-
-        # Condition 3: Trade Executes Successfully
+        # NO LIMITS: Take every single 100/100 trade
         history['active_trades'].append({
             "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
             "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
             "Target": float(buy["Target2"]), "SL": sl, "Status": "ACTIVE", 
             "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
         })
-        available_slots -= 1
-        available_margin -= required_margin
 
         alert_msg = f"""⚡ *MOMENTUM SETUP EXECUTED*
 ━━━━━━━━━━━━━━━━━━━
@@ -358,24 +334,21 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 🚀 *Target 2 (Runner):* ₹{buy['Target2']}
 ⚖️ *Risk:Reward:* 1 : {buy['RR']}
 ━━━━━━━━━━━━━━━━━━━
-📦 *Capital Allocated:* ₹{required_margin:,.2f}
+📦 *Paper Capital:* ₹{required_margin:,.2f}
 🔢 *Calculated Qty:* {required_qty} shares"""
         send_telegram_alert(alert_msg)
 
-    # ── 3. SEND CONSOLIDATED ALERTS (NO MORE SPAM) ──
-    if capacity_blocked_stocks:
-        send_telegram_alert(f"⚠️ *CAPACITY / MARGIN FULL*\nMoved to Watchlist: {', '.join(capacity_blocked_stocks)}\nMax trades ({MAX_ACTIVE_TRADES}) reached or insufficient margin.")
-        
+    # ── 3. SEND CONSOLIDATED VETO ALERT ──
     if ai_vetoed_stocks:
         send_telegram_alert(f"🛑 *AI VETO: TRADES BLOCKED*\nIgnored setups due to 🔴 BEARISH NEWS: {', '.join(ai_vetoed_stocks)}. Sent to Watchlist.")
 
     # ── 4. FLATTEN & SAVE ──
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     with open(history_file, "w") as f: json.dump(flat_history, f, indent=4)
-    print(f"Tracking complete. Anti-spam active. Free Margin: ₹{available_margin:,.2f}")
+    print("Tracking complete. Unlimited Paper Trading Mode Active.")
 
 def run_pipeline():
-    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing AI Engine...")
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Unlimited AI Engine...")
     mkt = get_market_data()
     if mkt:
         sector_trends, sector_df = get_sector_trends()
