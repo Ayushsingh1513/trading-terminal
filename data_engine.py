@@ -16,14 +16,12 @@ nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. CONFIGURATION (UNLIMITED MODE)
+# 1. CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
 TELEGRAM_CHAT_ID = "-1003707574219"
 IST = pytz.timezone('Asia/Kolkata')
 
-# We keep the corpus just to calculate a realistic lot size, 
-# but we will NO LONGER block trades if you run out of margin.
 TOTAL_CORPUS = 100000.0        
 MAX_TRADE_CAPITAL = 50000.0    
 MAX_RISK_PCT = 0.01            
@@ -91,7 +89,7 @@ def calculate_position_size(entry, sl):
     return min(qty_risk, qty_cap)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. FREE AI NEWS JUDGE (VADER NLP)
+# 2. FREE AI NEWSDESK AGENT (VADER NLP)
 # ══════════════════════════════════════════════════════════════════════════════
 def get_ai_news_sentiment(ticker):
     try:
@@ -110,17 +108,81 @@ def get_ai_news_sentiment(ticker):
                 article_count += 1
                 
         if article_count == 0: return 0.0, "⚪ NEUTRAL"
-        
         avg_score = compound_score / article_count
         
-        if avg_score >= 0.15: return avg_score, "🟢 BULLISH NEWS"
-        elif avg_score <= -0.15: return avg_score, "🔴 BEARISH NEWS"
-        else: return avg_score, "⚪ NEUTRAL NEWS"
+        if avg_score >= 0.15: return avg_score, "🟢 BULLISH SENTIMENT"
+        elif avg_score <= -0.15: return avg_score, "🔴 BEARISH SENTIMENT"
+        else: return avg_score, "⚪ NEUTRAL SENTIMENT"
     except:
         return 0.0, "⚪ NEUTRAL (FETCH ERROR)"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. MARKET DATA & PCR
+# 3. BULL & BEAR DEBATE ENGINE + JUDGE AGENT
+# ══════════════════════════════════════════════════════════════════════════════
+def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
+    """
+    Simulates the Bull vs. Bear debate and uses the Judge Agent 
+    to decide winner, confidence score, and rationale.
+    """
+    bull_reasons = []
+    bear_reasons = []
+    bull_score = 0
+    bear_score = 0
+
+    # ── BULL AGENT ARGUMENTS 🐂 ──
+    if buy_setup['Score'] >= 80:
+        bull_score += 4
+        bull_reasons.append(f"High technical conviction ({buy_setup['Score']}/100 score)")
+    if buy_setup['VolSurge'] >= 1.2:
+        bull_score += 2
+        bull_reasons.append(f"Institutional volume surge ({buy_setup['VolSurge']}x 20-day avg)")
+    if buy_setup['WeeklyTrend'] == "UP":
+        bull_score += 2
+        bull_reasons.append("Aligned with high-timeframe (Weekly) Uptrend")
+    if news_score > 0.1:
+        bull_score += 2
+        bull_reasons.append(f"Positive news flow ({news_label})")
+
+    # ── BEAR AGENT ARGUMENTS 🐻 ──
+    if news_score < -0.1:
+        bear_score += 4
+        bear_reasons.append(f"Negative news headlines ({news_label})")
+    if mkt['pcr'] > 1.3:
+        bear_score += 2
+        bear_reasons.append(f"Market PCR shows cautious overbought levels ({mkt['pcr']})")
+    if buy_setup['RSI'] > 65:
+        bear_score += 2
+        bear_reasons.append(f"Near-term RSI elevated ({buy_setup['RSI']})")
+    if buy_setup['RR'] < 1.5:
+        bear_score += 2
+        bear_reasons.append(f"Tight Risk-to-Reward ratio (1:{buy_setup['RR']})")
+
+    # Ensure baseline arguments exist
+    if not bull_reasons: bull_reasons.append("Base technical breakout pattern")
+    if not bear_reasons: bear_reasons.append("Standard market volatility risk")
+
+    # ── JUDGE AGENT VERDICT ⚖️ ──
+    total_points = max(1, bull_score + bear_score)
+    
+    if bull_score >= bear_score:
+        winner = "Bull 🐂"
+        verdict_status = "BUY SIGNAL"
+        confidence = min(10, max(5, round((bull_score / total_points) * 10)))
+    else:
+        winner = "Bear 🐻"
+        verdict_status = "VETO / WATCHLIST"
+        confidence = min(10, max(5, round((bear_score / total_points) * 10)))
+
+    return {
+        "verdict": verdict_status,
+        "winner": winner,
+        "confidence": confidence,
+        "bull_case": " • ".join(bull_reasons),
+        "bear_case": " • ".join(bear_reasons)
+    }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 4. MARKET DATA & SECTOR INTELLIGENCE
 # ══════════════════════════════════════════════════════════════════════════════
 def get_market_data():
     nifty = yf.Ticker('^NSEI').history(period='1y')
@@ -142,9 +204,6 @@ def get_market_data():
         "timestamp": datetime.now(IST).strftime("%Y-%m-%d %I:%M %p IST")
     }
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 4. SECTOR INTELLIGENCE & ADVANCED SCANNER
-# ══════════════════════════════════════════════════════════════════════════════
 def get_sector_trends():
     sector_data = {}
     sector_rows = []
@@ -226,7 +285,7 @@ def scan_hybrid_setups(sector_trends, mkt):
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. RISK ENGINE & AI NOTIFICATIONS (UNLIMITED MODE)
+# 5. EXECUTION & MULTI-AGENT TELEGRAM NOTIFICATIONS
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
@@ -243,9 +302,8 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             elif isinstance(raw_data, dict): history = raw_data
         except: pass
 
-    # ── 1. ACTIVE TRADE & WATCHLIST MONITOR ──
+    # ── 1. ACTIVE MONITOR ──
     still_active = []
-
     for trade in history.get('active_trades', []):
         try:
             stock = trade.get('Stock', trade.get('Symbol', ''))
@@ -259,18 +317,14 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 c_price = float(curr_df['Close'].iloc[-1])
                 if c_price <= sl:
                     trade['Exit Price'] = c_price 
-                    if is_watchlist: trade['Status'] = "WATCHLIST - SL HIT 🔴"
-                    else:
-                        trade['Status'] = "CLOSED - SL HIT 🔴"
-                        send_telegram_alert(f"🔴 *STOP LOSS HIT*\n🎯 {stock} Exit: ₹{c_price:.2f}")
+                    trade['Status'] = "WATCHLIST - SL HIT 🔴" if is_watchlist else "CLOSED - SL HIT 🔴"
+                    if not is_watchlist: send_telegram_alert(f"🔴 *STOP LOSS HIT*\n🎯 {stock} Exit: ₹{c_price:.2f}")
                     history['closed_trades'].append(trade)
                     continue
                 elif c_price >= target2:
                     trade['Exit Price'] = c_price 
-                    if is_watchlist: trade['Status'] = "WATCHLIST - TARGET 2 HIT 🚀"
-                    else:
-                        trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
-                        send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n🎯 {stock} Exit: ₹{c_price:.2f}")
+                    trade['Status'] = "WATCHLIST - TARGET 2 HIT 🚀" if is_watchlist else "CLOSED - TARGET 2 HIT 🚀"
+                    if not is_watchlist: send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n🎯 {stock} Exit: ₹{c_price:.2f}")
                     history['closed_trades'].append(trade)
                     continue
                 elif c_price >= target1 and not trade.get('T1_Hit', False):
@@ -286,35 +340,34 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
     
     ai_vetoed_stocks = []
 
-    # ── 2. PROCESS NEW ALERTS (NO MARGIN LIMITS, ONLY AI VETO) ──
+    # ── 2. PROCESS SETUPS WITH MULTI-AGENT DEBATE ──
     for buy in top_buys.to_dict('records'):
         stock = buy['Stock']
         entry, sl = float(buy["Entry"]), float(buy["SL"])
-        
-        # Skip if already in active trades
         if any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades']): continue
 
-        # Calculate a realistic lot size for PnL tracking, even though we ignore total margin
         required_qty = calculate_position_size(entry, sl)
         if required_qty <= 0: required_qty = 1 
         required_margin = required_qty * entry
         
-        # AI News Check
-        ai_score, ai_label = get_ai_news_sentiment(stock)
-        is_bad_news = ai_score <= -0.15
+        # 1. Newsdesk Agent
+        news_score, news_label = get_ai_news_sentiment(stock)
 
-        # Only block the trade if the AI literally detects bad news
-        if is_bad_news:
+        # 2. Bull vs Bear Debate & Judge Verdict
+        debate_result = run_ai_debate_and_judge(buy, news_score, news_label, mkt)
+
+        # If Bear Agent wins or Bearish news vetoes -> Send to Watchlist
+        if debate_result['winner'].startswith("Bear") or news_score <= -0.15:
             history['active_trades'].append({
                 "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
                 "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
-                "Target": float(buy["Target2"]), "SL": sl, "Status": f"WATCHLIST ({ai_label})", 
+                "Target": float(buy["Target2"]), "SL": sl, "Status": f"WATCHLIST ({news_label})", 
                 "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
             })
             ai_vetoed_stocks.append(stock)
             continue 
             
-        # NO LIMITS: Take every single 100/100 trade
+        # Bull Agent Wins -> Execute Trade & Send Structured Alert
         history['active_trades'].append({
             "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
             "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
@@ -322,33 +375,31 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
         })
 
-        alert_msg = f"""⚡ *MOMENTUM SETUP EXECUTED*
+        # Structured Telegram Output matching AlphaDesk
+        alert_msg = f"""🤖 *STOCK RESEARCH BOT — {stock}*
 ━━━━━━━━━━━━━━━━━━━
-🎯 *Stock:* {stock}
-⭐ *Algorithmic Rating:* STRONG BUY ({buy['Score']}/100)
-🤖 *AI News Judge:* {ai_label}
-🛠️ *Setup:* {buy['Setup']}
+🎯 *Verdict:* {debate_result['verdict']} | Confidence: {debate_result['confidence']}/10
+🏆 *Debate Winner:* {debate_result['winner']}
+
+📈 *Bull Case:* {debate_result['bull_case']}
+📉 *Bear Caveat:* {debate_result['bear_case']}
 
 🟢 *Entry Zone:* ₹{entry}
 🔴 *Stop Loss:* ₹{sl}
-🚀 *Target 2 (Runner):* ₹{buy['Target2']}
-⚖️ *Risk:Reward:* 1 : {buy['RR']}
+🚀 *Target:* ₹{buy['Target2']} (1:{buy['RR']} R:R)
 ━━━━━━━━━━━━━━━━━━━
-📦 *Paper Capital:* ₹{required_margin:,.2f}
-🔢 *Calculated Qty:* {required_qty} shares"""
+📦 *Capital Allocated:* ₹{required_margin:,.2f} ({required_qty} shares)"""
         send_telegram_alert(alert_msg)
 
-    # ── 3. SEND CONSOLIDATED VETO ALERT ──
     if ai_vetoed_stocks:
-        send_telegram_alert(f"🛑 *AI VETO: TRADES BLOCKED*\nIgnored setups due to 🔴 BEARISH NEWS: {', '.join(ai_vetoed_stocks)}. Sent to Watchlist.")
+        send_telegram_alert(f"🛑 *AI JUDGE VETO: TRADES WATCHLISTED*\nDebate lost to Bear case on: {', '.join(ai_vetoed_stocks)}.")
 
-    # ── 4. FLATTEN & SAVE ──
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     with open(history_file, "w") as f: json.dump(flat_history, f, indent=4)
-    print("Tracking complete. Unlimited Paper Trading Mode Active.")
+    print("Multi-Agent Debate Engine Complete.")
 
 def run_pipeline():
-    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Unlimited AI Engine...")
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Multi-Agent Engine...")
     mkt = get_market_data()
     if mkt:
         sector_trends, sector_df = get_sector_trends()
