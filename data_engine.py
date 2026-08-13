@@ -4,6 +4,7 @@ import numpy as np
 import json
 import os
 import requests
+import time  # ⏳ IMPORTED FOR ANTI-BAN DELAY
 from datetime import datetime
 import pytz
 
@@ -120,10 +121,6 @@ def get_ai_news_sentiment(ticker):
 # 3. BULL & BEAR DEBATE ENGINE + JUDGE AGENT
 # ══════════════════════════════════════════════════════════════════════════════
 def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
-    """
-    Simulates the Bull vs. Bear debate and uses the Judge Agent 
-    to decide winner, confidence score, and rationale.
-    """
     bull_reasons = []
     bear_reasons = []
     bull_score = 0
@@ -157,7 +154,6 @@ def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
         bear_score += 2
         bear_reasons.append(f"Tight Risk-to-Reward ratio (1:{buy_setup['RR']})")
 
-    # Ensure baseline arguments exist
     if not bull_reasons: bull_reasons.append("Base technical breakout pattern")
     if not bear_reasons: bear_reasons.append("Standard market volatility risk")
 
@@ -208,6 +204,7 @@ def get_sector_trends():
     sector_data = {}
     sector_rows = []
     for sec_name, etf_symbol in SECTOR_MAP.items():
+        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second per sector
         try:
             sdf = yf.Ticker(etf_symbol).history(period="6mo")
             if sdf.empty or len(sdf) < 20: continue
@@ -231,6 +228,7 @@ def get_sector_trends():
 def scan_hybrid_setups(sector_trends, mkt):
     scanner_results = []
     for ticker in STOCK_UNIVERSE:
+        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second per stock scan
         try:
             df = yf.Ticker(ticker).history(period="1y")
             if df.empty or len(df) < 50: continue
@@ -305,6 +303,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
     # ── 1. ACTIVE MONITOR ──
     still_active = []
     for trade in history.get('active_trades', []):
+        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second per active trade check
         try:
             stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
@@ -351,6 +350,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
         required_margin = required_qty * entry
         
         # 1. Newsdesk Agent
+        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second before fetching news
         news_score, news_label = get_ai_news_sentiment(stock)
 
         # 2. Bull vs Bear Debate & Judge Verdict
@@ -375,7 +375,6 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
         })
 
-        # Structured Telegram Output matching AlphaDesk
         alert_msg = f"""🤖 *STOCK RESEARCH BOT — {stock}*
 ━━━━━━━━━━━━━━━━━━━
 🎯 *Verdict:* {debate_result['verdict']} | Confidence: {debate_result['confidence']}/10
@@ -388,7 +387,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 🔴 *Stop Loss:* ₹{sl}
 🚀 *Target:* ₹{buy['Target2']} (1:{buy['RR']} R:R)
 ━━━━━━━━━━━━━━━━━━━
-📦 *Capital Allocated:* ₹{required_margin:,.2f} ({required_qty} shares)"""
+📦 *Paper Capital:* ₹{required_margin:,.2f} ({required_qty} shares)"""
         send_telegram_alert(alert_msg)
 
     if ai_vetoed_stocks:
