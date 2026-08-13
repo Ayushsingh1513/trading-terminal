@@ -7,6 +7,14 @@ import requests
 from datetime import datetime
 import pytz
 
+# --- FREE AI NLP AGENT IMPORTS ---
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+# Download the AI dictionary silently
+nltk.download('vader_lexicon', quiet=True)
+sia = SentimentIntensityAnalyzer()
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. INSTITUTIONAL RISK & MARGIN CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
@@ -71,13 +79,10 @@ STOCK_UNIVERSE = [
 def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    try:
-        requests.post(url, json=payload, timeout=10)
-    except:
-        pass
+    try: requests.post(url, json=payload, timeout=10)
+    except: pass
 
 def calculate_position_size(entry, sl):
-    """Calculates safe margin lot size based on 1% rule."""
     if entry <= 0 or sl >= entry: return 0
     risk_per_share = entry - sl
     max_risk_allowed = TOTAL_CORPUS * MAX_RISK_PCT
@@ -86,7 +91,38 @@ def calculate_position_size(entry, sl):
     return min(qty_risk, qty_cap)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. MARKET DATA & PCR
+# 2. FREE AI NEWS JUDGE (VADER NLP)
+# ══════════════════════════════════════════════════════════════════════════════
+def get_ai_news_sentiment(ticker):
+    """Fetches recent news from Yahoo Finance and uses AI to grade the sentiment."""
+    try:
+        news_data = yf.Ticker(ticker).news
+        if not news_data: 
+            return 0.0, "⚪ NO NEWS FOUND"
+            
+        compound_score = 0
+        article_count = 0
+        
+        # Analyze top 4 most recent headlines
+        for article in news_data[:4]:
+            title = article.get('title', '')
+            if title:
+                score = sia.polarity_scores(title)['compound']
+                compound_score += score
+                article_count += 1
+                
+        if article_count == 0: return 0.0, "⚪ NEUTRAL"
+        
+        avg_score = compound_score / article_count
+        
+        if avg_score >= 0.15: return avg_score, "🟢 BULLISH NEWS"
+        elif avg_score <= -0.15: return avg_score, "🔴 BEARISH NEWS"
+        else: return avg_score, "⚪ NEUTRAL NEWS"
+    except:
+        return 0.0, "⚪ NEUTRAL (FETCH ERROR)"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 3. MARKET DATA & PCR
 # ══════════════════════════════════════════════════════════════════════════════
 def get_market_data():
     nifty = yf.Ticker('^NSEI').history(period='1y')
@@ -98,81 +134,58 @@ def get_market_data():
     c_sensex = float(sensex['Close'].iloc[-1])
     sensex_chg = float((c_sensex - sensex['Close'].iloc[-2]) / sensex['Close'].iloc[-2] * 100)
     nifty_200 = float(nifty['Close'].ewm(span=200).mean().iloc[-1])
-
     pcr_value = 1.05 
     pcr_status = "⚠️ OVERBOUGHT" if pcr_value > 1.5 else ("🟢 OVERSOLD" if pcr_value < 0.7 else "⚪ NEUTRAL")
 
     return {
-        "nifty": c_nifty, "nifty_chg": nifty_chg,
-        "sensex": c_sensex, "sensex_chg": sensex_chg,
-        "pcr": pcr_value, "pcr_status": pcr_status,
-        "ma200": nifty_200, "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH",
+        "nifty": c_nifty, "nifty_chg": nifty_chg, "sensex": c_sensex, "sensex_chg": sensex_chg,
+        "pcr": pcr_value, "pcr_status": pcr_status, "ma200": nifty_200, 
+        "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH",
         "timestamp": datetime.now(IST).strftime("%Y-%m-%d %I:%M %p IST")
     }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. SECTOR INTELLIGENCE
+# 4. SECTOR INTELLIGENCE & ADVANCED SCANNER
 # ══════════════════════════════════════════════════════════════════════════════
 def get_sector_trends():
     sector_data = {}
     sector_rows = []
-
     for sec_name, etf_symbol in SECTOR_MAP.items():
         try:
             sdf = yf.Ticker(etf_symbol).history(period="6mo")
             if sdf.empty or len(sdf) < 20: continue
-
             c_price = float(sdf['Close'].iloc[-1])
             p_price = float(sdf['Close'].iloc[-2])
             today_chg = round(((c_price - p_price) / p_price) * 100, 2)
             m1_ret = float(((c_price - sdf['Close'].iloc[-21]) / sdf['Close'].iloc[-21]) * 100)
-
             delta = sdf['Close'].diff()
             up_v = sdf['Volume'].where(delta > 0, 0).rolling(14).sum().iloc[-1]
             dn_v = sdf['Volume'].where(delta < 0, 0).rolling(14).sum().iloc[-1]
             ud_ratio = (up_v / dn_v) if dn_v > 0 else 1.0
-
             flow_label = "Big Money Buying 🟢" if ud_ratio >= 1.3 else ("Big Money Selling 🔴" if ud_ratio <= 0.7 else "Neutral / Sideways ⚪")
             is_uptrend = m1_ret > 0 and c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
-
             sector_data[sec_name] = {"uptrend": is_uptrend, "today_chg": today_chg, "m1_ret": m1_ret, "flow": flow_label}
-            sector_rows.append({
-                "Sector": sec_name, "Today%": today_chg, "1M%": round(m1_ret, 2),
-                "Smart Money Flow": flow_label, "Score": 80 if is_uptrend else 40
-            })
-        except:
-            pass
-
+            sector_rows.append({"Sector": sec_name, "Today%": today_chg, "1M%": round(m1_ret, 2), "Smart Money Flow": flow_label, "Score": 80 if is_uptrend else 40})
+        except: pass
     sec_df = pd.DataFrame(sector_rows)
-    if not sec_df.empty:
-        sec_df = sec_df.sort_values("Today%", ascending=False)
-        sec_df.to_csv("sector_data.csv", index=False)
-
+    if not sec_df.empty: sec_df.sort_values("Today%", ascending=False).to_csv("sector_data.csv", index=False)
     return sector_data, sec_df
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 4. ADVANCED SCANNER
-# ══════════════════════════════════════════════════════════════════════════════
 def scan_hybrid_setups(sector_trends, mkt):
     scanner_results = []
-
     for ticker in STOCK_UNIVERSE:
         try:
             df = yf.Ticker(ticker).history(period="1y")
             if df.empty or len(df) < 50: continue
-
             weekly_df = df['Close'].resample('W').last()
             weekly_20_ema = weekly_df.ewm(span=20).mean().iloc[-1]
             is_weekly_uptrend = float(df['Close'].iloc[-1]) > float(weekly_20_ema)
-
             df['EMA_20'] = df['Close'].ewm(span=20).mean()
             df['EMA_50'] = df['Close'].ewm(span=50).mean()
-
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
             df['RSI'] = 100 - (100 / (1 + (gain / loss)))
-
             df['TR'] = np.maximum(df['High'] - df['Low'], np.maximum(abs(df['High'] - df['Close'].shift()), abs(df['Low'] - df['Close'].shift())))
             df['ATR'] = df['TR'].rolling(14).mean()
             df['Vol_20'] = df['Volume'].rolling(20).mean()
@@ -194,33 +207,28 @@ def scan_hybrid_setups(sector_trends, mkt):
             if is_oversold_rebound or is_compression: score += 40
             if sec_trend: score += 20 
             if price > float(latest['EMA_20']): score += 10
-
             if not is_weekly_uptrend: score = min(score, 49) 
             if mkt['pcr'] > 1.5: score = min(score, 79) 
 
             signal = "BUY" if score >= 80 else ("WATCH" if score >= 50 else "AVOID")
-            mtf_status = "✅ MTF Eligible (Dhan)"
-
             sl = round(price - (atr * 1.2), 2)
             t1 = round(price + (atr * 1.5), 2)
             t2 = round(price + (atr * 3.5), 2)
 
             scanner_results.append({
                 "Stock": ticker, "Signal": signal, "Setup": setup_type, "WeeklyTrend": "UP" if is_weekly_uptrend else "DOWN",
-                "MTF": mtf_status, "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
-                "VolSurge": round(float(latest['Volume'] / latest['Vol_20']), 2),
-                "Entry": round(price, 2), "SL": sl, "Target1": t1, "Target2": t2,
-                "RR": round((t2 - price) / (price - sl), 1) if (price - sl) > 0 else 0, "Sector": sec_name
+                "MTF": "✅ MTF Eligible", "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
+                "VolSurge": round(float(latest['Volume'] / latest['Vol_20']), 2), "Entry": round(price, 2), 
+                "SL": sl, "Target1": t1, "Target2": t2, "RR": round((t2 - price) / (price - sl), 1) if (price - sl) > 0 else 0, 
+                "Sector": sec_name
             })
-        except:
-            pass
-
+        except: pass
     scan_df = pd.DataFrame(scanner_results).sort_values("Score", ascending=False)
     scan_df.to_csv("scanner_data.csv", index=False)
     return scan_df
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. RISK ENGINE, MARGIN CHECK & NOTIFICATIONS
+# 5. RISK ENGINE & AI NOTIFICATIONS
 # ══════════════════════════════════════════════════════════════════════════════
 def track_targets_and_notify(scanner_df, sector_df, mkt):
     history_file = "performance_history.json"
@@ -228,42 +236,16 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
     
     if os.path.exists(history_file):
         try:
-            with open(history_file, "r") as f:
-                raw_data = json.load(f)
+            with open(history_file, "r") as f: raw_data = json.load(f)
             if isinstance(raw_data, list):
                 for t in raw_data:
-                    if t.get("Status") == "ACTIVE": history["active_trades"].append(t)
+                    status = str(t.get("Status", ""))
+                    if "ACTIVE" in status or "WATCHLIST" in status: history["active_trades"].append(t)
                     else: history["closed_trades"].append(t)
-            elif isinstance(raw_data, dict):
-                history = raw_data
+            elif isinstance(raw_data, dict): history = raw_data
         except: pass
 
-    # ── 1. RETROACTIVE PRUNING: Keep Top 3 Highest Probability Trades ──
-    if len(history['active_trades']) > MAX_ACTIVE_TRADES:
-        def rank_trade(trade):
-            try:
-                score_str = str(trade.get('Score', '0')).replace('/100', '')
-                score = int(score_str)
-                e = float(trade.get('Entry', 0))
-                s = float(trade.get('SL', 0))
-                t = float(trade.get('Target2', trade.get('Target', 0)))
-                rr = (t - e) / (e - s) if e > s else 0
-                return (score, rr) # Prioritize High Score, then High RR
-            except:
-                return (0, 0)
-                
-        history['active_trades'].sort(key=rank_trade, reverse=True)
-        excess_trades = history['active_trades'][MAX_ACTIVE_TRADES:]
-        history['active_trades'] = history['active_trades'][:MAX_ACTIVE_TRADES]
-        
-        for ext in excess_trades:
-            ext['Status'] = "CLOSED - MARGIN/RISK PRUNE (NO LOSS)"
-            ext['Exit Price'] = ext.get('Entry', 0)
-            history['closed_trades'].append(ext)
-            
-        send_telegram_alert(f"🧹 *PORTFOLIO OPTIMIZED*\nPruned excess active trades down to the top {MAX_ACTIVE_TRADES} highest-probability setups to protect margin limit.")
-
-    # ── 2. ACTIVE TRADE MONITOR & MARGIN CALCULATOR ──
+    # ── 1. ACTIVE TRADE & WATCHLIST MONITOR ──
     still_active = []
     used_margin = 0.0
 
@@ -271,87 +253,81 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
         try:
             stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
-            
-            entry = float(trade.get('Entry', 0))
-            sl = float(trade.get('SL', 0))
+            entry, sl = float(trade.get('Entry', 0)), float(trade.get('SL', 0))
             target2 = float(trade.get('Target2', trade.get('Target', 0)))
             target1 = float(trade.get('Target1', target2 * 0.9))
+            is_watchlist = "WATCHLIST" in str(trade.get('Status', ''))
             
-            # Calculate Margin Used for this active trade
-            qty = float(trade.get('Lot Size', calculate_position_size(entry, sl)))
-            if qty <= 0: qty = calculate_position_size(entry, sl)
-            trade_margin = qty * entry
+            if not is_watchlist:
+                qty = float(trade.get('Lot Size', calculate_position_size(entry, sl)))
+                if qty <= 0: qty = calculate_position_size(entry, sl)
+                used_margin += qty * entry
 
             if not curr_df.empty:
                 c_price = float(curr_df['Close'].iloc[-1])
-
                 if c_price <= sl:
-                    trade['Status'] = "CLOSED - SL HIT 🔴"
                     trade['Exit Price'] = c_price 
+                    if is_watchlist: trade['Status'] = "WATCHLIST - SL HIT 🔴"
+                    else:
+                        trade['Status'] = "CLOSED - SL HIT 🔴"
+                        send_telegram_alert(f"🔴 *STOP LOSS HIT*\n🎯 {stock} Exit: ₹{c_price:.2f}")
                     history['closed_trades'].append(trade)
-                    loss_pct = ((c_price - entry) / entry) * 100
-                    send_telegram_alert(f"🔴 *STOP LOSS HIT*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📉 *Entry:* ₹{entry}\n💔 *Exit Price:* ₹{c_price:.2f}\n📉 *Result:* {loss_pct:.2f}%")
                     continue
                 elif c_price >= target2:
-                    trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
                     trade['Exit Price'] = c_price 
+                    if is_watchlist: trade['Status'] = "WATCHLIST - TARGET 2 HIT 🚀"
+                    else:
+                        trade['Status'] = "CLOSED - TARGET 2 HIT 🚀"
+                        send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n🎯 {stock} Exit: ₹{c_price:.2f}")
                     history['closed_trades'].append(trade)
-                    profit_pct = ((c_price - entry) / entry) * 100
-                    send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n📈 *Entry:* ₹{entry}\n💰 *Exit Price:* ₹{c_price:.2f}\n📈 *Result:* +{profit_pct:.2f}%")
                     continue
                 elif c_price >= target1 and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
                     trade['SL'] = entry
-                    send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n━━━━━━━━━━━━━━━━━━━\n🎯 *Stock:* {stock}\n💰 *Price:* ₹{c_price:.2f}\n🛡️ *Action:* Book 50% Profit. SL moved to Entry.")
-            
-            # If trade is still open, it consumes margin
-            used_margin += trade_margin
+                    if not is_watchlist: send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n🎯 {stock} Price: ₹{c_price:.2f}\n🛡️ SL moved to Entry.")
             still_active.append(trade)
-            
-        except Exception as e:
-            still_active.append(trade)
+        except: still_active.append(trade)
 
     history['active_trades'] = still_active
-
-    # ── 3. PROCESS NEW ALERTS (WITH MARGIN CHECKING) ──
     top_buys = scanner_df[scanner_df['Signal'] == 'BUY'].copy()
+    if not top_buys.empty: top_buys = top_buys.sort_values(by=["Score", "RR"], ascending=[False, False])
     
-    if not top_buys.empty:
-        # Sort by best algorithmic score first, then best risk-to-reward
-        top_buys = top_buys.sort_values(by=["Score", "RR"], ascending=[False, False])
-    
-    current_active_count = len(history['active_trades'])
+    current_active_count = len([t for t in history['active_trades'] if "ACTIVE" in str(t.get("Status", ""))])
     available_slots = max(0, MAX_ACTIVE_TRADES - current_active_count)
     available_margin = TOTAL_CORPUS - used_margin
 
+    # ── 2. PROCESS NEW ALERTS (WITH AI NEWS JUDGE) ──
     for buy in top_buys.to_dict('records'):
         stock = buy['Stock']
-        entry = float(buy["Entry"])
-        sl = float(buy["SL"])
-        
-        is_active = any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades'])
-        if is_active: continue
+        entry, sl = float(buy["Entry"]), float(buy["SL"])
+        if any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades']): continue
 
-        if available_slots <= 0:
-            send_telegram_alert(f"⚠️ *CAPACITY FULL*\nIgnored highly rated {stock} to respect {MAX_ACTIVE_TRADES} max trades limit.")
-            break
-            
-        # Margin Math
         required_qty = calculate_position_size(entry, sl)
         required_margin = required_qty * entry
         
-        if required_qty <= 0 or available_margin < required_margin:
-            send_telegram_alert(f"⚠️ *MARGIN REJECT*\nIgnored {stock} - Insufficient free margin (Need ₹{required_margin:,.2f}, Free: ₹{available_margin:,.2f}).")
-            continue
+        # --- THE AI NEWS JUDGE KICKS IN ---
+        ai_score, ai_label = get_ai_news_sentiment(stock)
+        is_bad_news = ai_score <= -0.15
 
-        # Trade Passes all Margin & Risk Checks -> Take it
+        # If bad news, margin is blocked, or portfolio is full -> Sent to Watchlist
+        if is_bad_news or available_slots <= 0 or required_qty <= 0 or available_margin < required_margin:
+            history['active_trades'].append({
+                "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
+                "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
+                "Target": float(buy["Target2"]), "SL": sl, "Status": f"WATCHLIST ({ai_label})", 
+                "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
+            })
+            if is_bad_news and available_slots > 0:
+                send_telegram_alert(f"🛑 *AI VETO: TRADE BLOCKED*\nIgnored highly rated setup on {stock} due to 🔴 BEARISH NEWS sentiment. Sent to Watchlist.")
+            continue 
+
+        # Trade Passes AI Judge + Margin Checks -> Executed in Portfolio
         history['active_trades'].append({
             "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
             "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
             "Target": float(buy["Target2"]), "SL": sl, "Status": "ACTIVE", 
             "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
         })
-        
         available_slots -= 1
         available_margin -= required_margin
 
@@ -359,6 +335,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 ━━━━━━━━━━━━━━━━━━━
 🎯 *Stock:* {stock}
 ⭐ *Algorithmic Rating:* STRONG BUY ({buy['Score']}/100)
+🤖 *AI News Judge:* {ai_label}
 🛠️ *Setup:* {buy['Setup']}
 
 🟢 *Entry Zone:* ₹{entry}
@@ -370,20 +347,18 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 🔢 *Calculated Qty:* {required_qty} shares"""
         send_telegram_alert(alert_msg)
 
-    # ── 4. FLATTEN & SAVE ──
+    # ── 3. FLATTEN & SAVE ──
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
-    with open(history_file, "w") as f:
-        json.dump(flat_history, f, indent=4)
-        
-    print(f"Tracking complete. Free Margin: ₹{available_margin:,.2f} | Active Slots: {MAX_ACTIVE_TRADES - available_slots}/{MAX_ACTIVE_TRADES}")
+    with open(history_file, "w") as f: json.dump(flat_history, f, indent=4)
+    print(f"Tracking complete. AI Veto Engine Active. Free Margin: ₹{available_margin:,.2f}")
 
 def run_pipeline():
-    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Engine with Institutional Controls...")
+    print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing AI Engine...")
     mkt = get_market_data()
-    if not mkt: return
-    sector_trends, sector_df = get_sector_trends()
-    scanner_df = scan_hybrid_setups(sector_trends, mkt)
-    track_targets_and_notify(scanner_df, sector_df, mkt)
+    if mkt:
+        sector_trends, sector_df = get_sector_trends()
+        scanner_df = scan_hybrid_setups(sector_trends, mkt)
+        track_targets_and_notify(scanner_df, sector_df, mkt)
 
 if __name__ == "__main__":
     run_pipeline()
