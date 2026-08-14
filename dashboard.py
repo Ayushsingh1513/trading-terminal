@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+import numpy as np
 import streamlit as st
 
 # Safe import for Plotly
@@ -18,261 +19,346 @@ try:
 except ImportError:
     HAS_ALERTS = False
 
-st.set_page_config(page_title="Momentum Frenzy | Terminal", layout="wide", page_icon="⚡")
+# --- PAGE CONFIG ---
+st.set_page_config(
+    page_title="Momentum Frenzy | Quantitative Terminal", 
+    layout="wide", 
+    page_icon="⚡",
+    initial_sidebar_state="expanded"
+)
 
-# --- SIDEBAR RISK CONTROLS ---
+# --- CUSTOM STYLING ---
+st.markdown("""
+<style>
+    .metric-card {
+        background-color: #0E1117;
+        border: 1px solid #262730;
+        border-radius: 8px;
+        padding: 15px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- HELPER FUNCTIONS ---
+def safe_float(val, default=0.0):
+    if pd.isna(val) or val in ["", None, "None", "nan"]: 
+        return default
+    try: 
+        return float(val)
+    except (ValueError, TypeError): 
+        return default
+
+def is_trade_closed(status_str):
+    status = str(status_str).upper()
+    return any(keyword in status for keyword in ["CLOSED", "HIT", "EXIT", "STOPPED", "TARGET"])
+
+def load_json_history(filepath="performance_history.json"):
+    if not os.path.exists(filepath):
+        return pd.DataFrame()
+    try:
+        with open(filepath, "r") as f:
+            data = json.load(f)
+        if not data:
+            return pd.DataFrame()
+        if isinstance(data, list):
+            return pd.DataFrame(data)
+        elif isinstance(data, dict):
+            try:
+                return pd.DataFrame(data)
+            except ValueError:
+                max_len = max([len(v) for v in data.values() if isinstance(v, list)], default=0)
+                padded = {
+                    k: (v + [None] * (max_len - len(v)) if isinstance(v, list) else [v] * max_len)
+                    for k, v in data.items()
+                }
+                return pd.DataFrame(padded)
+    except Exception as e:
+        st.error(f"Error reading {filepath}: {e}")
+    return pd.DataFrame()
+
+# --- SIDEBAR: RISK ENGINE CONTROLS ---
 with st.sidebar:
     st.title("⚡ Momentum Frenzy")
-    st.header("Risk Engine Parameters")
+    st.caption("Multi-Agent Quantitative Execution Engine")
+    st.markdown("---")
     
-    total_corpus = st.number_input("Starting Corpus (₹)", value=100000.0, step=10000.0)
-    max_trade_capital = st.number_input("Max Allocation / Trade (₹)", value=50000.0, step=5000.0)
-    risk_pct = st.slider("Max Risk / Trade (%)", 0.5, 5.0, 1.0, 0.1) / 100.0
+    st.subheader("Risk Parameters")
+    total_corpus = st.number_input("Starting Corpus (₹)", value=100000.0, step=10000.0, format="%.2f")
+    max_trade_capital = st.number_input("Max Allocation / Trade (₹)", value=50000.0, step=5000.0, format="%.2f")
+    risk_pct = st.slider("Risk Per Trade (%)", min_value=0.25, max_value=5.0, value=1.0, step=0.25) / 100.0
     
     st.markdown("---")
-    st.info("Applies only to 100/100 Score trades in Performance History.")
+    min_score_filter = st.slider("Min Setup Score", min_value=50, max_value=100, value=100, step=5)
     
     st.markdown("---")
+    st.subheader("Telegram Dispatcher")
     if HAS_ALERTS:
-        if st.button("🔔 Test Telegram Alert"):
+        if st.button("🔔 Send Test Alert", use_container_width=True):
             send_trade_alert(
                 symbol="TEST_RELIANCE", 
-                entry=2500, 
-                sl=2450, 
-                target=2600, 
+                entry=2500.0, 
+                sl=2450.0, 
+                target=2600.0, 
                 lot_size=50
             )
-            st.success("Test alert sent! Check your phone.")
+            st.success("Test signal dispatched.")
     else:
-        st.warning("alert.py not found. Create it to enable Telegram alerts.")
+        st.warning("`alert.py` not detected. Alerts disabled.")
 
 # --- TABS LAYOUT ---
-tab1, tab2 = st.tabs(["📊 Live Screener", "📈 Performance History (Risk Ledger)"])
+tab_screener, tab_performance, tab_shadow = st.tabs([
+    "📊 Live Market Scanner", 
+    "📈 Risk Ledger & Performance", 
+    "🛡️ Shadow Watchlist"
+])
 
-with tab1:
-    st.header("Live Market Scanner")
-    st.write("*(Your existing live scanner, sector data, and websocket tables will load here just like they used to.)*")
+# ==========================================
+# TAB 1: LIVE MARKET SCANNER
+# ==========================================
+with tab_screener:
+    st.header("Live Scanner Universe")
     
     if os.path.exists("scanner_data.csv"):
         try:
             live_df = pd.read_csv("scanner_data.csv")
-            st.dataframe(live_df, use_container_width=True)
-        except Exception as e:
-            st.error(f"Could not load live scanner: {e}")
+            
+            # Overview Metrics
+            col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+            col_s1.metric("Scanned Symbols", len(live_df))
+            
+            score_col = next((c for c in live_df.columns if c.lower() == 'score'), None)
+            if score_col:
+                top_setups = live_df[live_df[score_col] >= 80]
+                col_s2.metric("High Conviction (≥80)", len(top_setups))
+            else:
+                col_s2.metric("High Conviction", "N/A")
+                
+            vol_col = next((c for c in live_df.columns if 'volume' in c.lower()), None)
+            col_s3.metric("Volume Spikes", len(live_df[live_df[vol_col] > 1.5]) if vol_col else "N/A")
+            col_s4.metric("Status", "Online", delta="Syncing Daily")
 
-with tab2:
-    st.header("Historical Performance & Quantitative Growth")
-    
-    # 1. Load data
-    history_df = pd.DataFrame()
-    if os.path.exists("performance_history.json"):
-        try:
-            with open("performance_history.json", "r") as f:
-                data = json.load(f)
+            st.markdown("---")
             
-            if data:
-                if isinstance(data, dict):
-                    try:
-                        history_df = pd.DataFrame(data)
-                    except ValueError:
-                        max_len = max([len(v) for v in data.values() if isinstance(v, list)], default=0)
-                        padded_data = {
-                            k: (v + [None] * (max_len - len(v)) if isinstance(v, list) else [v] * max_len)
-                            for k, v in data.items()
-                        }
-                        history_df = pd.DataFrame(padded_data)
-                elif isinstance(data, list):
-                    history_df = pd.DataFrame(data)
+            # Interactive Search
+            search = st.text_input("Filter Tickers / Sectors", "")
+            if search:
+                live_df = live_df[live_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
+                
+            st.dataframe(live_df, use_container_width=True, height=450)
+            
         except Exception as e:
-            st.error(f"Error loading history: {e}")
-            
-    if history_df.empty:
-        st.warning("No historical data found in performance_history.json.")
+            st.error(f"Error loading live scanner: {e}")
     else:
-        # 2. STRICT WHITELIST FILTERING
-        # Rule A: Must be a 100/100 Score trade
-        score_col = next((col for col in history_df.columns if col.lower() == 'score'), None)
-        if score_col:
-            history_df = history_df[history_df[score_col].astype(str).str.contains('100', na=False)]
-            
-        # Rule B: STRICT WHITELIST (Only show trades that are ACTIVE, or explicitly HIT a target/SL)
-        status_col = next((col for col in history_df.columns if col.lower() == 'status'), None)
-        if status_col:
-            valid_mask = history_df[status_col].astype(str).str.contains('ACTIVE|HIT', case=False, regex=True, na=False)
-            history_df = history_df[valid_mask]
-            
-        st.success(f"Loaded valid setups. Ghost/Aborted trades hidden.")
+        st.info("`scanner_data.csv` not found. Awaiting daily scan data.")
 
-        # 3. CORPUS ENGINE LOOP
+# ==========================================
+# TAB 2: PERFORMANCE & RISK LEDGER
+# ==========================================
+with tab_performance:
+    st.header("Historical Trade Performance")
+    
+    raw_history = load_json_history("performance_history.json")
+    
+    if raw_history.empty:
+        st.warning("No historical execution records found in `performance_history.json`.")
+    else:
+        # Normalize column names
+        cols_lower = {c: c.lower() for c in raw_history.columns}
+        
+        # 1. Filter by Score
+        score_key = next((c for c in raw_history.columns if 'score' in c.lower()), None)
+        if score_key:
+            history_df = raw_history[raw_history[score_key].astype(float) >= min_score_filter].copy()
+        else:
+            history_df = raw_history.copy()
+            
+        # 2. Filter Valid Trades
+        status_key = next((c for c in history_df.columns if 'status' in c.lower()), None)
+        if status_key:
+            valid_mask = history_df[status_key].astype(str).str.contains(
+                'ACTIVE|HIT|CLOSED|EXIT|TARGET|SL', case=False, regex=True, na=False
+            )
+            history_df = history_df[valid_mask].copy()
+
+        # 3. Simulate Sizing & Portfolio Dynamics
         current_corpus = total_corpus
         ledger = []
         chart_data = [{"Date": "Start", "Corpus": total_corpus}]
 
-        def safe_num(val, default):
-            if pd.isna(val) or val in ["", None]: return default
-            try: return float(val)
-            except: return default
-
         for idx, row in history_df.iterrows():
-            entry = safe_num(row.get("Entry", row.get("entry")), 0.0)
-            sl = safe_num(row.get("SL", row.get("Stoploss", row.get("sl"))), entry * 0.98)
-            target = safe_num(row.get("Target", row.get("target")), entry * 1.04)
-            actual_exit = safe_num(row.get("Exit Price", row.get("Exit", row.get("exit"))), entry)
-            contract_lot = int(safe_num(row.get("Lot Size", row.get("lot_size")), 1))
-            date_val = row.get("Date", row.get("date", f"Trade #{idx}"))
+            entry = safe_float(row.get("Entry", row.get("entry")), 0.0)
+            sl = safe_float(row.get("SL", row.get("Stoploss", row.get("sl"))), entry * 0.98)
+            target = safe_float(row.get("Target", row.get("target")), entry * 1.04)
+            actual_exit = safe_float(row.get("Exit Price", row.get("Exit", row.get("exit"))), entry)
+            contract_lot = max(1, int(safe_float(row.get("Lot Size", row.get("lot_size")), 1)))
+            date_val = row.get("Date", row.get("date", f"Trade #{idx+1}"))
+            status_val = str(row.get(status_key, "ACTIVE") if status_key else "ACTIVE")
 
-            if entry <= 0: continue
+            if entry <= 0:
+                continue
 
             risk_per_share = abs(entry - sl)
             reward_per_share = abs(target - entry)
-            rr_ratio = reward_per_share / risk_per_share if risk_per_share > 0 else 0.0
-            
-            if pd.isna(current_corpus) or current_corpus <= 0:
-                current_corpus = total_corpus 
+            rr_ratio = (reward_per_share / risk_per_share) if risk_per_share > 0 else 0.0
 
+            # Position Sizing
             max_risk_allowed = current_corpus * risk_pct
+            qty_by_risk = int(max_risk_allowed / risk_per_share) if risk_per_share > 0 else 0
+            qty_by_capital = int(max_trade_capital / entry) if entry > 0 else 0
             
-            qty_allowed_by_risk = int(max_risk_allowed / risk_per_share) if risk_per_share > 0 else 0
-            qty_allowed_by_capital = int(max_trade_capital / entry) if entry > 0 else 0
+            allowed_qty = min(qty_by_risk, qty_by_capital)
+            num_lots = allowed_qty // contract_lot
+            executed_qty = num_lots * contract_lot
             
-            max_qty = min(qty_allowed_by_risk, qty_allowed_by_capital)
-            number_of_lots = max_qty // contract_lot if contract_lot > 0 else 0
-            executed_qty = number_of_lots * contract_lot
+            deployed_capital = executed_qty * entry
             
-            capital_deployed = executed_qty * entry
-            actual_pnl = executed_qty * (actual_exit - entry)
-            actual_pnl = max(actual_pnl, -max_risk_allowed) 
-            
-            # Only update corpus if trade is actually closed (HIT)
-            status_text = str(row.get("Status", ""))
-            if "CLOSED" in status_text:
+            # PnL Calculation
+            closed = is_trade_closed(status_val)
+            if closed:
+                raw_pnl = executed_qty * (actual_exit - entry)
+                # Capped at risk rules
+                actual_pnl = max(raw_pnl, -max_risk_allowed)
                 current_corpus += actual_pnl
-            
-            new_row = row.to_dict()
-            new_row.update({
+            else:
+                actual_pnl = 0.0
+
+            row_record = row.to_dict()
+            row_record.update({
                 "R:R Ratio": f"1:{rr_ratio:.2f}",
-                "Executed Lots": number_of_lots,
-                "Total Qty": executed_qty,
-                "Deployed Capital": capital_deployed,
+                "Executed Lots": num_lots,
+                "Executed Qty": executed_qty,
+                "Deployed Capital": deployed_capital,
                 "Net PnL": actual_pnl,
                 "Updated Corpus": current_corpus,
+                "Is Closed": closed
             })
+            ledger.append(row_record)
             
-            ledger.append(new_row)
-            if "CLOSED" in status_text:
+            if closed:
                 chart_data.append({"Date": str(date_val), "Corpus": current_corpus})
 
-        # 4. MATH & DATAFRAMES
         df_ledger = pd.DataFrame(ledger)
         df_chart = pd.DataFrame(chart_data)
-        
+
+        # 4. KPI Calculations
         if not df_chart.empty:
             df_chart["Peak"] = df_chart["Corpus"].cummax()
             df_chart["Drawdown"] = df_chart["Corpus"] - df_chart["Peak"]
             df_chart["Drawdown_Pct"] = (df_chart["Drawdown"] / df_chart["Peak"]) * 100
-        
-        # --- TRUE KPIs (Calculated ONLY on Closed Trades) ---
+
         total_pnl = current_corpus - total_corpus
         pnl_pct = (total_pnl / total_corpus) * 100
-        
+
         if not df_ledger.empty:
-            # Isolate closed trades for accurate win rate math
-            closed_ledger = df_ledger[df_ledger["Status"].astype(str).str.contains("CLOSED", na=False)]
-            active_ledger = df_ledger[df_ledger["Status"].astype(str).str.contains("ACTIVE", na=False)]
+            closed_trades = df_ledger[df_ledger["Is Closed"] == True]
+            active_trades = df_ledger[df_ledger["Is Closed"] == False]
             
-            total_active = len(active_ledger)
-            
-            if not closed_ledger.empty:
-                winning_trades = closed_ledger[closed_ledger["Net PnL"] > 0]
-                losing_trades = closed_ledger[closed_ledger["Net PnL"] < 0]
+            total_closed = len(closed_trades)
+            total_active = len(active_trades)
+
+            if total_closed > 0:
+                wins = closed_trades[closed_trades["Net PnL"] > 0]
+                losses = closed_trades[closed_trades["Net PnL"] < 0]
                 
-                win_count = len(winning_trades)
-                total_closed = len(closed_ledger)
-                win_rate = win_count / total_closed if total_closed > 0 else 0
+                win_rate = len(wins) / total_closed
                 loss_rate = 1.0 - win_rate
                 
-                avg_win = winning_trades["Net PnL"].mean() if not winning_trades.empty else 0.0
-                avg_loss = abs(losing_trades["Net PnL"].mean()) if not losing_trades.empty else 0.0
+                avg_win = wins["Net PnL"].mean() if not wins.empty else 0.0
+                avg_loss = abs(losses["Net PnL"].mean()) if not losses.empty else 0.0
                 
-                gross_profit = winning_trades["Net PnL"].sum() if not winning_trades.empty else 0.0
-                gross_loss = abs(losing_trades["Net PnL"].sum()) if not losing_trades.empty else 0.0
-                profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0.0
+                gross_profit = wins["Net PnL"].sum() if not wins.empty else 0.0
+                gross_loss = abs(losses["Net PnL"].sum()) if not losses.empty else 0.0
+                profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (gross_profit if gross_profit > 0 else 0.0)
                 
                 expectancy = (win_rate * avg_win) - (loss_rate * avg_loss)
             else:
-                win_rate = expectancy = profit_factor = 0.0
-                total_closed = 0
+                win_rate = loss_rate = avg_win = avg_loss = profit_factor = expectancy = 0.0
                 
             max_dd_pct = df_chart["Drawdown_Pct"].min() if not df_chart.empty else 0.0
             max_dd_val = df_chart["Drawdown"].min() if not df_chart.empty else 0.0
         else:
-            win_rate = expectancy = profit_factor = max_dd_pct = max_dd_val = 0.0
-            total_closed = total_active = 0
+            total_closed = total_active = win_rate = profit_factor = expectancy = max_dd_pct = max_dd_val = 0.0
 
-        # --- RENDER KPI CARDS ---
+        # 5. Render KPIs
         st.subheader("Quantitative System Metrics")
+        kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+        kpi_col1.metric("Current Corpus", f"₹{current_corpus:,.2f}", f"{pnl_pct:+.2f}%")
+        kpi_col2.metric("Total Net PnL", f"₹{total_pnl:,.2f}")
+        kpi_col3.metric("Win Rate", f"{win_rate * 100:.1f}%")
+        kpi_col4.metric("Trades", f"{total_closed} Closed", f"{total_active} Active", delta_color="off")
         
-        row1_col1, row1_col2, row1_col3, row1_col4 = st.columns(4)
-        row1_col1.metric("Current Corpus", f"₹{current_corpus:,.2f}", f"{pnl_pct:+.2f}%")
-        row1_col2.metric("Total Net PnL", f"₹{total_pnl:,.2f}")
-        row1_col3.metric("Win Rate", f"{win_rate * 100:.1f}%")
-        row1_col4.metric("Completed Trades", f"{total_closed}", f"{total_active} Active", delta_color="off")
-        
-        st.write("") 
-        
-        row2_col1, row2_col2, row2_col3, row2_col4 = st.columns(4)
-        exp_color = "normal" if expectancy >= 0 else "inverse"
-        row2_col1.metric("Expectancy / Trade", f"₹{expectancy:,.2f}", delta="Per setup", delta_color=exp_color)
-        row2_col2.metric("Profit Factor", f"{profit_factor:.2f}", delta="Gross Profit / Gross Loss", delta_color="off")
-        row2_col3.metric("Max Drawdown (%)", f"{max_dd_pct:.2f}%", delta="Peak-to-Trough", delta_color="inverse")
-        row2_col4.metric("Max Drawdown (₹)", f"₹{max_dd_val:,.2f}")
+        st.write("")
+        kpi2_col1, kpi2_col2, kpi2_col3, kpi2_col4 = st.columns(4)
+        exp_delta_col = "normal" if expectancy >= 0 else "inverse"
+        kpi2_col1.metric("Expectancy / Trade", f"₹{expectancy:,.2f}", delta="Edge Per Setup", delta_color=exp_delta_col)
+        kpi2_col2.metric("Profit Factor", f"{profit_factor:.2f}", delta="Gross Profit / Loss", delta_color="off")
+        kpi2_col3.metric("Max Drawdown (%)", f"{max_dd_pct:.2f}%", delta="Peak-to-Trough", delta_color="inverse")
+        kpi2_col4.metric("Max Drawdown (₹)", f"₹{max_dd_val:,.2f}")
 
         st.markdown("---")
 
-        # --- CHARTS ---
-        st.subheader("Corpus Growth & Drawdown Analysis")
-        
-        if HAS_PLOTLY and not df_chart.empty and len(df_chart) > 1:
-            col_chart1, col_chart2 = st.columns([2, 1]) 
-            
-            with col_chart1:
-                fig1 = px.line(df_chart, x="Date", y="Corpus", markers=True, title="Account Equity Curve")
+        # 6. Render Charts
+        st.subheader("Equity Curve & Drawdown Profile")
+        if HAS_PLOTLY and len(df_chart) > 1:
+            c_left, c_right = st.columns([2, 1])
+            with c_left:
+                fig1 = px.line(df_chart, x="Date", y="Corpus", markers=True, title="Portfolio Growth Curve")
                 fig1.update_traces(line_color="#00FFAA", marker=dict(size=6))
                 fig1.add_hline(y=total_corpus, line_dash="dash", line_color="#FF4444", annotation_text="Initial Capital")
-                fig1.update_layout(yaxis_title="Corpus Balance (₹)", height=350, margin=dict(l=0, r=0, t=30, b=0))
+                fig1.update_layout(yaxis_title="Corpus (₹)", height=350, margin=dict(l=0, r=0, t=30, b=0))
                 st.plotly_chart(fig1, use_container_width=True)
-                
-            with col_chart2:
+            with c_right:
                 fig2 = px.area(df_chart, x="Date", y="Drawdown_Pct", title="Underwater Drawdown (%)")
-                fig2.update_traces(line_color="#FF4444", fillcolor="rgba(255, 68, 68, 0.3)")
+                fig2.update_traces(line_color="#FF4444", fillcolor="rgba(255, 68, 68, 0.25)")
                 fig2.update_layout(yaxis_title="Drawdown %", height=350, margin=dict(l=0, r=0, t=30, b=0))
                 st.plotly_chart(fig2, use_container_width=True)
-                
-        elif not df_chart.empty and len(df_chart) > 1:
+        elif len(df_chart) > 1:
             st.line_chart(df_chart.set_index("Date")[["Corpus"]], height=300)
         else:
-            st.info("Not enough closed trades to draw a growth curve yet.")
+            st.info("Execute and close at least one trade to plot performance charts.")
 
         st.markdown("---")
-        
-        # --- LEDGER ---
-        st.subheader("Active & Closed Trade Ledger")
+
+        # 7. Render Ledger Table
+        st.subheader("Trade Execution Ledger")
         if not df_ledger.empty:
-            format_dict = {
+            format_rules = {
                 "Deployed Capital": "₹{:,.2f}",
                 "Net PnL": "₹{:,.2f}",
                 "Updated Corpus": "₹{:,.2f}"
             }
-            
-            for col in ["Entry", "SL", "Target", "Exit Price", "Stoploss"]:
+            for col in ["Entry", "entry", "SL", "sl", "Stoploss", "Target", "target", "Exit Price", "Exit", "exit"]:
                 if col in df_ledger.columns:
-                    format_dict[col] = "₹{:,.2f}"
-                    
-            styled_df = df_ledger.style.format(format_dict).map(
-                lambda x: 'color: #00FF00' if x > 0 else ('color: #FF4444' if x < 0 else ''), 
-                subset=['Net PnL']
-            )
-            
-            st.dataframe(styled_df, use_container_width=True, height=400)
+                    format_rules[col] = "₹{:,.2f}"
+
+            def color_pnl(val):
+                if val > 0:
+                    return 'color: #00FF66; font-weight: bold;'
+                elif val < 0:
+                    return 'color: #FF4D4D; font-weight: bold;'
+                return ''
+
+            # Drop temporary internal columns for clean UI
+            display_df = df_ledger.drop(columns=["Is Closed"], errors="ignore")
+            styled_table = display_df.style.format(format_rules).map(color_pnl, subset=['Net PnL'])
+            st.dataframe(styled_table, use_container_width=True, height=400)
+
+# ==========================================
+# TAB 3: SHADOW WATCHLIST
+# ==========================================
+with tab_shadow:
+    st.header("Shadow Watchlist (AI Vetoed / Watch Setups)")
+    st.caption("Trades rejected by the Bear Agent or Judge for low sentiment, high RSI, or high risk.")
+    
+    if not raw_history.empty:
+        status_k = next((c for c in raw_history.columns if 'status' in c.lower()), None)
+        if status_k:
+            shadow_df = raw_history[raw_history[status_k].astype(str).str.contains('WATCH|VETO|SHADOW|REJECT', case=False, na=False)]
+            if not shadow_df.empty:
+                st.dataframe(shadow_df, use_container_width=True)
+            else:
+                st.info("No vetoed setups currently in the shadow ledger.")
         else:
-            st.info("No trades found.")
+            st.info("Status field not found in records.")
+    else:
+        st.info("No shadow data available.")
