@@ -1,31 +1,26 @@
+import os
 import requests
 
-def send_trade_alert(symbol, entry, sl, target, lot_size):
-    # Paste your existing bot credentials here:
-    bot_token = "PASTE_YOUR_EXISTING_TOKEN_HERE"
-    chat_id = "PASTE_YOUR_CHAT_ID_HERE"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "-1003707574219")
+
+def send_trade_alert(symbol, entry, sl, target, lot_size=1):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return False
+        
+    msg = f"""⚡ *MANUAL TEST ALERT*
+━━━━━━━━━━━━━━━━━━━
+🎯 *Symbol:* {symbol}
+🟢 *Entry:* ₹{entry}
+🔴 *SL:* ₹{sl}
+🚀 *Target:* ₹{target}
+📦 *Lots:* {lot_size}
+━━━━━━━━━━━━━━━━━━━"""
     
-    message = (
-        f"🚨 100/100 SCORE DETECTED 🚨\n\n"
-        f"📈 Symbol: {symbol}\n"
-        f"🎯 Entry: ₹{entry}\n"
-        f"🛑 SL: ₹{sl}\n"
-        f"💰 Target: ₹{target}\n"
-        f"📦 Qty/Lots: {lot_size}\n\n"
-        f"⚡ Momentum Frenzy Terminal"
-    )
-    
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message
-    }
-    
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"}
     try:
-        response = requests.post(url, data=payload)
-        if response.status_code == 200:
-            print(f"Telegram alert sent successfully for {symbol}!")
-        else:
-            print(f"Error sending alert: {response.text}")
-    except Exception as e:
-        print(f"Alert system failed: {e}")
+        r = requests.post(url, json=payload, timeout=10)
+        return r.status_code == 200
+    except Exception:
+        return False
