@@ -122,24 +122,29 @@ with tab_screener:
         try:
             live_df = pd.read_csv("scanner_data.csv")
             
-            # Overview Metrics
             col_s1, col_s2, col_s3, col_s4 = st.columns(4)
             col_s1.metric("Scanned Symbols", len(live_df))
             
             score_col = next((c for c in live_df.columns if c.lower() == 'score'), None)
             if score_col:
-                top_setups = live_df[live_df[score_col] >= 80]
+                clean_sc = live_df[score_col].astype(str).str.extract(r'(\d+(?:\.\d+)?)', expand=False)
+                num_sc = pd.to_numeric(clean_sc, errors='coerce').fillna(0.0)
+                top_setups = live_df[num_sc >= 80]
                 col_s2.metric("High Conviction (≥80)", len(top_setups))
             else:
                 col_s2.metric("High Conviction", "N/A")
                 
-            vol_col = next((c for c in live_df.columns if 'volume' in c.lower()), None)
-            col_s3.metric("Volume Spikes", len(live_df[live_df[vol_col] > 1.5]) if vol_col else "N/A")
+            vol_col = next((c for c in live_df.columns if 'volume' in c.lower() or 'volsurge' in c.lower()), None)
+            if vol_col:
+                vol_clean = pd.to_numeric(live_df[vol_col], errors='coerce').fillna(0)
+                col_s3.metric("Volume Spikes", len(live_df[vol_clean > 1.5]))
+            else:
+                col_s3.metric("Volume Spikes", "N/A")
+                
             col_s4.metric("Status", "Online", delta="Syncing Daily")
 
             st.markdown("---")
             
-            # Interactive Search
             search = st.text_input("Filter Tickers / Sectors", "")
             if search:
                 live_df = live_df[live_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
@@ -162,13 +167,16 @@ with tab_performance:
     if raw_history.empty:
         st.warning("No historical execution records found in `performance_history.json`.")
     else:
-        # Normalize column names
-        cols_lower = {c: c.lower() for c in raw_history.columns}
-        
-        # 1. Filter by Score
+        # 1. Filter by Score Safely
         score_key = next((c for c in raw_history.columns if 'score' in c.lower()), None)
         if score_key:
-            history_df = raw_history[raw_history[score_key].astype(float) >= min_score_filter].copy()
+            clean_scores = (
+                raw_history[score_key]
+                .astype(str)
+                .str.extract(r'(\d+(?:\.\d+)?)', expand=False)
+            )
+            numeric_scores = pd.to_numeric(clean_scores, errors='coerce').fillna(0.0)
+            history_df = raw_history[numeric_scores >= float(min_score_filter)].copy()
         else:
             history_df = raw_history.copy()
             
@@ -216,7 +224,6 @@ with tab_performance:
             closed = is_trade_closed(status_val)
             if closed:
                 raw_pnl = executed_qty * (actual_exit - entry)
-                # Capped at risk rules
                 actual_pnl = max(raw_pnl, -max_risk_allowed)
                 current_corpus += actual_pnl
             else:
@@ -338,7 +345,6 @@ with tab_performance:
                     return 'color: #FF4D4D; font-weight: bold;'
                 return ''
 
-            # Drop temporary internal columns for clean UI
             display_df = df_ledger.drop(columns=["Is Closed"], errors="ignore")
             styled_table = display_df.style.format(format_rules).map(color_pnl, subset=['Net PnL'])
             st.dataframe(styled_table, use_container_width=True, height=400)
