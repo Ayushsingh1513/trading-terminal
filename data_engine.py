@@ -4,7 +4,8 @@ import numpy as np
 import json
 import os
 import requests
-import time  # ⏳ IMPORTED FOR ANTI-BAN DELAY
+import io  # Added for reading memory CSVs
+import time  # ⏳ ANTI-BAN DELAY
 from datetime import datetime
 import pytz
 
@@ -16,8 +17,17 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
+# Inject Financial Context into the AI
+financial_lexicon = {
+    'upgrade': 2.0, 'upgrades': 2.0, 'downgrade': -2.0, 'downgrades': -2.0,
+    'bullish': 2.0, 'bearish': -2.0, 'profit': 1.5, 'loss': -1.5,
+    'beat': 1.5, 'missed': -1.5, 'dividend': 1.0, 'slashes debt': 2.0,
+    'default': -3.0, 'bankruptcy': -3.0, 'record high': 2.0, 'surges': 1.5
+}
+sia.lexicon.update(financial_lexicon)
+
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. CONFIGURATION
+# 1. CONFIGURATION & DYNAMIC UNIVERSE
 # ══════════════════════════════════════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = "8651727429:AAG3zE6_lLHgVhJIVEzeFs2-eMY-GisSU7E"
 TELEGRAM_CHAT_ID = "-1003707574219"
@@ -33,47 +43,35 @@ SECTOR_MAP = {
     'PSU Bank': 'PSUBNKBEES.NS', 'Nifty Infra': 'INFRABEES.NS'
 }
 
-STOCK_UNIVERSE = [
-    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS", 
-    "BHARTIARTL.NS", "ITC.NS", "LARSEN.NS", "BAJFINANCE.NS", "AXISBANK.NS", 
-    "KOTAKBANK.NS", "TATAMOTORS.NS", "SUNPHARMA.NS", "MARUTI.NS", "ULTRACEMCO.NS", 
-    "ASIANPAINT.NS", "NTPC.NS", "TATASTEEL.NS", "POWERGRID.NS", "M&M.NS", 
-    "HCLTECH.NS", "TITAN.NS", "BAJAJFINSV.NS", "ADANIENT.NS", "WIPRO.NS", 
-    "JSWSTEEL.NS", "ONGC.NS", "GRASIM.NS", "HINDUNILVR.NS", "NESTLEIND.NS", 
-    "TECHM.NS", "INDUSINDBK.NS", "HINDALCO.NS", "DRREDDY.NS", "CIPLA.NS", 
-    "TATACONSUM.NS", "DIVISLAB.NS", "APOLLOHOSP.NS", "BRITANNIA.NS", "EICHERMOT.NS", 
-    "BAJAJ-AUTO.NS", "HEROMOTOCO.NS", "COALINDIA.NS", "BPCL.NS", "SHRIRAMFIN.NS", 
-    "LTIM.NS", "ADANIPORTS.NS", "SBICARD.NS", "PNB.NS", "BANKBARODA.NS", 
-    "CHOLAFIN.NS", "MUTHOOTFIN.NS", "CANBK.NS", "UNIONBANK.NS", "IDFCFIRSTB.NS", 
-    "FEDERALBNK.NS", "BANDHANBNK.NS", "AUBANK.NS", "MANAPPURAM.NS", "M&MFIN.NS", 
-    "RECLTD.NS", "PFC.NS", "IREDA.NS", "IRFC.NS", "HDFCAMC.NS", "NAM-INDIA.NS", 
-    "CAMS.NS", "MCX.NS", "BSE.NS", "CDSL.NS", "ABCAPITAL.NS", "ICICIPRULI.NS", 
-    "HDFCLIFE.NS", "SBILIFE.NS", "ICICIGI.NS", "PERSISTENT.NS", "COFORGE.NS", 
-    "MPHASIS.NS", "OFSS.NS", "KPITTECH.NS", "CYIENT.NS", "TATAELXSI.NS", 
-    "LTTS.NS", "BISOFT.NS", "SONACOMS.NS", "ZOMATO.NS", "PAYTM.NS", "NYKAA.NS", 
-    "PBFINTECH.NS", "TVSMOTOR.NS", "BHARATFORG.NS", "BALKRISIND.NS", "ASHOKLEY.NS", 
-    "BOSCHLTD.NS", "MRF.NS", "CUMMINSIND.NS", "SIEMENS.NS", "ABB.NS", "POLYCAB.NS", 
-    "KEI.NS", "HAVELLS.NS", "DIXON.NS", "KAYNES.NS", "CGPOWER.NS", "SUZLON.NS", 
-    "BHEL.NS", "HAL.NS", "BEL.NS", "BDL.NS", "MAZDOCK.NS", "COCHINSHIP.NS", 
-    "GRSE.NS", "DATAPATTNS.NS", "MTARTECH.NS", "AETHER.NS", "TATAPOWER.NS", 
-    "ADANIGREEN.NS", "ADANIPOWER.NS", "NHPC.NS", "SJVN.NS", "TORNTPOWER.NS", 
-    "IEX.NS", "GAIL.NS", "IGL.NS", "MGL.NS", "PETRONET.NS", "OIL.NS", 
-    "HINDPETRO.NS", "IOC.NS", "GMRINFRA.NS", "IRCTC.NS", "CONCOR.NS", "RVNL.NS", 
-    "IRCON.NS", "TITAGARH.NS", "VEDL.NS", "JINDALSTEL.NS", "SAIL.NS", "NMDC.NS", 
-    "NATIONALUM.NS", "HINDZINC.NS", "PIIND.NS", "SRF.NS", "NAVINFLUOR.NS", 
-    "DEEPAKNTR.NS", "TATACHEM.NS", "COROMANDEL.NS", "UPL.NS", "AARTIIND.NS", 
-    "LINDEINDIA.NS", "LUPIN.NS", "TORNTPHARM.NS", "AUROPHARMA.NS", "ZYDUSLIFE.NS", 
-    "BIOCON.NS", "SYNGENE.NS", "GLENMARK.NS", "IPCALAB.NS", "ALKEM.NS", 
-    "LAURUSLABS.NS", "MAXHEALTH.NS", "MEDANTA.NS", "FORTIS.NS", "LALPATHLAB.NS", 
-    "METROPOLIS.NS", "TRENT.NS", "DABUR.NS", "GODREJCP.NS", "MARICO.NS", 
-    "COLPAL.NS", "PGHH.NS", "UBL.NS", "MCDOWELL-N.NS", "RADICO.NS", "VBL.NS", 
-    "DMART.NS", "JUBLFOOD.NS", "DEVYANI.NS", "INDIGOPNTS.NS", "KANSAINER.NS", 
-    "PAGEIND.NS", "BATAINDIA.NS", "RELAXO.NS", "VOLTAS.NS", "BLUESTARCO.NS", 
-    "KALYANKJIL.NS", "INDIGO.NS", "IHCL.NS", "CHALET.NS", "DLF.NS", 
-    "MACROTECH.NS", "GODREJPROP.NS", "OBEROIRLTY.NS", "PRESTIGE.NS", 
-    "PHOENIXLTD.NS", "BRIGADE.NS", "SHREECEM.NS", "AMBUJACEM.NS", "ACC.NS", 
-    "DALBHARAT.NS", "RAMCOCEM.NS", "INDIACEM.NS", "JKCEMENT.NS"
-]
+def get_dynamic_universe():
+    print("🌐 Fetching live Nifty 500 universe from NSE...")
+    try:
+        # Spoofing a browser to bypass NSE bot blocks
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        url = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+        
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        
+        # Read the CSV data directly from the response memory
+        df = pd.read_csv(io.StringIO(response.text))
+        
+        # Format the symbols for Yahoo Finance
+        tickers = [f"{symbol}.NS" for symbol in df['Symbol'].tolist()]
+        print(f"✅ Successfully loaded {len(tickers)} stocks.")
+        return tickers
+        
+    except Exception as e:
+        print(f"⚠️ Failed to fetch live universe: {e}. Using Nifty 50 Fallback.")
+        return [
+            "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", 
+            "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "LARSEN.NS", "BAJFINANCE.NS"
+        ]
+
+# Automatically assign the universe when the script runs
+STOCK_UNIVERSE = get_dynamic_universe()
 
 def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -190,6 +188,7 @@ def get_market_data():
     c_sensex = float(sensex['Close'].iloc[-1])
     sensex_chg = float((c_sensex - sensex['Close'].iloc[-2]) / sensex['Close'].iloc[-2] * 100)
     nifty_200 = float(nifty['Close'].ewm(span=200).mean().iloc[-1])
+    
     pcr_value = 1.05 
     pcr_status = "⚠️ OVERBOUGHT" if pcr_value > 1.5 else ("🟢 OVERSOLD" if pcr_value < 0.7 else "⚪ NEUTRAL")
 
@@ -204,7 +203,7 @@ def get_sector_trends():
     sector_data = {}
     sector_rows = []
     for sec_name, etf_symbol in SECTOR_MAP.items():
-        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second per sector
+        time.sleep(1) # ⏳ ANTI-BAN DELAY
         try:
             sdf = yf.Ticker(etf_symbol).history(period="6mo")
             if sdf.empty or len(sdf) < 20: continue
@@ -228,7 +227,7 @@ def get_sector_trends():
 def scan_hybrid_setups(sector_trends, mkt):
     scanner_results = []
     for ticker in STOCK_UNIVERSE:
-        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second per stock scan
+        time.sleep(1) # ⏳ ANTI-BAN DELAY
         try:
             df = yf.Ticker(ticker).history(period="1y")
             if df.empty or len(df) < 50: continue
@@ -256,10 +255,28 @@ def scan_hybrid_setups(sector_trends, mkt):
             is_oversold_rebound = (rsi < 42) and (price >= float(latest['EMA_50']) * 0.98)
             range_pct = ((df['High'].tail(5).max() - df['Low'].tail(5).min()) / df['Low'].tail(5).min()) * 100
             is_compression = (range_pct <= 3.5) and (float(latest['Volume']) < float(latest['Vol_20']) * 0.95)
+            
+            # --- CONQUEROR LOGIC ---
+            vol_surge = float(latest['Volume'] / latest['Vol_20']) if float(latest['Vol_20']) > 0 else 0
+            is_conqueror = (
+                is_compression 
+                and vol_surge > 1.8 
+                and sec_trend       
+                and rsi > 60        
+            )
 
-            setup_type = "Oversold Rebound ↩" if is_oversold_rebound else ("Tight Flag 🗜️" if is_compression else "Consolidating")
+            if is_conqueror:
+                setup_type = "Conqueror 👑"
+            elif is_oversold_rebound:
+                setup_type = "Oversold Rebound ↩"
+            elif is_compression:
+                setup_type = "Tight Flag 🗜️"
+            else:
+                setup_type = "Consolidating"
+                
             score = 30
-            if is_oversold_rebound or is_compression: score += 40
+            if is_conqueror: score += 50
+            elif is_oversold_rebound or is_compression: score += 40
             if sec_trend: score += 20 
             if price > float(latest['EMA_20']): score += 10
             if not is_weekly_uptrend: score = min(score, 49) 
@@ -273,7 +290,7 @@ def scan_hybrid_setups(sector_trends, mkt):
             scanner_results.append({
                 "Stock": ticker, "Signal": signal, "Setup": setup_type, "WeeklyTrend": "UP" if is_weekly_uptrend else "DOWN",
                 "MTF": "✅ MTF Eligible", "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
-                "VolSurge": round(float(latest['Volume'] / latest['Vol_20']), 2), "Entry": round(price, 2), 
+                "VolSurge": round(vol_surge, 2), "Entry": round(price, 2), 
                 "SL": sl, "Target1": t1, "Target2": t2, "RR": round((t2 - price) / (price - sl), 1) if (price - sl) > 0 else 0, 
                 "Sector": sec_name
             })
@@ -300,10 +317,10 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             elif isinstance(raw_data, dict): history = raw_data
         except: pass
 
-    # ── 1. ACTIVE MONITOR ──
+    # ── 1. ACTIVE MONITOR (GHOSTING FIX APPLIED) ──
     still_active = []
     for trade in history.get('active_trades', []):
-        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second per active trade check
+        time.sleep(1) # ⏳ ANTI-BAN DELAY
         try:
             stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
@@ -313,23 +330,35 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             is_watchlist = "WATCHLIST" in str(trade.get('Status', ''))
 
             if not curr_df.empty:
-                c_price = float(curr_df['Close'].iloc[-1])
-                if c_price <= sl:
-                    trade['Exit Price'] = c_price 
+                c_close = float(curr_df['Close'].iloc[-1])
+                c_low = float(curr_df['Low'].iloc[-1])
+                c_high = float(curr_df['High'].iloc[-1])
+                
+                # Check Stoploss against the LOW of the day
+                if c_low <= sl:
+                    # Factor in gap-down slippage
+                    c_open = float(curr_df['Open'].iloc[-1])
+                    exit_price = c_open if c_open < sl else sl
+                    
+                    trade['Exit Price'] = exit_price 
                     trade['Status'] = "WATCHLIST - SL HIT 🔴" if is_watchlist else "CLOSED - SL HIT 🔴"
-                    if not is_watchlist: send_telegram_alert(f"🔴 *STOP LOSS HIT*\n🎯 {stock} Exit: ₹{c_price:.2f}")
+                    if not is_watchlist: send_telegram_alert(f"🔴 *STOP LOSS HIT*\n🎯 {stock} Exit: ₹{exit_price:.2f}")
                     history['closed_trades'].append(trade)
                     continue
-                elif c_price >= target2:
-                    trade['Exit Price'] = c_price 
+                
+                # Check Target against the HIGH of the day
+                elif c_high >= target2:
+                    trade['Exit Price'] = target2 
                     trade['Status'] = "WATCHLIST - TARGET 2 HIT 🚀" if is_watchlist else "CLOSED - TARGET 2 HIT 🚀"
-                    if not is_watchlist: send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n🎯 {stock} Exit: ₹{c_price:.2f}")
+                    if not is_watchlist: send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n🎯 {stock} Exit: ₹{target2:.2f}")
                     history['closed_trades'].append(trade)
                     continue
-                elif c_price >= target1 and not trade.get('T1_Hit', False):
+                
+                elif c_high >= target1 and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
                     trade['SL'] = entry
-                    if not is_watchlist: send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n🎯 {stock} Price: ₹{c_price:.2f}\n🛡️ SL moved to Entry.")
+                    if not is_watchlist: send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n🎯 {stock} Price: ₹{c_high:.2f}\n🛡️ SL moved to Entry.")
+            
             still_active.append(trade)
         except: still_active.append(trade)
 
@@ -350,7 +379,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
         required_margin = required_qty * entry
         
         # 1. Newsdesk Agent
-        time.sleep(1) # ⏳ ANTI-BAN DELAY: 1 second before fetching news
+        time.sleep(1) # ⏳ ANTI-BAN DELAY
         news_score, news_label = get_ai_news_sentiment(stock)
 
         # 2. Bull vs Bear Debate & Judge Verdict
