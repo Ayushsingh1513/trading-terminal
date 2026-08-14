@@ -72,13 +72,23 @@ STOCK_UNIVERSE = get_dynamic_universe()
 
 def send_telegram_alert(message):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("⚠️ Missing Telegram credentials. Alert not sent.")
+        print("⚠️ Missing Telegram credentials. Check GitHub Secrets!")
         return
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    try: requests.post(url, json=payload, timeout=10)
-    except: pass
+    
+    # Removed parse_mode="Markdown" to prevent 400 Bad Request drops due to unescaped characters in tickers
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message} 
+    
+    try: 
+        r = requests.post(url, json=payload, timeout=10)
+        if r.status_code != 200:
+            print(f"⚠️ Telegram API Error ({r.status_code}): {r.text}")
+        else:
+            print("✅ Telegram notification dispatched successfully.")
+    except Exception as e: 
+        print(f"⚠️ Telegram request failed: {e}")
+
 
 def calculate_position_size(entry, sl):
     if entry <= 0 or sl >= entry: return 0
@@ -157,11 +167,11 @@ def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
     total_points = max(1, bull_score + bear_score)
     
     if bull_score >= bear_score:
-        winner = "Bull 🐂"
+        winner = "Bull"
         verdict_status = "BUY SIGNAL"
         confidence = min(10, max(5, round((bull_score / total_points) * 10)))
     else:
-        winner = "Bear 🐻"
+        winner = "Bear"
         verdict_status = "VETO / WATCHLIST"
         confidence = min(10, max(5, round((bear_score / total_points) * 10)))
 
@@ -169,8 +179,8 @@ def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
         "verdict": verdict_status,
         "winner": winner,
         "confidence": confidence,
-        "bull_case": " • ".join(bull_reasons),
-        "bear_case": " • ".join(bear_reasons)
+        "bull_case": " - ".join(bull_reasons),
+        "bear_case": " - ".join(bear_reasons)
     }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -192,13 +202,13 @@ def get_market_data():
     current_vix = float(vix_data['Close'].iloc[-1]) if not vix_data.empty else 15.0
     
     if current_vix > 18.0:
-        pcr_status = f"⚠️ HIGH FEAR (VIX: {current_vix:.1f})"
+        pcr_status = f"HIGH FEAR (VIX: {current_vix:.1f})"
         synthetic_pcr = 1.6 
     elif current_vix < 11.0:
-        pcr_status = f"🟢 COMPLACENT (VIX: {current_vix:.1f})"
+        pcr_status = f"COMPLACENT (VIX: {current_vix:.1f})"
         synthetic_pcr = 0.8
     else:
-        pcr_status = f"⚪ NEUTRAL (VIX: {current_vix:.1f})"
+        pcr_status = f"NEUTRAL (VIX: {current_vix:.1f})"
         synthetic_pcr = 1.0
 
     return {
@@ -224,7 +234,7 @@ def get_sector_trends():
             up_v = sdf['Volume'].where(delta > 0, 0).rolling(14).sum().iloc[-1]
             dn_v = sdf['Volume'].where(delta < 0, 0).rolling(14).sum().iloc[-1]
             ud_ratio = (up_v / dn_v) if dn_v > 0 else 1.0
-            flow_label = "Big Money Buying 🟢" if ud_ratio >= 1.3 else ("Big Money Selling 🔴" if ud_ratio <= 0.7 else "Neutral / Sideways ⚪")
+            flow_label = "Big Money Buying" if ud_ratio >= 1.3 else ("Big Money Selling" if ud_ratio <= 0.7 else "Neutral / Sideways")
             is_uptrend = m1_ret > 0 and c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
             sector_data[sec_name] = {"uptrend": is_uptrend, "today_chg": today_chg, "m1_ret": m1_ret, "flow": flow_label}
             sector_rows.append({"Sector": sec_name, "Today%": today_chg, "1M%": round(m1_ret, 2), "Smart Money Flow": flow_label, "Score": 80 if is_uptrend else 40})
@@ -274,11 +284,11 @@ def scan_hybrid_setups(sector_trends, mkt):
             )
 
             if is_conqueror:
-                setup_type = "Conqueror 👑"
+                setup_type = "Conqueror"
             elif is_oversold_rebound:
-                setup_type = "Oversold Rebound ↩"
+                setup_type = "Oversold Rebound"
             elif is_compression:
-                setup_type = "Tight Flag 🗜️"
+                setup_type = "Tight Flag"
             else:
                 setup_type = "Consolidating"
                 
@@ -297,7 +307,7 @@ def scan_hybrid_setups(sector_trends, mkt):
 
             scanner_results.append({
                 "Stock": ticker, "Signal": signal, "Setup": setup_type, "WeeklyTrend": "UP" if is_weekly_uptrend else "DOWN",
-                "MTF": "✅ MTF Eligible", "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
+                "MTF": "MTF Eligible", "Price": round(price, 2), "Score": score, "RSI": round(rsi, 1),
                 "VolSurge": round(vol_surge, 2), "Entry": round(price, 2), 
                 "SL": sl, "Target1": t1, "Target2": t2, "RR": round((t2 - price) / (price - sl), 1) if (price - sl) > 0 else 0, 
                 "Sector": sec_name
@@ -346,22 +356,22 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                     exit_price = c_open if c_open < sl else sl
                     
                     trade['Exit Price'] = exit_price 
-                    trade['Status'] = "WATCHLIST - SL HIT 🔴" if is_watchlist else "CLOSED - SL HIT 🔴"
-                    if not is_watchlist: send_telegram_alert(f"🔴 *STOP LOSS HIT*\n🎯 {stock} Exit: ₹{exit_price:.2f}")
+                    trade['Status'] = "WATCHLIST - SL HIT" if is_watchlist else "CLOSED - SL HIT"
+                    if not is_watchlist: send_telegram_alert(f"STOP LOSS HIT\n{stock} Exit: Rs {exit_price:.2f}")
                     history['closed_trades'].append(trade)
                     continue
                 
                 elif c_high >= target2:
                     trade['Exit Price'] = target2 
-                    trade['Status'] = "WATCHLIST - TARGET 2 HIT 🚀" if is_watchlist else "CLOSED - TARGET 2 HIT 🚀"
-                    if not is_watchlist: send_telegram_alert(f"🚀 *TARGET 2 HIT! (RUNNER)*\n🎯 {stock} Exit: ₹{target2:.2f}")
+                    trade['Status'] = "WATCHLIST - TARGET 2 HIT" if is_watchlist else "CLOSED - TARGET 2 HIT"
+                    if not is_watchlist: send_telegram_alert(f"TARGET 2 HIT! (RUNNER)\n{stock} Exit: Rs {target2:.2f}")
                     history['closed_trades'].append(trade)
                     continue
                 
                 elif c_high >= target1 and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
                     trade['SL'] = entry
-                    if not is_watchlist: send_telegram_alert(f"✅ *TARGET 1 HIT! (LOCK 50%)*\n🎯 {stock} Price: ₹{c_high:.2f}\n🛡️ SL moved to Entry.")
+                    if not is_watchlist: send_telegram_alert(f"TARGET 1 HIT! (LOCK 50%)\n{stock} Price: Rs {c_high:.2f}\nSL moved to Entry.")
             
             still_active.append(trade)
         except: still_active.append(trade)
@@ -403,23 +413,23 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
         })
 
-        alert_msg = f"""🤖 *STOCK RESEARCH BOT — {stock}*
-━━━━━━━━━━━━━━━━━━━
-🎯 *Verdict:* {debate_result['verdict']} | Confidence: {debate_result['confidence']}/10
-🏆 *Debate Winner:* {debate_result['winner']}
+        alert_msg = f"""STOCK RESEARCH BOT — {stock}
+-------------------
+Verdict: {debate_result['verdict']} | Confidence: {debate_result['confidence']}/10
+Debate Winner: {debate_result['winner']}
 
-📈 *Bull Case:* {debate_result['bull_case']}
-📉 *Bear Caveat:* {debate_result['bear_case']}
+Bull Case: {debate_result['bull_case']}
+Bear Caveat: {debate_result['bear_case']}
 
-🟢 *Entry Zone:* ₹{entry}
-🔴 *Stop Loss:* ₹{sl}
-🚀 *Target:* ₹{buy['Target2']} (1:{buy['RR']} R:R)
-━━━━━━━━━━━━━━━━━━━
-📦 *Paper Capital:* ₹{required_margin:,.2f} ({required_qty} shares)"""
+Entry Zone: Rs {entry}
+Stop Loss: Rs {sl}
+Target: Rs {buy['Target2']} (1:{buy['RR']} R:R)
+-------------------
+Paper Capital: Rs {required_margin:,.2f} ({required_qty} shares)"""
         send_telegram_alert(alert_msg)
 
     if ai_vetoed_stocks:
-        send_telegram_alert(f"🛑 *AI JUDGE VETO: TRADES WATCHLISTED*\nDebate lost to Bear case on: {', '.join(ai_vetoed_stocks)}.")
+        send_telegram_alert(f"AI JUDGE VETO: TRADES WATCHLISTED\nDebate lost to Bear case on: {', '.join(ai_vetoed_stocks)}.")
 
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     with open(history_file, "w") as f: json.dump(flat_history, f, indent=4)
@@ -432,6 +442,10 @@ def run_pipeline():
         sector_trends, sector_df = get_sector_trends()
         scanner_df = scan_hybrid_setups(sector_trends, mkt)
         track_targets_and_notify(scanner_df, sector_df, mkt)
+        
+        # Ping Telegram with a summary to confirm execution
+        buy_count = len(scanner_df[scanner_df['Signal'] == 'BUY'])
+        send_telegram_alert(f"Momentum Scan Completed!\nScanned: {len(scanner_df)} stocks\nBuy Setups Found: {buy_count}\nMarket Mood: {mkt['mood']}")
 
 if __name__ == "__main__":
     run_pipeline()
