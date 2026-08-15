@@ -102,7 +102,7 @@ def load_json_history(filepath="performance_history.json"):
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/combo-chart.png", width=60)
     st.title("Momentum Engine")
-    st.caption("v2.0 | Multi-Agent Execution")
+    st.caption("v3.0 | Multi-Agent Execution")
     st.markdown("---")
     
     st.subheader("⚙️ Risk Parameters")
@@ -147,8 +147,10 @@ with tab_screener:
                 
             setup_col = next((c for c in live_df.columns if 'setup' in c.lower() or 'signal' in c.lower()), None)
             if setup_col:
-                conqueror_count = len(live_df[live_df[setup_col].astype(str).str.contains('Conqueror', case=False, na=False)])
-                col_s4.metric("👑 Conqueror Setups", conqueror_count)
+                # Count any of the 3 new elite setups
+                elite_mask = live_df[setup_col].astype(str).str.contains('Golden|VCP|EMA', case=False, na=False)
+                elite_count = len(live_df[elite_mask])
+                col_s4.metric("🏆 Elite Setups", elite_count)
 
             st.markdown("---")
             
@@ -157,14 +159,18 @@ with tab_screener:
             if search:
                 live_df = live_df[live_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
                 
-            # --- PANDAS STYLING FOR READABILITY ---
+            # --- PANDAS STYLING FOR NEW SETUPS ---
             def style_dataframe(df):
                 def highlight_rows(row):
                     setup = str(row.get('Setup', '')).lower()
                     signal = str(row.get('Signal', '')).upper()
                     
-                    if 'conqueror' in setup:
+                    if 'golden' in setup:
                         return ['background-color: rgba(255, 215, 0, 0.15); color: #FFD700; font-weight: bold; border-left: 4px solid #FFD700'] * len(row)
+                    elif 'vcp' in setup:
+                        return ['background-color: rgba(184, 38, 255, 0.15); color: #E066FF; font-weight: bold; border-left: 4px solid #E066FF'] * len(row)
+                    elif 'ema' in setup:
+                        return ['background-color: rgba(0, 191, 255, 0.15); color: #00BFFF; font-weight: bold; border-left: 4px solid #00BFFF'] * len(row)
                     elif 'BUY' in signal:
                         return ['background-color: rgba(0, 255, 170, 0.05); color: #00FFAA; font-weight: bold; border-left: 4px solid #00FFAA'] * len(row)
                     elif 'WATCH' in signal:
@@ -181,7 +187,6 @@ with tab_screener:
                     "RR": "1:{:.1f}"
                 })
             
-            # Native Streamlit Column Config for Progress Bars
             st.dataframe(
                 style_dataframe(live_df),
                 use_container_width=True, 
@@ -299,8 +304,6 @@ with tab_performance:
                 wins = closed_trades[closed_trades["Net PnL"] > 0]
                 losses = closed_trades[closed_trades["Net PnL"] < 0]
                 win_rate = len(wins) / total_closed
-                avg_win = wins["Net PnL"].mean() if not wins.empty else 0.0
-                avg_loss = abs(losses["Net PnL"].mean()) if not losses.empty else 0.0
             else:
                 win_rate = 0.0
         else:
@@ -324,7 +327,6 @@ with tab_performance:
 
             display_df = df_ledger.drop(columns=["Is Closed", "Symbol", "Date", "T1_Hit"], errors="ignore")
             
-            # Format Ledger natively
             st.dataframe(
                 display_df.style.map(color_pnl_text, subset=['Net PnL']).format({
                     "Entry": "₹{:.2f}", "Target1": "₹{:.2f}", "Target2": "₹{:.2f}", "Target": "₹{:.2f}",
