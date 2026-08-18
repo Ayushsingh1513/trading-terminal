@@ -29,7 +29,6 @@ sia.lexicon.update(financial_lexicon)
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. CONFIGURATION & DYNAMIC UNIVERSE
 # ══════════════════════════════════════════════════════════════════════════════
-# Securely fetch credentials from environment variables (GitHub Secrets)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 IST = pytz.timezone('Asia/Kolkata')
@@ -47,12 +46,10 @@ SECTOR_MAP = {
 def get_dynamic_universe():
     print("🌐 Fetching live Nifty 500 universe from NSE...")
     try:
-        # Spoofing a browser to bypass NSE bot blocks
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         url = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
-        
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         
@@ -76,26 +73,27 @@ def send_telegram_alert(message):
         return
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    
-    # Removed parse_mode="Markdown" to prevent 400 Bad Request drops due to unescaped characters in tickers
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message} 
-    
     try: 
         r = requests.post(url, json=payload, timeout=10)
         if r.status_code != 200:
             print(f"⚠️ Telegram API Error ({r.status_code}): {r.text}")
-        else:
-            print("✅ Telegram notification dispatched successfully.")
     except Exception as e: 
         print(f"⚠️ Telegram request failed: {e}")
 
-
 def calculate_position_size(entry, sl):
-    if entry <= 0 or sl >= entry: return 0
+    # SAFETY CHECK: If entry/sl is NaN (corrupted data), return 0 shares
+    if pd.isna(entry) or pd.isna(sl) or entry <= 0 or sl >= entry: 
+        return 0
+        
     risk_per_share = entry - sl
+    if risk_per_share <= 0: 
+        return 0
+        
     max_risk_allowed = TOTAL_CORPUS * MAX_RISK_PCT
     qty_risk = int(max_risk_allowed / risk_per_share)
     qty_cap = int(MAX_TRADE_CAPITAL / entry)
+    
     return min(qty_risk, qty_cap)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -104,12 +102,9 @@ def calculate_position_size(entry, sl):
 def get_ai_news_sentiment(ticker):
     try:
         news_data = yf.Ticker(ticker).news
-        if not news_data: 
-            return 0.0, "⚪ NO NEWS FOUND"
+        if not news_data: return 0.0, "⚪ NO NEWS FOUND"
             
-        compound_score = 0
-        article_count = 0
-        
+        compound_score, article_count = 0, 0
         for article in news_data[:4]:
             title = article.get('title', '')
             if title:
@@ -130,10 +125,8 @@ def get_ai_news_sentiment(ticker):
 # 3. BULL & BEAR DEBATE ENGINE + JUDGE AGENT
 # ══════════════════════════════════════════════════════════════════════════════
 def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
-    bull_reasons = []
-    bear_reasons = []
-    bull_score = 0
-    bear_score = 0
+    bull_reasons, bear_reasons = [], []
+    bull_score, bear_score = 0, 0
 
     if buy_setup['Score'] >= 80:
         bull_score += 4
@@ -153,105 +146,63 @@ def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
         bear_reasons.append(f"Negative news headlines ({news_label})")
     if mkt['pcr'] > 1.3:
         bear_score += 2
-        bear_reasons.append(f"Market structure indicates caution/fear ({mkt['pcr_status']})")
-    if buy_setup['RSI'] > 65:
+        bear_reasons.append(f"Market structure indicates fear/caution ({mkt['pcr_status']})")
+    if buy_setup['RSI'] > 75:
         bear_score += 2
-        bear_reasons.append(f"Near-term RSI elevated ({buy_setup['RSI']})")
+        bear_reasons.append(f"Near-term RSI highly overbought ({buy_setup['RSI']})")
     if buy_setup['RR'] < 1.5:
         bear_score += 2
         bear_reasons.append(f"Tight Risk-to-Reward ratio (1:{buy_setup['RR']})")
 
-    if not bull_reasons: bull_reasons.append("Base technical breakout pattern")
+    if not bull_reasons: bull_reasons.append("Base technical setup")
     if not bear_reasons: bear_reasons.append("Standard market volatility risk")
 
     total_points = max(1, bull_score + bear_score)
-    
     if bull_score >= bear_score:
-        winner = "Bull"
-        verdict_status = "BUY SIGNAL"
-        confidence = min(10, max(5, round((bull_score / total_points) * 10)))
+        return {"verdict": "BUY SIGNAL", "winner": "Bull", "confidence": min(10, max(5, round((bull_score / total_points) * 10))), "bull_case": " - ".join(bull_reasons), "bear_case": " - ".join(bear_reasons)}
     else:
-        winner = "Bear"
-        verdict_status = "VETO / WATCHLIST"
-        confidence = min(10, max(5, round((bear_score / total_points) * 10)))
-
-    return {
-        "verdict": verdict_status,
-        "winner": winner,
-        "confidence": confidence,
-        "bull_case": " - ".join(bull_reasons),
-        "bear_case": " - ".join(bear_reasons)
-    }
+        return {"verdict": "VETO / WATCHLIST", "winner": "Bear", "confidence": min(10, max(5, round((bear_score / total_points) * 10))), "bull_case": " - ".join(bull_reasons), "bear_case": " - ".join(bear_reasons)}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 4. MARKET DATA & SECTOR INTELLIGENCE
 # ══════════════════════════════════════════════════════════════════════════════
 def get_market_data():
     nifty = yf.Ticker('^NSEI').history(period='1y')
-    sensex = yf.Ticker('^BSESN').history(period='5d')
     vix_data = yf.Ticker('^INDIAVIX').history(period='5d')
-    
-    if nifty.empty or sensex.empty: return None
+    if nifty.empty: return None
 
     c_nifty = float(nifty['Close'].iloc[-1])
-    nifty_chg = float((c_nifty - nifty['Close'].iloc[-2]) / nifty['Close'].iloc[-2] * 100)
-    c_sensex = float(sensex['Close'].iloc[-1])
-    sensex_chg = float((c_sensex - sensex['Close'].iloc[-2]) / sensex['Close'].iloc[-2] * 100)
     nifty_200 = float(nifty['Close'].ewm(span=200).mean().iloc[-1])
-    
     current_vix = float(vix_data['Close'].iloc[-1]) if not vix_data.empty else 15.0
     
-    if current_vix > 18.0:
-        pcr_status = f"HIGH FEAR (VIX: {current_vix:.1f})"
-        synthetic_pcr = 1.6 
-    elif current_vix < 11.0:
-        pcr_status = f"COMPLACENT (VIX: {current_vix:.1f})"
-        synthetic_pcr = 0.8
-    else:
-        pcr_status = f"NEUTRAL (VIX: {current_vix:.1f})"
-        synthetic_pcr = 1.0
+    if current_vix > 18.0: pcr_status, synthetic_pcr = f"HIGH FEAR (VIX: {current_vix:.1f})", 1.6 
+    elif current_vix < 11.0: pcr_status, synthetic_pcr = f"COMPLACENT (VIX: {current_vix:.1f})", 0.8
+    else: pcr_status, synthetic_pcr = f"NEUTRAL (VIX: {current_vix:.1f})", 1.0
 
-    return {
-        "nifty": c_nifty, "nifty_chg": nifty_chg, "sensex": c_sensex, "sensex_chg": sensex_chg,
-        "pcr": synthetic_pcr, "pcr_status": pcr_status, "ma200": nifty_200, "vix": current_vix,
-        "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH",
-        "timestamp": datetime.now(IST).strftime("%Y-%m-%d %I:%M %p IST")
-    }
+    return {"nifty": c_nifty, "pcr": synthetic_pcr, "pcr_status": pcr_status, "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH"}
 
 def get_sector_trends():
-    sector_data = {}
-    sector_rows = []
+    sector_data, sector_rows = {}, []
     for sec_name, etf_symbol in SECTOR_MAP.items():
-        time.sleep(1) 
+        time.sleep(0.5) 
         try:
             sdf = yf.Ticker(etf_symbol).history(period="6mo")
             if sdf.empty or len(sdf) < 20: continue
             c_price = float(sdf['Close'].iloc[-1])
-            p_price = float(sdf['Close'].iloc[-2])
-            today_chg = round(((c_price - p_price) / p_price) * 100, 2)
-            m1_ret = float(((c_price - sdf['Close'].iloc[-21]) / sdf['Close'].iloc[-21]) * 100)
-            delta = sdf['Close'].diff()
-            up_v = sdf['Volume'].where(delta > 0, 0).rolling(14).sum().iloc[-1]
-            dn_v = sdf['Volume'].where(delta < 0, 0).rolling(14).sum().iloc[-1]
-            ud_ratio = (up_v / dn_v) if dn_v > 0 else 1.0
-            flow_label = "Big Money Buying" if ud_ratio >= 1.3 else ("Big Money Selling" if ud_ratio <= 0.7 else "Neutral / Sideways")
-            is_uptrend = m1_ret > 0 and c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
-            sector_data[sec_name] = {"uptrend": is_uptrend, "today_chg": today_chg, "m1_ret": m1_ret, "flow": flow_label}
-            sector_rows.append({"Sector": sec_name, "Today%": today_chg, "1M%": round(m1_ret, 2), "Smart Money Flow": flow_label, "Score": 80 if is_uptrend else 40})
+            is_uptrend = c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
+            sector_data[sec_name] = {"uptrend": is_uptrend}
         except: pass
-    sec_df = pd.DataFrame(sector_rows)
-    if not sec_df.empty: sec_df.sort_values("Today%", ascending=False).to_csv("sector_data.csv", index=False)
-    return sector_data, sec_df
+    return sector_data, pd.DataFrame()
 
 def scan_hybrid_setups(sector_trends, mkt):
     scanner_results = []
     for ticker in STOCK_UNIVERSE:
-        time.sleep(1) 
+        time.sleep(0.8) 
         try:
             df = yf.Ticker(ticker).history(period="1y")
             if df.empty or len(df) < 50: continue
-            weekly_df = df['Close'].resample('W').last()
-            weekly_20_ema = weekly_df.ewm(span=20).mean().iloc[-1]
+            
+            weekly_20_ema = df['Close'].resample('W').last().ewm(span=20).mean().iloc[-1]
             is_weekly_uptrend = float(df['Close'].iloc[-1]) > float(weekly_20_ema)
             df['EMA_20'] = df['Close'].ewm(span=20).mean()
             df['EMA_50'] = df['Close'].ewm(span=50).mean()
@@ -267,43 +218,39 @@ def scan_hybrid_setups(sector_trends, mkt):
             price = float(latest['Close'])
             rsi = float(latest['RSI'])
             atr = float(latest['ATR'])
+            vol_surge = float(latest['Volume'] / latest['Vol_20']) if float(latest['Vol_20']) > 0 else 0
+            high_52w = float(df['High'].max())
 
             sec_name = "Nifty Bank" if "BANK" in ticker else ("Nifty IT" if "TCS" in ticker or "INFY" in ticker else "Nifty Auto")
             sec_trend = sector_trends.get(sec_name, {}).get("uptrend", False)
+            range_pct = ((df['High'].tail(10).max() - df['Low'].tail(10).min()) / df['Low'].tail(10).min()) * 100
 
-            is_oversold_rebound = (rsi < 42) and (price >= float(latest['EMA_50']) * 0.98)
-            range_pct = ((df['High'].tail(5).max() - df['Low'].tail(5).min()) / df['Low'].tail(5).min()) * 100
-            is_compression = (range_pct <= 3.5) and (float(latest['Volume']) < float(latest['Vol_20']) * 0.95)
+            is_golden = (price >= high_52w * 0.95) and (vol_surge > 1.5) and (rsi > 60)
+            is_vcp = (range_pct <= 4.0) and (vol_surge > 1.5) and (price > float(latest['EMA_20']))
             
-            vol_surge = float(latest['Volume'] / latest['Vol_20']) if float(latest['Vol_20']) > 0 else 0
-            is_conqueror = (
-                is_compression 
-                and vol_surge > 1.8 
-                and sec_trend       
-                and rsi > 60        
-            )
+            ema_dist = abs(price - float(latest['EMA_20'])) / float(latest['EMA_20'])
+            is_ema_pullback = (ema_dist <= 0.015) and (45 < rsi < 60) and sec_trend
 
-            if is_conqueror:
-                setup_type = "Conqueror"
-            elif is_oversold_rebound:
-                setup_type = "Oversold Rebound"
-            elif is_compression:
-                setup_type = "Tight Flag"
+            if is_golden:
+                setup_type = "Golden Momentum 🏆"
+                score = 90
+            elif is_vcp:
+                setup_type = "VCP Breakout 📈"
+                score = 85
+            elif is_ema_pullback:
+                setup_type = "EMA Pullback 🧲"
+                score = 80
             else:
                 setup_type = "Consolidating"
+                score = 40
                 
-            score = 30
-            if is_conqueror: score += 50
-            elif is_oversold_rebound or is_compression: score += 40
-            if sec_trend: score += 20 
-            if price > float(latest['EMA_20']): score += 10
-            if not is_weekly_uptrend: score = min(score, 49) 
-            if mkt['pcr'] > 1.5: score = min(score, 79) 
+            if not is_weekly_uptrend: score -= 20 
+            if mkt['pcr'] > 1.5: score -= 10 
 
-            signal = "BUY" if score >= 80 else ("WATCH" if score >= 50 else "AVOID")
-            sl = round(price - (atr * 1.2), 2)
+            signal = "BUY" if score >= 80 else ("WATCH" if score >= 60 else "AVOID")
+            sl = round(price - (atr * 1.5), 2)
             t1 = round(price + (atr * 1.5), 2)
-            t2 = round(price + (atr * 3.5), 2)
+            t2 = round(price + (atr * 4.0), 2)
 
             scanner_results.append({
                 "Stock": ticker, "Signal": signal, "Setup": setup_type, "WeeklyTrend": "UP" if is_weekly_uptrend else "DOWN",
@@ -337,7 +284,7 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     still_active = []
     for trade in history.get('active_trades', []):
-        time.sleep(1) 
+        time.sleep(0.8) 
         try:
             stock = trade.get('Stock', trade.get('Symbol', ''))
             curr_df = yf.Ticker(stock).history(period="1d")
@@ -347,53 +294,44 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             is_watchlist = "WATCHLIST" in str(trade.get('Status', ''))
 
             if not curr_df.empty:
-                c_close = float(curr_df['Close'].iloc[-1])
-                c_low = float(curr_df['Low'].iloc[-1])
-                c_high = float(curr_df['High'].iloc[-1])
+                c_low, c_high = float(curr_df['Low'].iloc[-1]), float(curr_df['High'].iloc[-1])
                 
                 if c_low <= sl:
                     c_open = float(curr_df['Open'].iloc[-1])
                     exit_price = c_open if c_open < sl else sl
-                    
                     trade['Exit Price'] = exit_price 
                     trade['Status'] = "WATCHLIST - SL HIT" if is_watchlist else "CLOSED - SL HIT"
-                    if not is_watchlist: send_telegram_alert(f"STOP LOSS HIT\n{stock} Exit: Rs {exit_price:.2f}")
+                    if not is_watchlist: send_telegram_alert(f"🛑 STOP LOSS HIT\n{stock} Exit: Rs {exit_price:.2f}")
                     history['closed_trades'].append(trade)
                     continue
-                
                 elif c_high >= target2:
                     trade['Exit Price'] = target2 
                     trade['Status'] = "WATCHLIST - TARGET 2 HIT" if is_watchlist else "CLOSED - TARGET 2 HIT"
-                    if not is_watchlist: send_telegram_alert(f"TARGET 2 HIT! (RUNNER)\n{stock} Exit: Rs {target2:.2f}")
+                    if not is_watchlist: send_telegram_alert(f"🚀 TARGET 2 HIT! (RUNNER)\n{stock} Exit: Rs {target2:.2f}")
                     history['closed_trades'].append(trade)
                     continue
-                
                 elif c_high >= target1 and not trade.get('T1_Hit', False):
                     trade['T1_Hit'] = True
                     trade['SL'] = entry
-                    if not is_watchlist: send_telegram_alert(f"TARGET 1 HIT! (LOCK 50%)\n{stock} Price: Rs {c_high:.2f}\nSL moved to Entry.")
-            
+                    if not is_watchlist: send_telegram_alert(f"✅ TARGET 1 HIT! (LOCK 50%)\n{stock} Price: Rs {c_high:.2f}\nSL moved to Entry.")
             still_active.append(trade)
         except: still_active.append(trade)
 
     history['active_trades'] = still_active
-    top_buys = scanner_df[scanner_df['Signal'] == 'BUY'].copy()
+    
+    top_buys = scanner_df[scanner_df['Signal'].isin(['BUY', 'WATCH'])].copy()
     if not top_buys.empty: top_buys = top_buys.sort_values(by=["Score", "RR"], ascending=[False, False])
     
-    ai_vetoed_stocks = []
-
     for buy in top_buys.to_dict('records'):
         stock = buy['Stock']
         entry, sl = float(buy["Entry"]), float(buy["SL"])
         if any(t.get('Stock', t.get('Symbol')) == stock for t in history['active_trades']): continue
 
-        required_qty = calculate_position_size(entry, sl)
-        if required_qty <= 0: required_qty = 1 
+        required_qty = max(1, calculate_position_size(entry, sl))
         required_margin = required_qty * entry
         
         time.sleep(1) 
         news_score, news_label = get_ai_news_sentiment(stock)
-
         debate_result = run_ai_debate_and_judge(buy, news_score, news_label, mkt)
 
         if debate_result['winner'].startswith("Bear") or news_score <= -0.15:
@@ -403,7 +341,20 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
                 "Target": float(buy["Target2"]), "SL": sl, "Status": f"WATCHLIST ({news_label})", 
                 "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
             })
-            ai_vetoed_stocks.append(stock)
+            
+            veto_msg = f"""🛑 AI JUDGE VETO — {stock}
+-------------------
+Verdict: SENT TO SHADOW WATCHLIST
+Debate Winner: {debate_result['winner']} ({debate_result['confidence']}/10)
+Setup Type: {buy['Setup']}
+
+Why it was rejected:
+{debate_result['bear_case']}
+
+News Sentiment: {news_label}
+-------------------
+Action: Margins set to Rs 0."""
+            send_telegram_alert(veto_msg)
             continue 
             
         history['active_trades'].append({
@@ -412,11 +363,15 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
             "Target": float(buy["Target2"]), "SL": sl, "Status": "ACTIVE", 
             "Score": f"{buy['Score']}/100", "Lot Size": required_qty, "T1_Hit": False
         })
+        
+        if "Golden" in buy['Setup']: header_msg = f"🏆 52-WEEK HIGH MOMENTUM — {stock}"
+        elif "VCP" in buy['Setup']: header_msg = f"📈 VCP BREAKOUT DETECTED — {stock}"
+        elif "EMA" in buy['Setup']: header_msg = f"🧲 20-EMA PULLBACK BUY — {stock}"
+        else: header_msg = f"⚡ NEW TRADE ALERT — {stock}"
 
-        alert_msg = f"""STOCK RESEARCH BOT — {stock}
+        alert_msg = f"""{header_msg}
 -------------------
 Verdict: {debate_result['verdict']} | Confidence: {debate_result['confidence']}/10
-Debate Winner: {debate_result['winner']}
 
 Bull Case: {debate_result['bull_case']}
 Bear Caveat: {debate_result['bear_case']}
@@ -428,9 +383,6 @@ Target: Rs {buy['Target2']} (1:{buy['RR']} R:R)
 Paper Capital: Rs {required_margin:,.2f} ({required_qty} shares)"""
         send_telegram_alert(alert_msg)
 
-    if ai_vetoed_stocks:
-        send_telegram_alert(f"AI JUDGE VETO: TRADES WATCHLISTED\nDebate lost to Bear case on: {', '.join(ai_vetoed_stocks)}.")
-
     flat_history = history.get("active_trades", []) + history.get("closed_trades", [])
     with open(history_file, "w") as f: json.dump(flat_history, f, indent=4)
     print("Multi-Agent Debate Engine Complete.")
@@ -439,13 +391,12 @@ def run_pipeline():
     print(f"[{datetime.now(IST).strftime('%Y-%m-%d %H:%M:%S')}] Executing Multi-Agent Engine...")
     mkt = get_market_data()
     if mkt:
-        sector_trends, sector_df = get_sector_trends()
+        sector_trends, _ = get_sector_trends()
         scanner_df = scan_hybrid_setups(sector_trends, mkt)
-        track_targets_and_notify(scanner_df, sector_df, mkt)
+        track_targets_and_notify(scanner_df, sector_df=None, mkt=mkt)
         
-        # Ping Telegram with a summary to confirm execution
         buy_count = len(scanner_df[scanner_df['Signal'] == 'BUY'])
-        send_telegram_alert(f"Momentum Scan Completed!\nScanned: {len(scanner_df)} stocks\nBuy Setups Found: {buy_count}\nMarket Mood: {mkt['mood']}")
+        send_telegram_alert(f"✅ Momentum Scan Completed!\nScanned: {len(scanner_df)} stocks\nBuy Setups Found: {buy_count}\nMarket Mood: {mkt['mood']}")
 
 if __name__ == "__main__":
     run_pipeline()
