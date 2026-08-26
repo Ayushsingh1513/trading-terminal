@@ -57,7 +57,6 @@ def get_dynamic_universe():
         tickers = [f"{symbol}.NS" for symbol in df['Symbol'].tolist()]
         print(f"✅ Successfully loaded {len(tickers)} stocks.")
         return tickers
-        
     except Exception as e:
         print(f"⚠️ Failed to fetch live universe: {e}. Using Fallback.")
         return [
@@ -71,7 +70,6 @@ def send_telegram_alert(message):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Missing Telegram credentials. Check GitHub Secrets!")
         return
-        
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message} 
     try: 
@@ -82,18 +80,12 @@ def send_telegram_alert(message):
         print(f"⚠️ Telegram request failed: {e}")
 
 def calculate_position_size(entry, sl):
-    # SAFETY CHECK: If entry/sl is NaN (corrupted data), return 0 shares
-    if pd.isna(entry) or pd.isna(sl) or entry <= 0 or sl >= entry: 
-        return 0
-        
+    if pd.isna(entry) or pd.isna(sl) or entry <= 0 or sl >= entry: return 0
     risk_per_share = entry - sl
-    if risk_per_share <= 0: 
-        return 0
-        
+    if risk_per_share <= 0: return 0
     max_risk_allowed = TOTAL_CORPUS * MAX_RISK_PCT
     qty_risk = int(max_risk_allowed / risk_per_share)
     qty_cap = int(MAX_TRADE_CAPITAL / entry)
-    
     return min(qty_risk, qty_cap)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -103,7 +95,6 @@ def get_ai_news_sentiment(ticker):
     try:
         news_data = yf.Ticker(ticker).news
         if not news_data: return 0.0, "⚪ NO NEWS FOUND"
-            
         compound_score, article_count = 0, 0
         for article in news_data[:4]:
             title = article.get('title', '')
@@ -111,10 +102,8 @@ def get_ai_news_sentiment(ticker):
                 score = sia.polarity_scores(title)['compound']
                 compound_score += score
                 article_count += 1
-                
         if article_count == 0: return 0.0, "⚪ NEUTRAL"
         avg_score = compound_score / article_count
-        
         if avg_score >= 0.15: return avg_score, "🟢 BULLISH SENTIMENT"
         elif avg_score <= -0.15: return avg_score, "🔴 BEARISH SENTIMENT"
         else: return avg_score, "⚪ NEUTRAL SENTIMENT"
@@ -131,7 +120,7 @@ def run_ai_debate_and_judge(buy_setup, news_score, news_label, mkt):
     if buy_setup['Score'] >= 80:
         bull_score += 4
         bull_reasons.append(f"High technical conviction ({buy_setup['Score']}/100 score)")
-    if buy_setup['VolSurge'] >= 1.2:
+    if buy_setup['VolSurge'] >= 1.5:
         bull_score += 2
         bull_reasons.append(f"Institutional volume surge ({buy_setup['VolSurge']}x 20-day avg)")
     if buy_setup['WeeklyTrend'] == "UP":
@@ -182,15 +171,14 @@ def get_market_data():
     return {"nifty": c_nifty, "pcr": synthetic_pcr, "pcr_status": pcr_status, "mood": "BULLISH" if c_nifty > nifty_200 else "BEARISH"}
 
 def get_sector_trends():
-    sector_data, sector_rows = {}, []
+    sector_data = {}
     for sec_name, etf_symbol in SECTOR_MAP.items():
         time.sleep(0.5) 
         try:
             sdf = yf.Ticker(etf_symbol).history(period="6mo")
             if sdf.empty or len(sdf) < 20: continue
             c_price = float(sdf['Close'].iloc[-1])
-            is_uptrend = c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]
-            sector_data[sec_name] = {"uptrend": is_uptrend}
+            sector_data[sec_name] = {"uptrend": c_price > sdf['Close'].ewm(span=50).mean().iloc[-1]}
         except: pass
     return sector_data, pd.DataFrame()
 
@@ -200,12 +188,17 @@ def scan_hybrid_setups(sector_trends, mkt):
         time.sleep(0.8) 
         try:
             df = yf.Ticker(ticker).history(period="1y")
-            if df.empty or len(df) < 50: continue
+            if df.empty or len(df) < 200: continue
             
             weekly_20_ema = df['Close'].resample('W').last().ewm(span=20).mean().iloc[-1]
             is_weekly_uptrend = float(df['Close'].iloc[-1]) > float(weekly_20_ema)
+            
+            # --- CALCULATE EMAS ---
+            df['EMA_9'] = df['Close'].ewm(span=9).mean()
             df['EMA_20'] = df['Close'].ewm(span=20).mean()
             df['EMA_50'] = df['Close'].ewm(span=50).mean()
+            df['EMA_200'] = df['Close'].ewm(span=200).mean()
+            
             delta = df['Close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
@@ -215,6 +208,8 @@ def scan_hybrid_setups(sector_trends, mkt):
             df['Vol_20'] = df['Volume'].rolling(20).mean()
 
             latest = df.iloc[-1]
+            prev = df.iloc[-2]
+            
             price = float(latest['Close'])
             rsi = float(latest['RSI'])
             atr = float(latest['ATR'])
@@ -225,29 +220,26 @@ def scan_hybrid_setups(sector_trends, mkt):
             sec_trend = sector_trends.get(sec_name, {}).get("uptrend", False)
             range_pct = ((df['High'].tail(10).max() - df['Low'].tail(10).min()) / df['Low'].tail(10).min()) * 100
 
-            is_golden = (price >= high_52w * 0.95) and (vol_surge > 1.5) and (rsi > 60)
-            is_vcp = (range_pct <= 4.0) and (vol_surge > 1.5) and (price > float(latest['EMA_20']))
+            # ─── STRICT CONFLUENCE MATRIX ───
+            is_trend_aligned = (price > float(latest['EMA_50'])) and (price > float(latest['EMA_200']))
+            
+            is_golden = (price >= high_52w * 0.95) and (vol_surge > 2.0) and (rsi > 60) and is_trend_aligned
+            is_vcp = (range_pct <= 4.0) and (vol_surge > 2.0) and (price > float(latest['EMA_20'])) and is_trend_aligned
             
             ema_dist = abs(price - float(latest['EMA_20'])) / float(latest['EMA_20'])
-            is_ema_pullback = (ema_dist <= 0.015) and (45 < rsi < 60) and sec_trend
+            is_ema_pullback = (ema_dist <= 0.015) and (45 < rsi < 60) and sec_trend and is_trend_aligned
+            
+            ema9_today, ema20_today = float(latest['EMA_9']), float(latest['EMA_20'])
+            ema9_prev, ema20_prev = float(prev['EMA_9']), float(prev['EMA_20'])
+            is_crossover = (ema9_prev <= ema20_prev) and (ema9_today > ema20_today) and (vol_surge > 1.5) and is_trend_aligned
 
-            if is_golden:
-                setup_type = "Golden Momentum 🏆"
-                score = 90
-            elif is_vcp:
-                setup_type = "VCP Breakout 📈"
-                score = 85
-            elif is_ema_pullback:
-                setup_type = "EMA Pullback 🧲"
-                score = 80
-            else:
-                setup_type = "Consolidating"
-                score = 40
-                
-            if not is_weekly_uptrend: score -= 20 
-            if mkt['pcr'] > 1.5: score -= 10 
+            if is_golden: setup_type, score = "Golden Momentum 🏆", 95
+            elif is_vcp: setup_type, score = "VCP Breakout 📈", 90
+            elif is_crossover: setup_type, score = "9/20 EMA Crossover ⚔️", 88
+            elif is_ema_pullback: setup_type, score = "EMA Pullback 🧲", 85
+            else: continue
 
-            signal = "BUY" if score >= 80 else ("WATCH" if score >= 60 else "AVOID")
+            signal = "BUY"
             sl = round(price - (atr * 1.5), 2)
             t1 = round(price + (atr * 1.5), 2)
             t2 = round(price + (atr * 4.0), 2)
@@ -260,7 +252,12 @@ def scan_hybrid_setups(sector_trends, mkt):
                 "Sector": sec_name
             })
         except: pass
-    scan_df = pd.DataFrame(scanner_results).sort_values("Score", ascending=False)
+
+    scan_df = pd.DataFrame(scanner_results)
+    if not scan_df.empty:
+        # THE SNIPER RULE: ONLY KEEP THE TOP 5
+        scan_df = scan_df.sort_values(by=["Score", "RR"], ascending=[False, False]).head(5)
+    
     scan_df.to_csv("scanner_data.csv", index=False)
     return scan_df
 
@@ -319,7 +316,12 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
 
     history['active_trades'] = still_active
     
-    top_buys = scanner_df[scanner_df['Signal'].isin(['BUY', 'WATCH'])].copy()
+    # STRICT FILTER for Execution Engine
+    top_buys = scanner_df[
+        scanner_df['Signal'].isin(['BUY', 'WATCH']) & 
+        scanner_df['Setup'].str.contains('Golden|VCP|EMA|Crossover', case=False, na=False)
+    ].copy()
+    
     if not top_buys.empty: top_buys = top_buys.sort_values(by=["Score", "RR"], ascending=[False, False])
     
     for buy in top_buys.to_dict('records'):
@@ -337,8 +339,10 @@ def track_targets_and_notify(scanner_df, sector_df, mkt):
         if debate_result['winner'].startswith("Bear") or news_score <= -0.15:
             history['active_trades'].append({
                 "Symbol": stock, "Stock": stock, "Date": datetime.now(IST).strftime("%Y-%m-%d"),
-                "Entry": entry, "Target1": float(buy["Target1"]), "Target2": float(buy["Target2"]), 
-                "Target": float(buy["Target2"]), "SL": sl, "Status": f"WATCHLIST ({news_label})", 
+                "Entry": entry, "Target1": float(buy.get("Target1", 0)), 
+                "Target2": float(buy.get("Target2", 0)), 
+                "Target": float(buy.get("Target2", 0)), 
+                "SL": sl, "Status": f"WATCHLIST ({news_label})", 
                 "Score": f"{buy['Score']}/100", "Lot Size": 0, "T1_Hit": False
             })
             
@@ -366,6 +370,7 @@ Action: Margins set to Rs 0."""
         
         if "Golden" in buy['Setup']: header_msg = f"🏆 52-WEEK HIGH MOMENTUM — {stock}"
         elif "VCP" in buy['Setup']: header_msg = f"📈 VCP BREAKOUT DETECTED — {stock}"
+        elif "Crossover" in buy['Setup']: header_msg = f"⚔️ 9/20 EMA CROSSOVER — {stock}"
         elif "EMA" in buy['Setup']: header_msg = f"🧲 20-EMA PULLBACK BUY — {stock}"
         else: header_msg = f"⚡ NEW TRADE ALERT — {stock}"
 
@@ -395,8 +400,8 @@ def run_pipeline():
         scanner_df = scan_hybrid_setups(sector_trends, mkt)
         track_targets_and_notify(scanner_df, sector_df=None, mkt=mkt)
         
-        buy_count = len(scanner_df[scanner_df['Signal'] == 'BUY'])
-        send_telegram_alert(f"✅ Momentum Scan Completed!\nScanned: {len(scanner_df)} stocks\nBuy Setups Found: {buy_count}\nMarket Mood: {mkt['mood']}")
+        buy_count = len(scanner_df) # Scanner now only outputs max 5
+        send_telegram_alert(f"✅ Momentum Scan Completed!\nTop Sniper Setups Found: {buy_count}\nMarket Mood: {mkt['mood']}")
 
 if __name__ == "__main__":
     run_pipeline()
