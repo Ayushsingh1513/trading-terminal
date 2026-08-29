@@ -1,36 +1,32 @@
-name: Market Close Telegram Alert
+name: Manual Intraday Scan
 
 on:
-  schedule:
-    # This runs at Market Close (adjust the cron time if you had a specific one)
-    - cron: '0 10 * * 1-5' 
-  workflow_dispatch: # Allows you to run it manually
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   send-alert:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-
-      - name: Install dependencies (Including AI NLP)
+          python-version: "3.10"
+      - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install yfinance pandas numpy requests pytz nltk
-
-      - name: Engine (Triggers Alert)
-        run: python data_engine.py
-
-      - name: Commit and Push Updated Ledger
+          pip install yfinance pandas numpy requests pytz
+      - name: Scan
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python intraday_scanner.py
+      - name: Commit tape
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action Bot"
-          git add performance_history.json scanner_data.csv sector_data.csv historical_scans.csv || true
-          git commit -m "🤖 AI Engine Update: Market Close" || true
+          git config --local user.name "Sector Tape Bot"
+          git add scanner_data.csv sector_data.csv market_data.json
+          git commit -m "Manual intraday tape [skip ci]" || echo "No changes"
           git push
