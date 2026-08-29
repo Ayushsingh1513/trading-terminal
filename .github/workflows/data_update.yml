@@ -1,44 +1,42 @@
-name: ⚡ Momentum AI Engine
+name: Intraday Sector Scan
 
 on:
   schedule:
-    # Runs at 10:30 AM UTC (which is 4:00 PM IST) every Monday through Friday
-    - cron: '30 10 * * 1-5'
-  workflow_dispatch: 
+    # 09:45 IST = 04:15 UTC, Mon–Fri (after 30-min opening range)
+    - cron: "15 4 * * 1-5"
+    # 10:15 IST = 04:45 UTC refresh
+    - cron: "45 4 * * 1-5"
+  workflow_dispatch:
 
 permissions:
-  contents: write 
+  contents: write
 
 jobs:
-  run-market-scan:
+  run-intraday-scan:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python 3.10
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          cache: 'pip' 
+          python-version: "3.10"
+          cache: pip
 
-      - name: 📦 Install Dependencies
+      - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install yfinance pandas numpy requests nltk pytz
+          pip install yfinance pandas numpy requests pytz
 
-      - name: 🧠 Execute Multi-Agent Engine
+      - name: Scan
         env:
-          # Passes the hidden secrets to Python securely
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python data_engine.py
+        run: python intraday_scanner.py
 
-      - name: 💾 Commit and Push Updated Data
+      - name: Commit tape
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "Momentum Bot 🤖"
-          git add scanner_data.csv sector_data.csv performance_history.json
-          git commit -m "Auto-update: Post-Market Scan & Risk Ledger [skip ci]" || echo "No changes to commit"
+          git config --local user.name "Sector Tape Bot"
+          git add scanner_data.csv sector_data.csv market_data.json
+          git commit -m "Intraday sector tape [skip ci]" || echo "No changes"
           git push
