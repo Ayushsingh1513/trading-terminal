@@ -1,4 +1,4 @@
-import json
+ import json
 import os
 
 import pandas as pd
@@ -12,26 +12,153 @@ except ImportError:
     HAS_PLOTLY = False
 
 st.set_page_config(
-    page_title="Intraday Sector Tape",
+    page_title="Sector Tape",
     layout="wide",
-    page_icon="⚡",
-    initial_sidebar_state="expanded",
+    page_icon="■",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
     """
 <style>
-    .stApp { background-color: #0B0E14; color: #E2E8F0; }
-    .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
-    div[data-testid="metric-container"] {
-        background-color: #131822;
-        border: 1px solid #1E293B;
-        border-radius: 10px;
-        padding: 15px 20px;
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+    html, body, [class*="css"] { font-family: 'Inter', system-ui, sans-serif; }
+    .stApp { background: #050608; color: #d4d6db; }
+    .block-container { padding: 1rem 1.5rem 2rem; max-width: 1400px; }
+    header[data-testid="stHeader"] { background: transparent; }
+    #MainMenu, footer { visibility: hidden; }
+    section[data-testid="stSidebar"] {
+        background: #0a0b0e; border-right: 1px solid #1c1e24;
+    }
+
+    .topbar {
+        display: flex; align-items: baseline; gap: 1.25rem;
+        padding: 0.25rem 0 1rem; border-bottom: 1px solid #1c1e24;
+        margin-bottom: 1.25rem;
+    }
+    .topbar-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700; font-size: 0.95rem;
+        letter-spacing: 0.12em; text-transform: uppercase; color: #f0f1f3;
+    }
+    .topbar-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem; color: #6b6e78;
+    }
+    .pill {
+        display: inline-block;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem; font-weight: 600;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        padding: 3px 8px; border-radius: 3px;
+    }
+    .pill-up { background: #0f2a1c; color: #3ecf8e; }
+    .pill-dn { background: #2a0f0f; color: #f07178; }
+    .pill-flat { background: #1a1c22; color: #8b8e98; }
+
+    .strip {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        margin-bottom: 1.25rem;
+    }
+    .strip-cell {
+        background: #0d0e12; border: 1px solid #1c1e24;
+        border-radius: 4px; padding: 12px 14px;
+    }
+    .strip-label {
+        font-size: 0.62rem; text-transform: uppercase;
+        letter-spacing: 0.1em; color: #6b6e78; margin-bottom: 4px;
+    }
+    .strip-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.15rem; font-weight: 600; color: #f0f1f3;
+    }
+    .strip-sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem; color: #6b6e78; margin-top: 2px;
+    }
+    .up { color: #3ecf8e !important; }
+    .dn { color: #f07178 !important; }
+
+    .sec-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 8px; margin-bottom: 1.5rem;
+    }
+    .sec-card {
+        background: #0d0e12; border: 1px solid #1c1e24;
+        border-radius: 4px; padding: 10px 12px; border-top: 2px solid #1c1e24;
+    }
+    .sec-card.bull { border-top-color: #3ecf8e; }
+    .sec-card.weak { border-top-color: #f07178; }
+    .sec-name {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem; font-weight: 600;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        color: #a0a3ab; margin-bottom: 6px;
+    }
+    .sec-ret {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.05rem; font-weight: 600;
+    }
+    .sec-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem; color: #6b6e78; margin-top: 4px;
+    }
+
+    .setup {
+        background: #0d0e12; border: 1px solid #1c1e24;
+        border-radius: 4px; padding: 14px 16px; margin-bottom: 10px;
+        display: grid; grid-template-columns: 100px 1fr auto;
+        gap: 16px; align-items: center;
+    }
+    .setup.buy { border-left: 3px solid #3ecf8e; }
+    .setup.sell { border-left: 3px solid #f07178; }
+    .setup-side {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+    }
+    .setup-side.buy { color: #3ecf8e; }
+    .setup-side.sell { color: #f07178; }
+    .setup-name {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1rem; font-weight: 600; color: #f0f1f3;
+    }
+    .setup-sub { font-size: 0.72rem; color: #6b6e78; margin-top: 2px; }
+    .setup-levels {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem; color: #a0a3ab;
+        text-align: right; line-height: 1.55;
+    }
+    .setup-levels b { color: #f0f1f3; font-weight: 600; }
+
+    .section-h {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem; font-weight: 600;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        color: #6b6e78; margin: 0 0 10px 0;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0; border-bottom: 1px solid #1c1e24; background: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 36px; background: transparent; color: #6b6e78;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem; font-weight: 500;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        border-radius: 0; padding: 0 16px;
     }
     .stTabs [aria-selected="true"] {
-        color: #F8FAFC !important;
-        border-bottom: 2px solid #00FFAA !important;
+        color: #f0f1f3 !important;
+        border-bottom: 2px solid #3ecf8e !important;
+        background: transparent !important;
+    }
+    .stSelectbox label { display: none; }
+    .empty {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem; color: #6b6e78;
+        padding: 24px; text-align: center;
+        border: 1px dashed #1c1e24; border-radius: 4px;
     }
 </style>
 """,
@@ -84,185 +211,221 @@ def load_market():
 
 
 with st.sidebar:
-    st.title("Sector Tape")
-    st.caption("Intraday · sector first · opening range")
-    st.markdown("---")
-    st.subheader("Sizing")
-    fixed_rupee_risk = st.number_input("Max risk per trade (Rs)", value=400.0, step=100.0, format="%.2f")
-    max_trade_capital = st.number_input("Max margin (Rs)", value=50000.0, step=5000.0, format="%.2f")
-    st.markdown("---")
-    st.info("Scan runs \~09:45 IST on weekdays. Longs only from BULLISH sectors. Flat by 15:10.")
+    st.markdown("**Risk**")
+    fixed_rupee_risk = st.number_input("INR risk / trade", value=400.0, step=100.0, format="%.0f")
+    max_trade_capital = st.number_input("INR max margin", value=50000.0, step=5000.0, format="%.0f")
+    st.caption("Long + short · 0.4% corpus · max 2 · 1/sector · flat 15:10")
 
-tab_scanner, tab_pnl, tab_shadow = st.tabs(
-    ["Live tape", "Trade history", "Watchlist"]
+mkt = load_market()
+nifty = safe_float(mkt.get("nifty"))
+nret = safe_float(mkt.get("nifty_ret"))
+mood = str(mkt.get("mood") or "—")
+as_of = mkt.get("as_of") or "—"
+ret_cls = "up" if nret >= 0 else "dn"
+mood_pill = (
+    "pill-up" if mood.upper() == "BULLISH"
+    else ("pill-dn" if mood.upper() in ("HEAVY", "BEARISH") else "pill-flat")
 )
 
-with tab_scanner:
-    mkt = load_market()
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Nifty", f"{safe_float(mkt.get('nifty')):,.0f}", f"{safe_float(mkt.get('nifty_ret')):+.2f}%")
-    c2.metric("Mood", mkt.get("mood", "—"))
-    c3.metric("Bullish sectors", mkt.get("bullish_sectors") or "none")
-    c4.metric("As of", mkt.get("as_of", "—"))
+st.markdown(
+    f"""
+    <div class="topbar">
+      <div class="topbar-title">Sector Tape</div>
+      <span class="pill {mood_pill}">{mood}</span>
+      <div class="topbar-meta">{as_of}</div>
+    </div>
+    <div class="strip">
+      <div class="strip-cell">
+        <div class="strip-label">Nifty</div>
+        <div class="strip-val">{nifty:,.0f}</div>
+        <div class="strip-sub {ret_cls}">{nret:+.2f}%</div>
+      </div>
+      <div class="strip-cell">
+        <div class="strip-label">Long sectors</div>
+        <div class="strip-val" style="font-size:0.85rem">{mkt.get('bullish_sectors') or '—'}</div>
+      </div>
+      <div class="strip-cell">
+        <div class="strip-label">Short sectors</div>
+        <div class="strip-val" style="font-size:0.85rem">{mkt.get('weak_sectors') or '—'}</div>
+      </div>
+      <div class="strip-cell">
+        <div class="strip-label">Bias</div>
+        <div class="strip-val" style="font-size:0.95rem">{mood}</div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-    st.markdown("### Sector scorecard")
-    st.caption("Bias from opening drive vs Nifty, breadth (% of names green), and VWAP.")
+tab_tape, tab_hist, tab_watch = st.tabs(["Tape", "History", "Watchlist"])
+
+with tab_tape:
+    st.markdown('<p class="section-h">Sector map</p>', unsafe_allow_html=True)
+
     if os.path.exists("sector_data.csv"):
         sec_df = pd.read_csv("sector_data.csv")
         if sec_df.empty:
-            st.warning("Sector file is empty. Run `python intraday_scanner.py` or wait for the 09:45 job.")
+            st.markdown('<div class="empty">No sector data — run scanner</div>', unsafe_allow_html=True)
         else:
-            def color_bias(val):
-                v = str(val).upper()
-                if v == "BULLISH":
-                    return "background-color: rgba(0,255,170,0.12); color: #00FFAA; font-weight: 600"
-                if v == "WEAK":
-                    return "background-color: rgba(255,68,68,0.12); color: #FF6B6B; font-weight: 600"
-                return "background-color: rgba(100,116,139,0.12); color: #94A3B8"
-
-            st.dataframe(
-                sec_df.style.map(color_bias, subset=["Bias"]).format(
-                    {"ReturnPct": "{:+.2f}%", "VsNifty": "{:+.2f}", "Breadth": "{:.0f}%", "Last": "{:.2f}", "VWAP": "{:.2f}"}
-                ),
-                use_container_width=True,
-                hide_index=True,
-                height=320,
-            )
+            cards = []
+            for _, r in sec_df.iterrows():
+                bias = str(r.get("Bias", "")).upper()
+                cls = "bull" if bias == "BULLISH" else ("weak" if bias == "WEAK" else "")
+                ret = safe_float(r.get("ReturnPct"))
+                ret_c = "up" if ret >= 0 else "dn"
+                vs = safe_float(r.get("VsNifty"))
+                br = int(safe_float(r.get("Breadth")))
+                cards.append(
+                    f"""
+                    <div class="sec-card {cls}">
+                      <div class="sec-name">{r.get('Sector')}</div>
+                      <div class="sec-ret {ret_c}">{ret:+.2f}%</div>
+                      <div class="sec-meta">vsN {vs:+.2f} · br {br}%</div>
+                      <div class="sec-meta">{bias}</div>
+                    </div>
+                    """
+                )
+            st.markdown(f'<div class="sec-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
     else:
-        st.info("No sector_data.csv yet.")
+        st.markdown('<div class="empty">sector_data.csv missing</div>', unsafe_allow_html=True)
 
-    st.markdown("### Stock setups (from bullish sectors only)")
+    st.markdown('<p class="section-h">Setups · long + short</p>', unsafe_allow_html=True)
+
     if os.path.exists("scanner_data.csv"):
         live_df = pd.read_csv("scanner_data.csv")
         if live_df.empty:
-            st.success("No long setups — stand aside. That is a valid output.")
+            st.markdown('<div class="empty">No setups — stand aside</div>', unsafe_allow_html=True)
         else:
-            stock_list = live_df["Stock"].tolist()
-            selected_stock = st.selectbox("Inspect", stock_list)
-            stock_row = live_df[live_df["Stock"] == selected_stock].iloc[0]
+            rows_html = []
+            for _, t in live_df.iterrows():
+                sig = str(t.get("Signal", "BUY")).upper()
+                side = "buy" if sig == "BUY" else "sell"
+                side_label = "LONG" if side == "buy" else "SHORT"
+                name = str(t.get("Stock", "")).replace(".NS", "")
+                rows_html.append(
+                    f"""
+                    <div class="setup {side}">
+                      <div>
+                        <div class="setup-side {side}">{side_label}</div>
+                        <div class="setup-sub">{t.get('Setup')}</div>
+                      </div>
+                      <div>
+                        <div class="setup-name">{name}</div>
+                        <div class="setup-sub">{t.get('Sector')} · RVOL {t.get('VolSurge')}x · score {t.get('Score')}</div>
+                      </div>
+                      <div class="setup-levels">
+                        Entry <b>INR {safe_float(t.get('Entry')):,.2f}</b><br>
+                        SL <b>INR {safe_float(t.get('SL')):,.2f}</b><br>
+                        T1 INR {safe_float(t.get('Target1')):,.2f} · T2 INR {safe_float(t.get('Target2')):,.2f}<br>
+                        Qty {int(safe_float(t.get('Qty')))} · risk INR {safe_float(t.get('RiskRs')):,.0f}
+                      </div>
+                    </div>
+                    """
+                )
+            st.markdown("".join(rows_html), unsafe_allow_html=True)
 
-            col_chart, col_ticket = st.columns([1.4, 1])
-            with col_chart:
-                st.markdown(f"#### {selected_stock}")
-                hist_df = yf.Ticker(selected_stock).history(period="5d", interval="5m")
-                if hist_df.empty:
-                    hist_df = yf.Ticker(selected_stock).history(period="5d")
-                if not hist_df.empty and HAS_PLOTLY:
+            st.markdown('<p class="section-h" style="margin-top:1.5rem">Inspect</p>', unsafe_allow_html=True)
+            stock_list = live_df["Stock"].tolist()
+            selected = st.selectbox("stock", stock_list, label_visibility="collapsed")
+            row = live_df[live_df["Stock"] == selected].iloc[0]
+            sig = str(row.get("Signal", "BUY")).upper()
+
+            col_c, col_t = st.columns([1.6, 1])
+            with col_c:
+                hist = yf.Ticker(selected).history(period="5d", interval="5m")
+                if hist.empty:
+                    hist = yf.Ticker(selected).history(period="5d")
+                if not hist.empty and HAS_PLOTLY:
                     fig = go.Figure()
                     fig.add_trace(
                         go.Candlestick(
-                            x=hist_df.index,
-                            open=hist_df["Open"],
-                            high=hist_df["High"],
-                            low=hist_df["Low"],
-                            close=hist_df["Close"],
-                            name="Price",
-                            increasing_line_color="#00FFAA",
-                            decreasing_line_color="#FF4444",
+                            x=hist.index,
+                            open=hist["Open"],
+                            high=hist["High"],
+                            low=hist["Low"],
+                            close=hist["Close"],
+                            increasing_line_color="#3ecf8e",
+                            decreasing_line_color="#f07178",
+                            increasing_fillcolor="#3ecf8e",
+                            decreasing_fillcolor="#f07178",
                         )
                     )
-                    entry_p = safe_float(stock_row.get("Entry"))
-                    sl_p = safe_float(stock_row.get("SL"))
-                    t1_p = safe_float(stock_row.get("Target1"))
-                    t2_p = safe_float(stock_row.get("Target2"))
-                    orh = safe_float(stock_row.get("ORHigh"))
-                    orl = safe_float(stock_row.get("ORLow"))
-                    if entry_p:
-                        fig.add_hline(y=entry_p, line_dash="dash", line_color="#00FFAA", annotation_text=f"Entry {entry_p}")
-                    if sl_p:
-                        fig.add_hline(y=sl_p, line_dash="solid", line_color="#FF4444", annotation_text=f"SL {sl_p}")
-                    if t1_p:
-                        fig.add_hline(y=t1_p, line_dash="dot", line_color="#3B82F6", annotation_text=f"T1 {t1_p}")
-                    if t2_p:
-                        fig.add_hline(y=t2_p, line_dash="dash", line_color="#64748B", annotation_text=f"T2 {t2_p}")
-                    if orh:
-                        fig.add_hline(y=orh, line_dash="dot", line_color="#94A3B8", annotation_text="OR high")
-                    if orl:
-                        fig.add_hline(y=orl, line_dash="dot", line_color="#94A3B8", annotation_text="OR low")
+                    for y, color, label in [
+                        (safe_float(row.get("Entry")), "#a0a3ab", "Entry"),
+                        (safe_float(row.get("SL")), "#f07178", "SL"),
+                        (safe_float(row.get("Target1")), "#3ecf8e", "T1"),
+                        (safe_float(row.get("Target2")), "#6b6e78", "T2"),
+                    ]:
+                        if y:
+                            fig.add_hline(
+                                y=y, line_dash="dot", line_color=color, line_width=1,
+                                annotation_text=label, annotation_font_size=10,
+                            )
                     fig.update_layout(
                         template="plotly_dark",
-                        plot_bgcolor="#131822",
-                        paper_bgcolor="#131822",
-                        margin=dict(l=10, r=10, t=20, b=10),
-                        height=420,
+                        plot_bgcolor="#0d0e12",
+                        paper_bgcolor="#0d0e12",
+                        font=dict(family="JetBrains Mono", size=10, color="#6b6e78"),
+                        margin=dict(l=4, r=4, t=8, b=4),
+                        height=380,
                         xaxis_rangeslider_visible=False,
+                        showlegend=False,
+                        xaxis=dict(gridcolor="#15171c"),
+                        yaxis=dict(gridcolor="#15171c", side="right"),
                     )
                     st.plotly_chart(fig, use_container_width=True)
+
+            with col_t:
+                e = safe_float(row.get("Entry"))
+                s = safe_float(row.get("SL"))
+                risk_ps = abs(e - s) if e and s else 0
+                if risk_ps > 0:
+                    qty = max(1, min(int(fixed_rupee_risk / risk_ps), int(max_trade_capital / e)))
                 else:
-                    st.warning("Could not render chart.")
-
-            with col_ticket:
-                e = safe_float(stock_row.get("Entry"))
-                s = safe_float(stock_row.get("SL"))
-                st.markdown(f"**{stock_row.get('Setup')}** · {stock_row.get('Sector')}")
-                st.write(
-                    f"Entry Rs {e:,.2f}  \n"
-                    f"SL (OR low) Rs {s:,.2f}  \n"
-                    f"T1 (2R) Rs {safe_float(stock_row.get('Target1')):,.2f}  \n"
-                    f"T2 (3R) Rs {safe_float(stock_row.get('Target2')):,.2f}  \n"
-                    f"RVOL {stock_row.get('VolSurge')}x  ·  vs sector {stock_row.get('VsSector')}%"
+                    qty = int(safe_float(row.get("Qty")))
+                action = "BUY" if sig == "BUY" else "SELL / SHORT"
+                side_cls = "buy" if sig == "BUY" else "sell"
+                st.markdown(
+                    f"""
+                    <div class="setup {side_cls}" style="grid-template-columns:1fr;display:block">
+                      <div class="setup-side {side_cls}">{action}</div>
+                      <div class="setup-name" style="margin:8px 0">{str(selected).replace('.NS','')}</div>
+                      <div class="setup-levels" style="text-align:left">
+                        Entry <b>INR {e:,.2f}</b><br>
+                        SL <b>INR {s:,.2f}</b><br>
+                        T1 <b>INR {safe_float(row.get('Target1')):,.2f}</b><br>
+                        T2 <b>INR {safe_float(row.get('Target2')):,.2f}</b><br><br>
+                        Size <b>{qty}</b> sh<br>
+                        Margin INR {qty * e:,.0f}<br>
+                        Risk INR {qty * risk_ps:,.0f}
+                      </div>
+                      <div class="setup-sub" style="margin-top:10px">MIS only · skip gap SL · flat 15:10</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
-                if e > s > 0:
-                    risk_ps = e - s
-                    calc_qty = int(fixed_rupee_risk / risk_ps)
-                    max_cap_qty = int(max_trade_capital / e)
-                    final_qty = max(1, min(calc_qty, max_cap_qty))
-                    st.markdown(
-                        f"""
-<div style="background:#1E293B;padding:14px;border-radius:8px;border-left:4px solid #00FFAA;">
-Buy <b>{final_qty}</b> shares at Rs {e:,.2f}.<br>
-Margin Rs {final_qty * e:,.0f}. If stopped: <b>Rs {final_qty * risk_ps:,.0f}</b>.<br>
-<span style="color:#94A3B8">Skip if the next bar gaps through the stop. Exit by 15:10.</span>
-</div>
-""",
-                        unsafe_allow_html=True,
-                    )
-
-            show_cols = [
-                c
-                for c in [
-                    "Stock",
-                    "Setup",
-                    "Sector",
-                    "Score",
-                    "Price",
-                    "Entry",
-                    "SL",
-                    "Target1",
-                    "Target2",
-                    "RR",
-                    "VolSurge",
-                    "VsSector",
-                    "Qty",
-                    "RiskRs",
-                ]
-                if c in live_df.columns
-            ]
-            st.dataframe(live_df[show_cols], use_container_width=True, hide_index=True, height=260)
     else:
-        st.info("Awaiting first scan. `scanner_data.csv` is missing.")
+        st.markdown('<div class="empty">scanner_data.csv missing</div>', unsafe_allow_html=True)
 
 raw_history = load_json_history("performance_history.json")
 
-with tab_pnl:
-    st.markdown("### Execution history")
+with tab_hist:
     if raw_history.empty:
-        st.info("No ledger yet.")
+        st.markdown('<div class="empty">No ledger</div>', unsafe_allow_html=True)
     else:
-        valid_df = raw_history[
+        valid = raw_history[
             raw_history["Status"].astype(str).str.contains("ACTIVE|CLOSED|HIT|EXIT", case=False, na=False)
         ]
-        st.dataframe(valid_df, use_container_width=True, height=400)
+        st.dataframe(valid, use_container_width=True, height=400, hide_index=True)
 
-with tab_shadow:
-    st.markdown("### Watchlist / veto")
+with tab_watch:
     if raw_history.empty:
-        st.info("Empty.")
+        st.markdown('<div class="empty">Empty</div>', unsafe_allow_html=True)
     else:
-        veto_df = raw_history[
+        veto = raw_history[
             raw_history["Status"].astype(str).str.contains("WATCHLIST|VETO", case=False, na=False)
         ]
-        if veto_df.empty:
-            st.info("Nothing parked.")
+        if veto.empty:
+            st.markdown('<div class="empty">Nothing parked</div>', unsafe_allow_html=True)
         else:
-            st.dataframe(veto_df, use_container_width=True, height=400)
+            st.dataframe(veto, use_container_width=True, height=400, hide_index=True)
