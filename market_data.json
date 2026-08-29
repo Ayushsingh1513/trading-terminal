@@ -1,11 +1,1 @@
-{
-    "nifty": 24471.69921875,
-    "nifty_chg": -0.45599768521350675,
-    "sensex": 78154.25,
-    "sensex_chg": -0.4942391812069749,
-    "pcr": 1.05,
-    "pcr_status": "\u26aa NEUTRAL",
-    "ma200": 24403.043306091622,
-    "mood": "BULLISH",
-    "timestamp": "2026-08-11 11:19 PM IST"
-}
+{"nifty":24175.650390625,"nifty_ret":0.18,"mood":"BULLISH","as_of":"2026-08-29 21:13 IST","bullish_sectors":"IT,Pharma,Metal","weak_sectors":"Auto,FMCG"}

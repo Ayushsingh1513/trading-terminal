@@ -1,6 +1,9 @@
-Sector,Today%,1M%,Smart Money Flow,Score
-Nifty Bank,0.34,-0.3,Big Money Buying,40
-PSU Bank,0.13,1.55,Big Money Buying,80
-Nifty Infra,0.09,0.38,Big Money Buying,80
-Nifty Auto,0.06,8.65,Big Money Buying,80
-Nifty IT,-1.64,5.74,Big Money Buying,80
+Sector,Bias,ReturnPct,VsNifty,Breadth,Score,Last,VWAP
+IT,BULLISH,2.57,2.39,100.0,4,31281.7,31281.7
+Pharma,BULLISH,0.35,0.17,75.0,4,26992.05,26992.05
+Metal,BULLISH,0.39,0.22,88.0,4,13521.1,13521.1
+Bank,CHOP,0.04,-0.13,62.0,1,57496.3,57496.3
+Infra,CHOP,-0.12,-0.3,62.0,-1,9242.7,9242.7
+Energy,CHOP,-0.3,-0.48,62.0,-2,38010.0,38010.0
+Auto,WEAK,-0.35,-0.53,29.0,-6,28850.65,28850.65
+FMCG,WEAK,-0.52,-0.7,38.0,-6,46816.3,46816.3
