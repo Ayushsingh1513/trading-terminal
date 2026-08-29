@@ -1,12 +1,11 @@
 """
-Intraday sector-first scanner for NSE cash.
+Intraday sector-first scanner for NSE cash (long + short).
 
 Flow:
-  1. Score sector indices vs Nifty using the 09:15–09:45 opening range.
-  2. Keep only BULLISH sectors (long-only).
-  3. Inside those sectors, keep liquid names that lead the sector,
-     hold VWAP, and break/tag the opening-range high.
-  4. SL = opening-range low. T1 = 2R, T2 = 3R.
+  1. Score sectors vs Nifty on the 09:15–09:45 opening range.
+  2. BULLISH sectors → long candidates (OR high break, above VWAP).
+  3. WEAK sectors → short candidates (OR low break, below VWAP).
+  4. SL = opposite side of opening range. T1 = 2R, T2 = 3R.
   5. Size at 0.4% of corpus, max 2 names, 1 per sector.
 
 Run: python intraday_scanner.py
@@ -35,117 +34,69 @@ MIN_BREADTH = 0.55
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Official-ish NSE groups with liquid names. Index first, ETF fallback.
 SECTORS = {
     "Bank": {
         "index": "^NSEBANK",
         "etf": "BANKBEES.NS",
         "names": [
-            "HDFCBANK.NS",
-            "ICICIBANK.NS",
-            "SBIN.NS",
-            "AXISBANK.NS",
-            "KOTAKBANK.NS",
-            "INDUSINDBK.NS",
-            "FEDERALBNK.NS",
-            "BANKBARODA.NS",
+            "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "AXISBANK.NS",
+            "KOTAKBANK.NS", "INDUSINDBK.NS", "FEDERALBNK.NS", "BANKBARODA.NS",
         ],
     },
     "IT": {
         "index": "^CNXIT",
         "etf": "ITBEES.NS",
         "names": [
-            "TCS.NS",
-            "INFY.NS",
-            "HCLTECH.NS",
-            "WIPRO.NS",
-            "TECHM.NS",
-            "PERSISTENT.NS",
-            "COFORGE.NS",
-            "MPHASIS.NS",
+            "TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS",
+            "TECHM.NS", "PERSISTENT.NS", "COFORGE.NS", "MPHASIS.NS",
         ],
     },
     "Auto": {
         "index": "^CNXAUTO",
         "etf": "AUTOBEES.NS",
         "names": [
-            "MARUTI.NS",
-            "M&M.NS",
-            "BAJAJ-AUTO.NS",
-            "EICHERMOT.NS",
-            "HEROMOTOCO.NS",
-            "TVSMOTOR.NS",
-            "ASHOKLEY.NS",
+            "MARUTI.NS", "M&M.NS", "BAJAJ-AUTO.NS", "EICHERMOT.NS",
+            "HEROMOTOCO.NS", "TVSMOTOR.NS", "ASHOKLEY.NS",
         ],
     },
     "Pharma": {
         "index": "^CNXPHARMA",
         "etf": "PHARMABEES.NS",
         "names": [
-            "SUNPHARMA.NS",
-            "DRREDDY.NS",
-            "CIPLA.NS",
-            "DIVISLAB.NS",
-            "APOLLOHOSP.NS",
-            "LAURUSLABS.NS",
-            "AUROPHARMA.NS",
-            "MAXHEALTH.NS",
+            "SUNPHARMA.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS",
+            "APOLLOHOSP.NS", "LAURUSLABS.NS", "AUROPHARMA.NS", "MAXHEALTH.NS",
         ],
     },
     "FMCG": {
         "index": "^CNXFMCG",
         "etf": "CONSUMBEES.NS",
         "names": [
-            "HINDUNILVR.NS",
-            "ITC.NS",
-            "NESTLEIND.NS",
-            "BRITANNIA.NS",
-            "TATACONSUM.NS",
-            "DABUR.NS",
-            "GODREJCP.NS",
-            "MARICO.NS",
+            "HINDUNILVR.NS", "ITC.NS", "NESTLEIND.NS", "BRITANNIA.NS",
+            "TATACONSUM.NS", "DABUR.NS", "GODREJCP.NS", "MARICO.NS",
         ],
     },
     "Metal": {
         "index": "^CNXMETAL",
         "etf": "TATASTEEL.NS",
         "names": [
-            "TATASTEEL.NS",
-            "JSWSTEEL.NS",
-            "HINDALCO.NS",
-            "VEDL.NS",
-            "JINDALSTEL.NS",
-            "NATIONALUM.NS",
-            "HINDZINC.NS",
-            "SAIL.NS",
+            "TATASTEEL.NS", "JSWSTEEL.NS", "HINDALCO.NS", "VEDL.NS",
+            "JINDALSTEL.NS", "NATIONALUM.NS", "HINDZINC.NS", "SAIL.NS",
         ],
     },
     "Energy": {
         "index": "^CNXENERGY",
         "etf": "RELIANCE.NS",
         "names": [
-            "RELIANCE.NS",
-            "ONGC.NS",
-            "NTPC.NS",
-            "POWERGRID.NS",
-            "COALINDIA.NS",
-            "BPCL.NS",
-            "IOC.NS",
-            "ADANIGREEN.NS",
+            "RELIANCE.NS", "ONGC.NS", "NTPC.NS", "POWERGRID.NS",
+            "COALINDIA.NS", "BPCL.NS", "IOC.NS", "ADANIGREEN.NS",
         ],
     },
     "Infra": {
         "index": "^CNXINFRA",
         "etf": "INFRABEES.NS",
         "names": [
-            "LT.NS",
-            "ADANIPORTS.NS",
-            "ULTRACEMCO.NS",
-            "GRASIM.NS",
-            "SIEMENS.NS",
-            "ABB.NS",
-            "BEL.NS",
-            "HAL.NS",
+            "LT.NS", "ADANIPORTS.NS", "ULTRACEMCO.NS", "GRASIM.NS",
+            "SIEMENS.NS", "ABB.NS", "BEL.NS", "HAL.NS",
         ],
     },
 }
@@ -157,21 +108,100 @@ def now_ist() -> datetime:
     return datetime.now(IST)
 
 
-def send_telegram(message: str) -> None:
+def send_telegram(message: str, parse_mode: str = "HTML") -> None:
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Telegram secrets missing — skip alert.")
         return
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+        "parse_mode": parse_mode,
+        "disable_web_page_preview": True,
+    }
     try:
-        r = requests.post(
-            url,
-            json={"chat_id": TELEGRAM_CHAT_ID, "text": message},
-            timeout=10,
-        )
+        r = requests.post(url, json=payload, timeout=10)
         if r.status_code != 200:
-            print(f"Telegram error {r.status_code}: {r.text}")
+            payload.pop("parse_mode", None)
+            r2 = requests.post(url, json=payload, timeout=10)
+            if r2.status_code != 200:
+                print(f"Telegram error {r2.status_code}: {r2.text}")
     except Exception as exc:
         print(f"Telegram failed: {exc}")
+
+
+def _fmt_inr(n: float) -> str:
+    return f"₹{n:,.2f}"
+
+
+def build_telegram_report(
+    stamp: str,
+    market_blob: dict,
+    sector_df: pd.DataFrame,
+    scan_df: pd.DataFrame,
+) -> str:
+    nifty = market_blob.get("nifty") or 0
+    nret = market_blob.get("nifty_ret") or 0
+    mood = market_blob.get("mood") or "—"
+    arrow = "▲" if nret >= 0 else "▼"
+
+    lines = [
+        f"<b>SECTOR TAPE</b>  ·  {stamp}",
+        f"Nifty <b>{nifty:,.0f}</b>  {arrow} {nret:+.2f}%  ·  {mood}",
+        "",
+    ]
+
+    if not sector_df.empty:
+        lines.append("<b>Sectors</b>")
+        for _, r in sector_df.iterrows():
+            bias = str(r["Bias"])
+            tag = {"BULLISH": "↑", "WEAK": "↓"}.get(bias, "·")
+            lines.append(
+                f"{tag} <code>{r['Sector']:<8}</code>  "
+                f"{r['ReturnPct']:+.2f}%  "
+                f"vsN {r['VsNifty']:+.2f}  "
+                f"br {int(r['Breadth'])}%"
+            )
+        lines.append("")
+
+    if scan_df.empty:
+        lines.append("<b>No setups.</b> Stand aside.")
+        lines.append("<i>Flat by 15:10. Risk 0.4% · max 2 names · long + short.</i>")
+    else:
+        n_buy = int((scan_df["Signal"] == "BUY").sum()) if "Signal" in scan_df.columns else 0
+        n_sell = int((scan_df["Signal"] == "SELL").sum()) if "Signal" in scan_df.columns else 0
+        lines.append(
+            f"<b>Setups</b>  ·  {len(scan_df)} of {MAX_TRADES}  "
+            f"(L {n_buy} / S {n_sell})"
+        )
+        for i, (_, t) in enumerate(scan_df.iterrows(), 1):
+            name = str(t["Stock"]).replace(".NS", "")
+            sig = str(t.get("Signal", "BUY")).upper()
+            side_tag = "LONG" if sig == "BUY" else "SHORT"
+            lines.append("")
+            lines.append(
+                f"<b>{i}. {side_tag}  {name}</b>  ·  {t['Sector']}  ·  {t['Setup']}"
+            )
+            lines.append(
+                f"Entry <code>{_fmt_inr(t['Entry'])}</code>  "
+                f"SL <code>{_fmt_inr(t['SL'])}</code>"
+            )
+            lines.append(
+                f"T1 <code>{_fmt_inr(t['Target1'])}</code>  "
+                f"T2 <code>{_fmt_inr(t['Target2'])}</code>  "
+                f"(1:{float(t['RR']):.0f})"
+            )
+            lines.append(
+                f"Qty <b>{int(t['Qty'])}</b>  ·  "
+                f"risk {_fmt_inr(t['RiskRs'])}  ·  "
+                f"RVOL {float(t['VolSurge']):.1f}×"
+            )
+        lines.append("")
+        lines.append(
+            "<i>Skip gap through SL · MIS / intraday only · flat by 15:10.</i>"
+        )
+
+    return "\n".join(lines)
 
 
 def to_ist(df: pd.DataFrame) -> pd.DataFrame:
@@ -183,7 +213,10 @@ def to_ist(df: pd.DataFrame) -> pd.DataFrame:
     if out.index.tz is None:
         out.index = out.index.tz_localize("UTC")
     out.index = out.index.tz_convert(IST)
-    out.columns = [str(c).title() if str(c).lower() in {"open", "high", "low", "close", "volume"} else c for c in out.columns]
+    out.columns = [
+        str(c).title() if str(c).lower() in {"open", "high", "low", "close", "volume"} else c
+        for c in out.columns
+    ]
     return out
 
 
@@ -258,10 +291,19 @@ def download_bundle(tickers: list[str], interval: str, period: str) -> pd.DataFr
         return pd.DataFrame()
 
 
-def position_size(entry: float, sl: float) -> int:
-    if entry <= 0 or sl >= entry:
+def position_size(entry: float, sl: float, side: str = "BUY") -> int:
+    if entry <= 0:
         return 0
-    risk_ps = entry - sl
+    if side == "BUY":
+        if sl >= entry:
+            return 0
+        risk_ps = entry - sl
+    else:
+        if sl <= entry:
+            return 0
+        risk_ps = sl - entry
+    if risk_ps <= 0:
+        return 0
     qty_risk = int((TOTAL_CORPUS * RISK_PCT) / risk_ps)
     qty_cap = int(MAX_TRADE_CAPITAL / entry)
     return max(0, min(qty_risk, qty_cap))
@@ -315,10 +357,18 @@ def score_sector(session: pd.DataFrame, nifty_ret: float, members: list[pd.DataF
     }
 
 
-def evaluate_stock(symbol: str, session: pd.DataFrame, daily: pd.DataFrame, sector_ret: float, sector: str) -> dict | None:
+def evaluate_stock(
+    symbol: str,
+    session: pd.DataFrame,
+    daily: pd.DataFrame,
+    sector_ret: float,
+    sector: str,
+    side: str,
+) -> dict | None:
+    """side: BUY (bullish sector) or SELL (weak sector)."""
     if session is None or session.empty or len(session) < 4:
         return None
-    or_high, or_low, or_bars = opening_range(session)
+    or_high, or_low, _ = opening_range(session)
     if pd.isna(or_high) or pd.isna(or_low) or or_high <= or_low:
         return None
     last = float(session["Close"].iloc[-1])
@@ -327,12 +377,12 @@ def evaluate_stock(symbol: str, session: pd.DataFrame, daily: pd.DataFrame, sect
     width = (or_high - or_low) / last
     if width > MAX_OR_WIDTH or width < 0.002:
         return None
+
     vw = vwap(session)
-    if pd.isna(vw) or last < vw:
-        return None
     stock_ret = ret_pct(session)
-    if pd.isna(stock_ret) or stock_ret < sector_ret:
+    if pd.isna(stock_ret) or pd.isna(vw):
         return None
+
     sess_vol = float(session["Volume"].fillna(0).sum())
     adv = np.nan
     if daily is not None and not daily.empty and "Volume" in daily.columns:
@@ -341,29 +391,53 @@ def evaluate_stock(symbol: str, session: pd.DataFrame, daily: pd.DataFrame, sect
     rvol = (sess_vol / (adv * elapsed_frac)) if adv and adv > 0 else 0.0
     if rvol < MIN_RVOL:
         return None
-    broke = last >= or_high * 0.999
-    tagged = last >= or_high * 0.997
-    if not (broke or tagged):
-        return None
-    setup = "ORB break" if broke else "OR tag"
+
     entry = round(last, 2)
-    sl = round(or_low, 2)
-    risk = entry - sl
-    if risk <= 0:
-        return None
-    t1 = round(entry + 2 * risk, 2)
-    t2 = round(entry + 3 * risk, 2)
-    qty = position_size(entry, sl)
+    rs = stock_ret - sector_ret
+
+    if side == "BUY":
+        if last < vw or stock_ret < sector_ret:
+            return None
+        broke = last >= or_high * 0.999
+        tagged = last >= or_high * 0.997
+        if not (broke or tagged):
+            return None
+        setup = "ORB break" if broke else "OR tag"
+        sl = round(or_low, 2)
+        risk = entry - sl
+        if risk <= 0:
+            return None
+        t1 = round(entry + 2 * risk, 2)
+        t2 = round(entry + 3 * risk, 2)
+        bias = "BULLISH"
+        score = int(min(99, 70 + rs * 8 + min(rvol, 3) * 6))
+    else:
+        if last > vw or stock_ret > sector_ret:
+            return None
+        broke = last <= or_low * 1.001
+        tagged = last <= or_low * 1.003
+        if not (broke or tagged):
+            return None
+        setup = "ORB breakdown" if broke else "OR low tag"
+        sl = round(or_high, 2)
+        risk = sl - entry
+        if risk <= 0:
+            return None
+        t1 = round(entry - 2 * risk, 2)
+        t2 = round(entry - 3 * risk, 2)
+        bias = "WEAK"
+        score = int(min(99, 70 + (-rs) * 8 + min(rvol, 3) * 6))
+
+    qty = position_size(entry, sl, side)
     if qty < 1:
         return None
-    rs = stock_ret - sector_ret
-    score = int(min(99, 70 + rs * 8 + min(rvol, 3) * 6))
+
     return {
         "Stock": symbol,
-        "Signal": "BUY",
+        "Signal": side,
         "Setup": setup,
         "Sector": sector,
-        "SectorBias": "BULLISH",
+        "SectorBias": bias,
         "WeeklyTrend": "INTRADAY",
         "MTF": "Opening range",
         "Price": entry,
@@ -389,7 +463,11 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
     print(f"[{stamp}] Intraday sector scan")
 
     all_names = [n for spec in SECTORS.values() for n in spec["names"]]
-    proxies = [spec["index"] for spec in SECTORS.values()] + [spec["etf"] for spec in SECTORS.values()] + [NIFTY]
+    proxies = (
+        [spec["index"] for spec in SECTORS.values()]
+        + [spec["etf"] for spec in SECTORS.values()]
+        + [NIFTY]
+    )
     five_min_tickers = list(dict.fromkeys(all_names + proxies))
     daily_tickers = list(dict.fromkeys(all_names))
 
@@ -402,6 +480,7 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
 
     sector_rows = []
     bullish: dict[str, float] = {}
+    weak: dict[str, float] = {}
     member_cache: dict[str, pd.DataFrame] = {}
 
     for name in all_names:
@@ -418,9 +497,14 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
         scored = score_sector(sess, nifty_ret, members)
         scored["Sector"] = sector
         sector_rows.append(scored)
-        print(f"  {sector:8} {scored['Bias']:8} ret={scored['ReturnPct']:+.2f} vsNifty={scored['VsNifty']:+.2f} breadth={scored['Breadth']:.0f}%")
+        print(
+            f"  {sector:8} {scored['Bias']:8} ret={scored['ReturnPct']:+.2f} "
+            f"vsNifty={scored['VsNifty']:+.2f} breadth={scored['Breadth']:.0f}%"
+        )
         if scored["Bias"] == "BULLISH":
             bullish[sector] = scored["ReturnPct"]
+        elif scored["Bias"] == "WEAK":
+            weak[sector] = scored["ReturnPct"]
 
     sector_df = pd.DataFrame(sector_rows)
     if not sector_df.empty:
@@ -430,22 +514,27 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
     sector_df.to_csv("sector_data.csv", index=False)
 
     setups: list[dict] = []
-    if not bullish:
-        print("No bullish sector — stand aside.")
-    else:
-        for sector, sector_ret in bullish.items():
+
+    def pick_best(sector_map: dict[str, float], side: str) -> None:
+        for sector, sector_ret in sector_map.items():
             names = SECTORS[sector]["names"]
-            best_for_sector = None
+            best = None
             for symbol in names:
                 sess = member_cache.get(symbol, pd.DataFrame())
                 daily = to_ist(bars_of(daily_raw, symbol))
-                row = evaluate_stock(symbol, sess, daily, sector_ret, sector)
+                row = evaluate_stock(symbol, sess, daily, sector_ret, sector, side)
                 if row is None:
                     continue
-                if best_for_sector is None or row["Score"] > best_for_sector["Score"]:
-                    best_for_sector = row
-            if best_for_sector:
-                setups.append(best_for_sector)
+                if best is None or row["Score"] > best["Score"]:
+                    best = row
+            if best:
+                setups.append(best)
+
+    if not bullish and not weak:
+        print("No directional sector — stand aside.")
+    else:
+        pick_best(bullish, "BUY")
+        pick_best(weak, "SELL")
 
     scan_df = pd.DataFrame(setups)
     if not scan_df.empty:
@@ -453,28 +542,9 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
     else:
         scan_df = pd.DataFrame(
             columns=[
-                "Stock",
-                "Signal",
-                "Setup",
-                "Sector",
-                "SectorBias",
-                "WeeklyTrend",
-                "MTF",
-                "Price",
-                "Score",
-                "RSI",
-                "VolSurge",
-                "Entry",
-                "SL",
-                "Target1",
-                "Target2",
-                "RR",
-                "ORHigh",
-                "ORLow",
-                "VsSector",
-                "Qty",
-                "Margin",
-                "RiskRs",
+                "Stock", "Signal", "Setup", "Sector", "SectorBias", "WeeklyTrend", "MTF",
+                "Price", "Score", "RSI", "VolSurge", "Entry", "SL", "Target1", "Target2",
+                "RR", "ORHigh", "ORLow", "VsSector", "Qty", "Margin", "RiskRs",
             ]
         )
     scan_df.to_csv("scanner_data.csv", index=False)
@@ -484,34 +554,13 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
         "nifty_ret": round(float(nifty_ret) if pd.notna(nifty_ret) else 0.0, 2),
         "mood": "BULLISH" if (nifty_ret or 0) >= 0 else "HEAVY",
         "as_of": stamp,
-        "bullish_sectors": ",".join(bullish.keys()),
-        "weak_sectors": ",".join(sector_df.loc[sector_df["Bias"] == "WEAK", "Sector"].tolist()) if not sector_df.empty else "",
+        "bullish_sectors": ",".join(bullish.keys()) or "—",
+        "weak_sectors": ",".join(weak.keys()) or "—",
     }
     pd.Series(market_blob).to_json("market_data.json")
 
-    lines = [
-        f"INTRADAY TAPE  {stamp}",
-        f"Nifty {market_blob['nifty']:.0f}  open-drive {market_blob['nifty_ret']:+.2f}%",
-        "",
-    ]
-    if not sector_df.empty:
-        for _, r in sector_df.iterrows():
-            lines.append(
-                f"{r['Bias']:8}  {r['Sector']:8}  {r['ReturnPct']:+.2f}%  vsNifty {r['VsNifty']:+.2f}  breadth {int(r['Breadth'])}%"
-            )
-    lines.append("")
-    if scan_df.empty:
-        lines.append("No long setups. Stand aside.")
-    else:
-        lines.append(f"SETUPS  (max {MAX_TRADES}, 1 per sector, 0.4% risk)")
-        for _, t in scan_df.iterrows():
-            lines.append(
-                f"{t['Stock']}  {t['Setup']}  {t['Sector']}\n"
-                f"  Entry {t['Entry']}  SL {t['SL']}  T1 {t['Target1']}  T2 {t['Target2']}\n"
-                f"  Qty {int(t['Qty'])}  risk Rs {t['RiskRs']}  RVOL {t['VolSurge']}x"
-            )
-        lines.append("Fill is live / next 5-min bar. Flat by 15:10. Skip if price gaps through SL.")
-    send_telegram("\n".join(lines))
+    msg = build_telegram_report(stamp, market_blob, sector_df, scan_df)
+    send_telegram(msg)
     print("Wrote sector_data.csv, scanner_data.csv, market_data.json")
     return scan_df, sector_df
 
