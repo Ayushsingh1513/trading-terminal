@@ -1,3 +1,2 @@
 Stock,Signal,Setup,Sector,SectorBias,WeeklyTrend,MTF,Price,Score,RSI,VolSurge,Entry,SL,Target1,Target2,RR,ORHigh,ORLow,VsSector,Qty,Margin,RiskRs
-IOC.NS,SELL,ORB breakdown,Energy,WEAK,INTRADAY,Opening range,135.27,82,-0.8,1.79,135.27,136.3,133.21,132.18,2.0,136.3,135.17,-0.25,369,49914.63,380.07
-BEL.NS,SELL,OR low tag,Infra,WEAK,INTRADAY,Opening range,407.3,81,-0.8,1.26,407.3,410.75,400.4,396.95,2.0,410.75,406.4,-0.44,115,46839.5,396.75
+IOC.NS,SELL,ORB breakdown,Energy,WEAK,INTRADAY,Opening range,135.11,82,-0.9,1.78,135.11,136.3,132.73,131.54,2.0,136.3,135.17,-0.23,336,45396.96,399.84
