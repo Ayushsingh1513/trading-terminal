@@ -1,2 +1,2 @@
 Stock,Signal,Setup,Sector,SectorBias,WeeklyTrend,MTF,Price,Score,RSI,VolSurge,Entry,SL,Target1,Target2,RR,ORHigh,ORLow,VsSector,Qty,Margin,RiskRs
-HDFCBANK.NS,SELL,ORB breakdown,Bank,WEAK,INTRADAY,Opening range,701.8,91,-0.7,3.51,701.8,708.6,688.2,681.4,2.0,708.6,702.0,-0.39,58,40704.4,394.4
+SUNPHARMA.NS,SELL,ORB breakdown,Pharma,WEAK,INTRADAY,Opening range,1933.5,85,-1.1,2.13,1933.5,1956.0,1888.5,1866.0,2.0,1956.0,1934.2,-0.3,17,32869.5,382.5
