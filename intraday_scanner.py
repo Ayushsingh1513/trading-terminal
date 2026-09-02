@@ -1,12 +1,14 @@
+
 """
 Intraday sector-first scanner for NSE cash (long + short).
 
 Flow:
-  1. Score sectors vs Nifty on the 09:15–09:45 opening range.
-  2. BULLISH sectors → long candidates (OR high break, above VWAP).
-  3. WEAK sectors → short candidates (OR low break, below VWAP).
-  4. SL = opposite side of opening range. T1 = 2R, T2 = 3R.
-  5. Size at 0.4% of corpus, max 2 names, 1 per sector.
+  1. If Nifty open-drive is inside ±0.25% → CHOP. No trades.
+  2. Score sectors vs Nifty on the 09:15–09:45 opening range.
+  3. Longs only if Nifty is up; shorts only if Nifty is down.
+  4. True OR close (not a tag). Skip if already extended.
+  5. SL just beyond the OR edge (not the far side of the range).
+  6. T1 = 1R (book), T2 = 2R. Size 0.4% corpus, max 2, 1 per sector.
 
 Run: python intraday_scanner.py
 """
@@ -25,11 +27,18 @@ IST = pytz.timezone("Asia/Kolkata")
 
 TOTAL_CORPUS = 100_000.0
 MAX_TRADE_CAPITAL = 50_000.0
-RISK_PCT = 0.004  # 0.4% per trade
+RISK_PCT = 0.004
 MAX_TRADES = 2
-MAX_OR_WIDTH = 0.012  # skip if opening range > 1.2% of price
-MIN_RVOL = 1.2
-MIN_BREADTH = 0.55
+MAX_OR_WIDTH = 0.008
+MIN_OR_WIDTH = 0.0025
+MIN_RVOL = 1.8
+MIN_BREADTH = 0.70
+MIN_VS_NIFTY = 0.40
+NIFTY_CHOP = 0.25
+MAX_EXTENSION = 0.004
+T1_R = 1.0
+T2_R = 2.0
+SL_BUFFER = 0.0015
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -151,55 +160,58 @@ def build_telegram_report(
         "",
     ]
 
+    if mood == "CHOP":
+        lines.append("<b>CHOP day.</b> |Nifty drive| under 0.25%. No trades.")
+        if not sector_df.empty:
+            lines.append("")
+            lines.append("<b>Sectors (info only)</b>")
+            for _, r in sector_df.iterrows():
+                tag = {"BULLISH": "↑", "WEAK": "↓"}.get(str(r["Bias"]), "·")
+                lines.append(
+                    f"{tag} <code>{r['Sector']:<8}</code>  "
+                    f"{r['ReturnPct']:+.2f}%  vsN {r['VsNifty']:+.2f}  "
+                    f"br {int(r['Breadth'])}%"
+                )
+        return "\n".join(lines)
+
     if not sector_df.empty:
         lines.append("<b>Sectors</b>")
         for _, r in sector_df.iterrows():
-            bias = str(r["Bias"])
-            tag = {"BULLISH": "↑", "WEAK": "↓"}.get(bias, "·")
+            tag = {"BULLISH": "↑", "WEAK": "↓"}.get(str(r["Bias"]), "·")
             lines.append(
                 f"{tag} <code>{r['Sector']:<8}</code>  "
-                f"{r['ReturnPct']:+.2f}%  "
-                f"vsN {r['VsNifty']:+.2f}  "
+                f"{r['ReturnPct']:+.2f}%  vsN {r['VsNifty']:+.2f}  "
                 f"br {int(r['Breadth'])}%"
             )
         lines.append("")
 
     if scan_df.empty:
         lines.append("<b>No setups.</b> Stand aside.")
-        lines.append("<i>Flat by 15:10. Risk 0.4% · max 2 names · long + short.</i>")
+        lines.append("<i>T1 = 1R book · T2 = 2R · flat 15:10.</i>")
     else:
         n_buy = int((scan_df["Signal"] == "BUY").sum()) if "Signal" in scan_df.columns else 0
         n_sell = int((scan_df["Signal"] == "SELL").sum()) if "Signal" in scan_df.columns else 0
-        lines.append(
-            f"<b>Setups</b>  ·  {len(scan_df)} of {MAX_TRADES}  "
-            f"(L {n_buy} / S {n_sell})"
-        )
+        lines.append(f"<b>Setups</b>  ·  {len(scan_df)} of {MAX_TRADES}  (L {n_buy} / S {n_sell})")
         for i, (_, t) in enumerate(scan_df.iterrows(), 1):
             name = str(t["Stock"]).replace(".NS", "")
             sig = str(t.get("Signal", "BUY")).upper()
             side_tag = "LONG" if sig == "BUY" else "SHORT"
             lines.append("")
-            lines.append(
-                f"<b>{i}. {side_tag}  {name}</b>  ·  {t['Sector']}  ·  {t['Setup']}"
-            )
+            lines.append(f"<b>{i}. {side_tag}  {name}</b>  ·  {t['Sector']}  ·  {t['Setup']}")
             lines.append(
                 f"Entry <code>{_fmt_inr(t['Entry'])}</code>  "
                 f"SL <code>{_fmt_inr(t['SL'])}</code>"
             )
             lines.append(
-                f"T1 <code>{_fmt_inr(t['Target1'])}</code>  "
-                f"T2 <code>{_fmt_inr(t['Target2'])}</code>  "
-                f"(1:{float(t['RR']):.0f})"
+                f"T1 <code>{_fmt_inr(t['Target1'])}</code> (1R book)  "
+                f"T2 <code>{_fmt_inr(t['Target2'])}</code>"
             )
             lines.append(
-                f"Qty <b>{int(t['Qty'])}</b>  ·  "
-                f"risk {_fmt_inr(t['RiskRs'])}  ·  "
+                f"Qty <b>{int(t['Qty'])}</b>  ·  risk {_fmt_inr(t['RiskRs'])}  ·  "
                 f"RVOL {float(t['VolSurge']):.1f}×"
             )
         lines.append("")
-        lines.append(
-            "<i>Skip gap through SL · MIS / intraday only · flat by 15:10.</i>"
-        )
+        lines.append("<i>Skip gap through SL · MIS only · book 1R · trail rest · flat 15:10.</i>")
 
     return "\n".join(lines)
 
@@ -291,6 +303,16 @@ def download_bundle(tickers: list[str], interval: str, period: str) -> pd.DataFr
         return pd.DataFrame()
 
 
+def empty_scan() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            "Stock", "Signal", "Setup", "Sector", "SectorBias", "WeeklyTrend", "MTF",
+            "Price", "Score", "RSI", "VolSurge", "Entry", "SL", "Target1", "Target2",
+            "RR", "ORHigh", "ORLow", "VsSector", "Qty", "Margin", "RiskRs",
+        ]
+    )
+
+
 def position_size(entry: float, sl: float, side: str = "BUY") -> int:
     if entry <= 0:
         return 0
@@ -324,25 +346,25 @@ def score_sector(session: pd.DataFrame, nifty_ret: float, members: list[pd.DataF
             green += 1
     breadth = (green / counted) if counted else 0.5
     score = 0
-    if vs >= 0.15:
+    if vs >= MIN_VS_NIFTY:
         score += 2
-    elif vs <= -0.15:
+    elif vs <= -MIN_VS_NIFTY:
         score -= 2
     if breadth >= MIN_BREADTH:
         score += 2
-    elif breadth <= 0.40:
+    elif breadth <= (1 - MIN_BREADTH):
         score -= 2
-    if pd.notna(r) and r >= 0.20:
+    if pd.notna(r) and r >= 0.40:
         score += 1
-    elif pd.notna(r) and r <= -0.20:
+    elif pd.notna(r) and r <= -0.40:
         score -= 1
     if pd.notna(vw) and last > vw:
         score += 1
     else:
         score -= 1
-    if score >= 3:
+    if score >= 4:
         bias = "BULLISH"
-    elif score <= -3:
+    elif score <= -4:
         bias = "WEAK"
     else:
         bias = "CHOP"
@@ -365,17 +387,16 @@ def evaluate_stock(
     sector: str,
     side: str,
 ) -> dict | None:
-    """side: BUY (bullish sector) or SELL (weak sector)."""
     if session is None or session.empty or len(session) < 4:
         return None
     or_high, or_low, _ = opening_range(session)
     if pd.isna(or_high) or pd.isna(or_low) or or_high <= or_low:
         return None
     last = float(session["Close"].iloc[-1])
-    if last < 50:
+    if last < 80:
         return None
     width = (or_high - or_low) / last
-    if width > MAX_OR_WIDTH or width < 0.002:
+    if width > MAX_OR_WIDTH or width < MIN_OR_WIDTH:
         return None
 
     vw = vwap(session)
@@ -398,33 +419,39 @@ def evaluate_stock(
     if side == "BUY":
         if last < vw or stock_ret < sector_ret:
             return None
-        broke = last >= or_high * 0.999
-        tagged = last >= or_high * 0.997
-        if not (broke or tagged):
+        if last < or_high:
             return None
-        setup = "ORB break" if broke else "OR tag"
-        sl = round(or_low, 2)
+        extension = (last - or_high) / last
+        if extension > MAX_EXTENSION:
+            return None
+        setup = "ORB break"
+        sl = round(or_high * (1 - SL_BUFFER), 2)
+        if sl >= entry:
+            sl = round(entry * (1 - SL_BUFFER), 2)
         risk = entry - sl
         if risk <= 0:
             return None
-        t1 = round(entry + 2 * risk, 2)
-        t2 = round(entry + 3 * risk, 2)
+        t1 = round(entry + T1_R * risk, 2)
+        t2 = round(entry + T2_R * risk, 2)
         bias = "BULLISH"
         score = int(min(99, 70 + rs * 8 + min(rvol, 3) * 6))
     else:
         if last > vw or stock_ret > sector_ret:
             return None
-        broke = last <= or_low * 1.001
-        tagged = last <= or_low * 1.003
-        if not (broke or tagged):
+        if last > or_low:
             return None
-        setup = "ORB breakdown" if broke else "OR low tag"
-        sl = round(or_high, 2)
+        extension = (or_low - last) / last
+        if extension > MAX_EXTENSION:
+            return None
+        setup = "ORB breakdown"
+        sl = round(or_low * (1 + SL_BUFFER), 2)
+        if sl <= entry:
+            sl = round(entry * (1 + SL_BUFFER), 2)
         risk = sl - entry
         if risk <= 0:
             return None
-        t1 = round(entry - 2 * risk, 2)
-        t2 = round(entry - 3 * risk, 2)
+        t1 = round(entry - T1_R * risk, 2)
+        t2 = round(entry - T2_R * risk, 2)
         bias = "WEAK"
         score = int(min(99, 70 + (-rs) * 8 + min(rvol, 3) * 6))
 
@@ -448,7 +475,7 @@ def evaluate_stock(
         "SL": sl,
         "Target1": t1,
         "Target2": t2,
-        "RR": 2.0,
+        "RR": T1_R,
         "ORHigh": round(or_high, 2),
         "ORLow": round(or_low, 2),
         "VsSector": round(rs, 2),
@@ -513,46 +540,55 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
         ].sort_values("Score", ascending=False)
     sector_df.to_csv("sector_data.csv", index=False)
 
-    setups: list[dict] = []
-
-    def pick_best(sector_map: dict[str, float], side: str) -> None:
-        for sector, sector_ret in sector_map.items():
-            names = SECTORS[sector]["names"]
-            best = None
-            for symbol in names:
-                sess = member_cache.get(symbol, pd.DataFrame())
-                daily = to_ist(bars_of(daily_raw, symbol))
-                row = evaluate_stock(symbol, sess, daily, sector_ret, sector, side)
-                if row is None:
-                    continue
-                if best is None or row["Score"] > best["Score"]:
-                    best = row
-            if best:
-                setups.append(best)
-
-    if not bullish and not weak:
-        print("No directional sector — stand aside.")
+    chop = pd.isna(nifty_ret) or abs(float(nifty_ret)) < NIFTY_CHOP
+    if chop:
+        mood = "CHOP"
+        print("Nifty CHOP — stand aside.")
+        scan_df = empty_scan()
+        bullish = {}
+        weak = {}
     else:
-        pick_best(bullish, "BUY")
-        pick_best(weak, "SELL")
+        mood = "BULLISH" if float(nifty_ret) >= NIFTY_CHOP else "HEAVY"
+        if mood == "BULLISH":
+            weak = {}
+        else:
+            bullish = {}
 
-    scan_df = pd.DataFrame(setups)
-    if not scan_df.empty:
-        scan_df = scan_df.sort_values(["Score", "VolSurge"], ascending=False).head(MAX_TRADES)
-    else:
-        scan_df = pd.DataFrame(
-            columns=[
-                "Stock", "Signal", "Setup", "Sector", "SectorBias", "WeeklyTrend", "MTF",
-                "Price", "Score", "RSI", "VolSurge", "Entry", "SL", "Target1", "Target2",
-                "RR", "ORHigh", "ORLow", "VsSector", "Qty", "Margin", "RiskRs",
-            ]
-        )
+        setups: list[dict] = []
+
+        def pick_best(sector_map: dict[str, float], side: str) -> None:
+            for sector, sector_ret in sector_map.items():
+                names = SECTORS[sector]["names"]
+                best = None
+                for symbol in names:
+                    sess = member_cache.get(symbol, pd.DataFrame())
+                    daily = to_ist(bars_of(daily_raw, symbol))
+                    row = evaluate_stock(symbol, sess, daily, sector_ret, sector, side)
+                    if row is None:
+                        continue
+                    if best is None or row["Score"] > best["Score"]:
+                        best = row
+                if best:
+                    setups.append(best)
+
+        if not bullish and not weak:
+            print("No directional sector after Nifty filter — stand aside.")
+        else:
+            pick_best(bullish, "BUY")
+            pick_best(weak, "SELL")
+
+        scan_df = pd.DataFrame(setups)
+        if not scan_df.empty:
+            scan_df = scan_df.sort_values(["Score", "VolSurge"], ascending=False).head(MAX_TRADES)
+        else:
+            scan_df = empty_scan()
+
     scan_df.to_csv("scanner_data.csv", index=False)
 
     market_blob = {
         "nifty": float(nifty_sess["Close"].iloc[-1]) if not nifty_sess.empty else 0.0,
         "nifty_ret": round(float(nifty_ret) if pd.notna(nifty_ret) else 0.0, 2),
-        "mood": "BULLISH" if (nifty_ret or 0) >= 0 else "HEAVY",
+        "mood": mood,
         "as_of": stamp,
         "bullish_sectors": ",".join(bullish.keys()) or "—",
         "weak_sectors": ",".join(weak.keys()) or "—",
