@@ -210,4 +210,231 @@ def load_json_history(filepath="performance_history.json"):
 
 
 def load_market():
-    if not os.path.exists
+    if not os.path.exists("market_data.json"):
+        return {}
+    try:
+        with open("market_data.json") as f:
+            raw = json.load(f)
+        if isinstance(raw, dict):
+            return raw
+    except Exception:
+        pass
+    return {}
+
+
+with st.sidebar:
+    st.markdown("**Risk**")
+    fixed_rupee_risk = st.number_input("INR risk / trade", value=400.0, step=100.0, format="%.0f")
+    max_trade_capital = st.number_input("INR max margin", value=50000.0, step=5000.0, format="%.0f")
+    st.caption("Long + short · 0.4% corpus · max 2 · 1/sector · flat 15:10")
+
+mkt = load_market()
+nifty = safe_float(mkt.get("nifty"))
+nret = safe_float(mkt.get("nifty_ret"))
+mood = str(mkt.get("mood") or "—")
+as_of = mkt.get("as_of") or "—"
+ret_cls = "up" if nret >= 0 else "dn"
+mood_pill = "pill-up" if mood.upper() == "BULLISH" else ("pill-dn" if mood.upper() in ("HEAVY", "BEARISH") else "pill-flat")
+
+st.markdown(
+    f"""
+    <div class="topbar">
+      <div class="topbar-title">Sector Tape</div>
+      <span class="pill {mood_pill}">{mood}</span>
+      <div class="topbar-meta">{as_of}</div>
+    </div>
+    <div class="strip">
+      <div class="strip-cell">
+        <div class="strip-label">Nifty</div>
+        <div class="strip-val">{nifty:,.0f}</div>
+        <div class="strip-sub {ret_cls}">{nret:+.2f}%</div>
+      </div>
+      <div class="strip-cell">
+        <div class="strip-label">Long sectors</div>
+        <div class="strip-val" style="font-size:0.85rem">{mkt.get('bullish_sectors') or '—'}</div>
+      </div>
+      <div class="strip-cell">
+        <div class="strip-label">Short sectors</div>
+        <div class="strip-val" style="font-size:0.85rem">{mkt.get('weak_sectors') or '—'}</div>
+      </div>
+      <div class="strip-cell">
+        <div class="strip-label">Bias</div>
+        <div class="strip-val" style="font-size:0.95rem">{mood}</div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+tab_tape, tab_hist, tab_watch = st.tabs(["Tape", "History", "Watchlist"])
+
+with tab_tape:
+    st.markdown('<p class="section-h">Sector map</p>', unsafe_allow_html=True)
+
+    if os.path.exists("sector_data.csv"):
+        sec_df = pd.read_csv("sector_data.csv")
+        if sec_df.empty:
+            st.markdown('<div class="empty">No sector data — run scanner</div>', unsafe_allow_html=True)
+        else:
+            cards = []
+            for _, r in sec_df.iterrows():
+                bias = str(r.get("Bias", "")).upper()
+                cls = "bull" if bias == "BULLISH" else ("weak" if bias == "WEAK" else "")
+                ret = safe_float(r.get("ReturnPct"))
+                ret_c = "up" if ret >= 0 else "dn"
+                vs = safe_float(r.get("VsNifty"))
+                br = int(safe_float(r.get("Breadth")))
+                cards.append(
+                    f"""
+                    <div class="sec-card {cls}">
+                      <div class="sec-name">{r.get('Sector')}</div>
+                      <div class="sec-ret {ret_c}">{ret:+.2f}%</div>
+                      <div class="sec-meta">vsN {vs:+.2f} · br {br}%</div>
+                      <div class="sec-meta">{bias}</div>
+                    </div>
+                    """
+                )
+            st.markdown(f'<div class="sec-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="empty">sector_data.csv missing</div>', unsafe_allow_html=True)
+
+    st.markdown('<p class="section-h">Setups · long + short</p>', unsafe_allow_html=True)
+
+    if os.path.exists("scanner_data.csv"):
+        live_df = pd.read_csv("scanner_data.csv")
+        if live_df.empty:
+            st.markdown('<div class="empty">No setups — stand aside</div>', unsafe_allow_html=True)
+        else:
+            rows_html = []
+            for _, t in live_df.iterrows():
+                sig = str(t.get("Signal", "BUY")).upper()
+                side = "buy" if sig == "BUY" else "sell"
+                side_label = "LONG" if side == "buy" else "SHORT"
+                name = str(t.get("Stock", "")).replace(".NS", "")
+                rows_html.append(
+                    f"""
+                    <div class="setup {side}">
+                      <div>
+                        <div class="setup-side {side}">{side_label}</div>
+                        <div class="setup-sub">{t.get('Setup')}</div>
+                      </div>
+                      <div>
+                        <div class="setup-name">{name}</div>
+                        <div class="setup-sub">{t.get('Sector')} · RVOL {t.get('VolSurge')}x · score {t.get('Score')}</div>
+                      </div>
+                      <div class="setup-levels">
+                        Entry <b>INR {safe_float(t.get('Entry')):,.2f}</b><br>
+                        SL <b>INR {safe_float(t.get('SL')):,.2f}</b><br>
+                        T1 INR {safe_float(t.get('Target1')):,.2f} · T2 INR {safe_float(t.get('Target2')):,.2f}<br>
+                        Qty {int(safe_float(t.get('Qty')))} · risk INR {safe_float(t.get('RiskRs')):,.0f}
+                      </div>
+                    </div>
+                    """
+                )
+            st.markdown("".join(rows_html), unsafe_allow_html=True)
+
+            st.markdown('<p class="section-h" style="margin-top:1.5rem">Inspect</p>', unsafe_allow_html=True)
+            stock_list = live_df["Stock"].tolist()
+            selected = st.selectbox("stock", stock_list, label_visibility="collapsed")
+            row = live_df[live_df["Stock"] == selected].iloc[0]
+            sig = str(row.get("Signal", "BUY")).upper()
+
+            col_c, col_t = st.columns([1.6, 1])
+            with col_c:
+                hist = yf.Ticker(selected).history(period="5d", interval="5m")
+                if hist.empty:
+                    hist = yf.Ticker(selected).history(period="5d")
+                if not hist.empty and HAS_PLOTLY:
+                    fig = go.Figure()
+                    fig.add_trace(
+                        go.Candlestick(
+                            x=hist.index,
+                            open=hist["Open"],
+                            high=hist["High"],
+                            low=hist["Low"],
+                            close=hist["Close"],
+                            increasing_line_color="#3ecf8e",
+                            decreasing_line_color="#f07178",
+                            increasing_fillcolor="#3ecf8e",
+                            decreasing_fillcolor="#f07178",
+                        )
+                    )
+                    for y, color, label in [
+                        (safe_float(row.get("Entry")), "#a0a3ab", "Entry"),
+                        (safe_float(row.get("SL")), "#f07178", "SL"),
+                        (safe_float(row.get("Target1")), "#3ecf8e", "T1"),
+                        (safe_float(row.get("Target2")), "#6b6e78", "T2"),
+                    ]:
+                        if y:
+                            fig.add_hline(
+                                y=y, line_dash="dot", line_color=color, line_width=1,
+                                annotation_text=label, annotation_font_size=10,
+                            )
+                    fig.update_layout(
+                        template="plotly_dark",
+                        plot_bgcolor="#0d0e12",
+                        paper_bgcolor="#0d0e12",
+                        font=dict(family="JetBrains Mono", size=10, color="#6b6e78"),
+                        margin=dict(l=4, r=4, t=8, b=4),
+                        height=380,
+                        xaxis_rangeslider_visible=False,
+                        showlegend=False,
+                        xaxis=dict(gridcolor="#15171c"),
+                        yaxis=dict(gridcolor="#15171c", side="right"),
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+            with col_t:
+                e = safe_float(row.get("Entry"))
+                s = safe_float(row.get("SL"))
+                risk_ps = abs(e - s) if e and s else 0
+                if risk_ps > 0:
+                    qty = max(1, min(int(fixed_rupee_risk / risk_ps), int(max_trade_capital / e)))
+                else:
+                    qty = int(safe_float(row.get("Qty")))
+                action = "BUY" if sig == "BUY" else "SELL / SHORT"
+                side_cls = "buy" if sig == "BUY" else "sell"
+                st.markdown(
+                    f"""
+                    <div class="setup {side_cls}" style="grid-template-columns:1fr;display:block">
+                      <div class="setup-side {side_cls}">{action}</div>
+                      <div class="setup-name" style="margin:8px 0">{str(selected).replace('.NS','')}</div>
+                      <div class="setup-levels" style="text-align:left">
+                        Entry <b>INR {e:,.2f}</b><br>
+                        SL <b>INR {s:,.2f}</b><br>
+                        T1 <b>INR {safe_float(row.get('Target1')):,.2f}</b><br>
+                        T2 <b>INR {safe_float(row.get('Target2')):,.2f}</b><br><br>
+                        Size <b>{qty}</b> sh<br>
+                        Margin INR {qty * e:,.0f}<br>
+                        Risk INR {qty * risk_ps:,.0f}
+                      </div>
+                      <div class="setup-sub" style="margin-top:10px">MIS only · skip gap SL · flat 15:10</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.markdown('<div class="empty">scanner_data.csv missing</div>', unsafe_allow_html=True)
+
+raw_history = load_json_history("performance_history.json")
+
+with tab_hist:
+    if raw_history.empty:
+        st.markdown('<div class="empty">No ledger</div>', unsafe_allow_html=True)
+    else:
+        valid = raw_history[
+            raw_history["Status"].astype(str).str.contains("ACTIVE|CLOSED|HIT|EXIT", case=False, na=False)
+        ]
+        st.dataframe(valid, use_container_width=True, height=400, hide_index=True)
+
+with tab_watch:
+    if raw_history.empty:
+        st.markdown('<div class="empty">Empty</div>', unsafe_allow_html=True)
+    else:
+        veto = raw_history[
+            raw_history["Status"].astype(str).str.contains("WATCHLIST|VETO", case=False, na=False)
+        ]
+        if veto.empty:
+            st.markdown('<div class="empty">Nothing parked</div>', unsafe_allow_html=True)
+        else:
+            st.dataframe(veto, use_container_width=True, height=400, hide_index=True)
