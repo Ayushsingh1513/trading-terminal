@@ -1,4 +1,3 @@
-
 """
 Intraday sector-first scanner for NSE cash (long + short).
 
@@ -14,6 +13,7 @@ Run: python intraday_scanner.py
 """
 from __future__ import annotations
 
+import hashlib
 import os
 from datetime import datetime
 
@@ -137,6 +137,25 @@ def send_telegram(message: str, parse_mode: str = "HTML") -> None:
                 print(f"Telegram error {r2.status_code}: {r2.text}")
     except Exception as exc:
         print(f"Telegram failed: {exc}")
+
+
+def send_telegram_once(message: str) -> None:
+    """Skip Telegram if this tape is identical to the last one (15-min cron)."""
+    digest = hashlib.sha256(message.encode("utf-8")).hexdigest()
+    last_path = "last_alert.sha"
+    if os.path.exists(last_path):
+        try:
+            if open(last_path, encoding="utf-8").read().strip() == digest:
+                print("Telegram unchanged — skip.")
+                return
+        except Exception:
+            pass
+    send_telegram(message)
+    try:
+        with open(last_path, "w", encoding="utf-8") as f:
+            f.write(digest)
+    except Exception as exc:
+        print(f"could not write {last_path}: {exc}")
 
 
 def _fmt_inr(n: float) -> str:
@@ -596,7 +615,7 @@ def run_intraday() -> tuple[pd.DataFrame, pd.DataFrame]:
     pd.Series(market_blob).to_json("market_data.json")
 
     msg = build_telegram_report(stamp, market_blob, sector_df, scan_df)
-    send_telegram(msg)
+    send_telegram_once(msg)
     print("Wrote sector_data.csv, scanner_data.csv, market_data.json")
     return scan_df, sector_df
 
