@@ -1,2 +1,2 @@
 Stock,Signal,Setup,Sector,SectorBias,WeeklyTrend,MTF,Price,Score,RSI,VolSurge,Entry,SL,Target1,Target2,RR,ORHigh,ORLow,VsSector,Qty,Margin,RiskRs
-APOLLOHOSP.NS,SELL,ORB breakdown,Pharma,WEAK,INTRADAY,Opening range,8881.0,90,-0.9,4.69,8881.0,8917.86,8844.14,8807.28,1.0,8972.5,8904.5,-0.32,5,44405.0,184.3
+INDUSINDBK.NS,SELL,ORB breakdown,Bank,WEAK,INTRADAY,Opening range,955.0,85,-0.7,2.23,955.0,959.44,950.56,946.12,1.0,962.3,958.0,-0.21,52,49660.0,230.88
