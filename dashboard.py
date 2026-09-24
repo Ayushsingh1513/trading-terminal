@@ -3,7 +3,6 @@ import os
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 import yfinance as yf
 
 try:
@@ -13,62 +12,102 @@ except ImportError:
     HAS_PLOTLY = False
 
 st.set_page_config(page_title="Sector Tape", layout="wide", page_icon="■", initial_sidebar_state="collapsed")
-components.html("<script>setTimeout(function(){window.parent.location.reload();},45000);</script>", height=0, width=0)
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
-html,body,[class*="css"]{font-family:Inter,system-ui,sans-serif}
-.stApp{background:#050608;color:#d4d6db}
-.block-container{padding:1rem 1.5rem 2rem;max-width:1400px}
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+html,body,[class*="css"]{font-family:'IBM Plex Sans',system-ui,sans-serif}
+.stApp{background:#07080b;color:#c8cbd2;
+  background-image:radial-gradient(ellipse at top,#12141a 0%,#07080b 55%)}
+.block-container{padding:1.1rem 1.4rem 2.4rem;max-width:1360px}
 header[data-testid="stHeader"]{background:transparent}
-#MainMenu,footer{visibility:hidden}
-section[data-testid="stSidebar"]{background:#0a0b0e;border-right:1px solid #1c1e24}
-.topbar{display:flex;align-items:baseline;gap:1.25rem;flex-wrap:wrap;padding:0 0 1rem;border-bottom:1px solid #1c1e24;margin-bottom:1.25rem}
-.topbar-title{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.95rem;letter-spacing:.12em;text-transform:uppercase;color:#f0f1f3}
-.topbar-meta{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b6e78}
-.pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px}
-.pill-up{background:#0f2a1c;color:#3ecf8e}.pill-dn{background:#2a0f0f;color:#f07178}.pill-flat{background:#1a1c22;color:#8b8e98}
-.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:1.25rem}
-.strip-cell{background:#0d0e12;border:1px solid #1c1e24;border-radius:4px;padding:12px 14px}
-.strip-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:#6b6e78;margin-bottom:4px}
-.strip-val{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:600;color:#f0f1f3}
-.strip-sub{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#6b6e78;margin-top:2px}
+#MainMenu,footer,div[data-testid="stToolbar"]{visibility:hidden}
+section[data-testid="stSidebar"]{background:#0a0c10;border-right:1px solid #1a1d26}
+section[data-testid="stSidebar"] .stMarkdown,section[data-testid="stSidebar"] label{color:#9aa0ab}
+.stButton>button{background:#12151c;color:#e8eaef;border:1px solid #2a2e3a;border-radius:6px;
+  font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;width:100%}
+.stButton>button:hover{border-color:#3ecf8e;color:#3ecf8e}
+.stNumberInput input{background:#0d0f14;color:#e8eaef;border:1px solid #2a2e3a}
+div[data-testid="stRadio"]{margin:0 0 1.15rem}
+div[data-testid="stRadio"]>div{gap:0!important;background:#0d0f14;border:1px solid #1f2330;
+  border-radius:8px;padding:4px;width:fit-content;flex-wrap:nowrap}
+div[data-testid="stRadio"] label{padding:7px 18px!important;margin:0!important;
+  font-family:'IBM Plex Mono',monospace!important;font-size:.72rem!important;
+  letter-spacing:.12em;text-transform:uppercase;color:#6e7480!important;border-radius:6px}
+div[data-testid="stRadio"] label:has(input:checked){background:#171a22;color:#f3f4f6!important;
+  box-shadow:inset 0 -2px 0 #3ecf8e}
+div[data-testid="stRadio"] label p{font-family:'IBM Plex Mono',monospace!important}
+div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p{font-size:.72rem}
+.stSelectbox label{display:none}
+.stSelectbox div[data-baseweb="select"]>div{background:#0d0f14;border-color:#1f2330;color:#e8eaef}
+
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:0 0 14px;border-bottom:1px solid #1a1d26;margin-bottom:16px}
+.mark{width:8px;height:8px;border-radius:50%;background:#3ecf8e;box-shadow:0 0 8px #3ecf8e}
+.topbar-title{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:.92rem;
+  letter-spacing:.16em;text-transform:uppercase;color:#f3f4f6}
+.topbar-meta{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#6e7480;margin-left:auto}
+.pill{font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:4px}
+.pill-up{background:rgba(62,207,142,.12);color:#3ecf8e;border:1px solid rgba(62,207,142,.25)}
+.pill-dn{background:rgba(240,113,120,.12);color:#f07178;border:1px solid rgba(240,113,120,.25)}
+.pill-flat{background:#14161c;color:#8b909c;border:1px solid #262a36}
+
+.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px}
+.strip-cell{background:linear-gradient(180deg,#10131a,#0c0e13);border:1px solid #1c2030;
+  border-radius:8px;padding:12px 14px}
+.strip-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:#6e7480;margin-bottom:6px}
+.strip-val{font-family:'IBM Plex Mono',monospace;font-size:1.08rem;font-weight:600;color:#f3f4f6}
+.strip-sub{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#6e7480;margin-top:3px}
 .up{color:#3ecf8e!important}.dn{color:#f07178!important}
-.sec-grid,.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:1.5rem}
-.sec-card,.agent{background:#0d0e12;border:1px solid #1c1e24;border-radius:4px;padding:10px 12px;border-top:2px solid #1c1e24}
+
+.sec-grid,.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px;margin-bottom:22px}
+.sec-card,.agent{background:#0d0f14;border:1px solid #1c2030;border-radius:8px;padding:12px 13px;border-top:2px solid #1c2030}
 .sec-card.bull,.agent.long{border-top-color:#3ecf8e}
 .sec-card.weak,.agent.short{border-top-color:#f07178}
-.agent.flat{border-top-color:#6b6e78}
-.sec-name,.agent-k{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#6b6e78;margin-bottom:6px}
-.sec-ret,.agent-v{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700}
-.sec-meta,.agent-c,.agent-why{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#6b6e78;margin-top:4px;line-height:1.4}
-.setup{background:#0d0e12;border:1px solid #1c1e24;border-radius:4px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:90px 1fr auto auto;gap:14px;align-items:center}
+.agent.flat{border-top-color:#5c6270}
+.sec-name,.agent-k{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;
+  text-transform:uppercase;color:#6e7480;margin-bottom:7px}
+.sec-ret,.agent-v{font-family:'IBM Plex Mono',monospace;font-size:1.05rem;font-weight:700}
+.sec-meta,.agent-c,.agent-why{font-family:'IBM Plex Mono',monospace;font-size:.64rem;color:#6e7480;margin-top:5px;line-height:1.45}
+
+.setup{background:#0d0f14;border:1px solid #1c2030;border-radius:8px;padding:14px 16px;margin-bottom:8px;
+  display:grid;grid-template-columns:88px 1fr auto auto;gap:14px;align-items:center}
 .setup.buy{border-left:3px solid #3ecf8e}.setup.sell{border-left:3px solid #f07178}
-.setup-side{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;letter-spacing:.1em}
+.setup-side{font-family:'IBM Plex Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:.12em}
 .setup-side.buy{color:#3ecf8e}.setup-side.sell{color:#f07178}
-.setup-name{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:600;color:#f0f1f3}
-.setup-sub{font-size:.72rem;color:#6b6e78;margin-top:2px}
-.setup-levels{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#a0a3ab;text-align:right;line-height:1.55}
-.setup-levels b{color:#f0f1f3}
-.conf{font-family:'JetBrains Mono',monospace;text-align:right}
-.conf-n{font-size:1.2rem;font-weight:700}
-.conf-l{font-size:.6rem;letter-spacing:.1em;color:#6b6e78;text-transform:uppercase}
-.section-h{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#6b6e78;margin:0 0 10px}
-.stTabs [data-baseweb="tab-list"]{gap:0;border-bottom:1px solid #1c1e24;background:transparent}
-.stTabs [data-baseweb="tab"]{height:36px;background:transparent;color:#6b6e78;font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;border-radius:0;padding:0 16px}
-.stTabs [aria-selected="true"]{color:#f0f1f3!important;border-bottom:2px solid #3ecf8e!important;background:transparent!important}
-.stSelectbox label{display:none}
-.empty{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#6b6e78;padding:24px;text-align:center;border:1px dashed #1c1e24;border-radius:4px}
-.bar{height:4px;background:#1c1e24;border-radius:2px;margin-top:8px;overflow:hidden}
+.setup-name{font-family:'IBM Plex Mono',monospace;font-size:1.02rem;font-weight:600;color:#f3f4f6}
+.setup-sub{font-size:.72rem;color:#6e7480;margin-top:3px}
+.setup-levels{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#9aa0ab;text-align:right;line-height:1.6}
+.setup-levels b{color:#f3f4f6}
+.conf{font-family:'IBM Plex Mono',monospace;text-align:right}
+.conf-n{font-size:1.25rem;font-weight:700}
+.conf-l{font-size:.58rem;letter-spacing:.12em;color:#6e7480;text-transform:uppercase}
+
+.section-h{font-family:'IBM Plex Mono',monospace;font-size:.66rem;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;color:#6e7480;margin:4px 0 10px}
+.empty{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:#6e7480;padding:28px;text-align:center;
+  border:1px dashed #262a36;border-radius:8px;background:#0b0d12}
+.bar{height:3px;background:#1c2030;border-radius:2px;margin-top:10px;overflow:hidden}
 .bar>i{display:block;height:100%;background:#3ecf8e}
-.bar.dn>i{background:#f07178}.bar.fl>i{background:#6b6e78}
-table.mtx{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-bottom:1.5rem}
-table.mtx th{text-align:left;color:#6b6e78;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #1c1e24}
-table.mtx td{padding:9px 10px;border-bottom:1px solid #15171c;color:#d4d6db}
-.cell{display:inline-block;min-width:64px;text-align:right;padding:2px 6px;border-radius:3px}
-.hi{background:#0f2a1c;color:#3ecf8e}.lo{background:#2a0f0f;color:#f07178}.mid{background:#1a1c22;color:#8b8e98}
-@media(max-width:900px){.strip{grid-template-columns:repeat(2,1fr)}.setup{grid-template-columns:1fr 1fr}}
+.bar.dn>i{background:#f07178}.bar.fl>i{background:#5c6270}
+
+.mtx-wrap{overflow-x:auto;border:1px solid #1c2030;border-radius:8px;margin-bottom:22px}
+table.mtx{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.72rem;margin:0}
+table.mtx th{text-align:left;color:#6e7480;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  padding:10px 12px;border-bottom:1px solid #1c2030;background:#0b0d12;position:sticky;top:0}
+table.mtx td{padding:10px 12px;border-bottom:1px solid #141720;color:#c8cbd2}
+table.mtx tr:last-child td{border-bottom:0}
+table.mtx tbody tr:hover td{background:#10131a}
+.cell{display:inline-block;min-width:70px;text-align:right;padding:3px 7px;border-radius:4px;font-weight:500}
+.hi{background:rgba(62,207,142,.14);color:#3ecf8e}
+.lo{background:rgba(240,113,120,.14);color:#f07178}
+.mid{background:#14161c;color:#8b909c}
+@media(max-width:900px){
+  .strip{grid-template-columns:repeat(2,1fr)}
+  .setup{grid-template-columns:1fr 1fr}
+  .topbar-meta{margin-left:0}
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -255,28 +294,34 @@ if not sec_df.empty:
     lead = "%s %+.2f%%" % (top["Sector"], sf(top["ReturnPct"]))
 
 with st.sidebar:
+    st.markdown("**Desk**")
+    if st.button("Refresh tape"):
+        st.rerun()
+    st.caption("Stays on this page. Scanner itself still runs every 15 min on GitHub.")
+    st.markdown("---")
     st.markdown("**Risk**")
     fixed_rupee_risk = st.number_input("INR risk / trade", value=400.0, step=100.0, format="%.0f")
     max_trade_capital = st.number_input("INR max margin", value=50000.0, step=5000.0, format="%.0f")
-    st.caption("5 free agents · 1R book · max 2 · flat 15:10")
+    st.caption("0.4% corpus · max 2 · 1/sector · T1 = 1R · flat 15:10")
     st.markdown("---")
     st.markdown("**Consensus**  \n`%s` · %d%%" % (vote, vote_conf))
     st.caption(vote_why)
 
 st.markdown("""
 <div class="topbar">
+  <span class="mark"></span>
   <div class="topbar-title">Sector Tape</div>
   <span class="pill %s">%s</span>
-  <span class="pill %s">AGENTS %s %d%%</span>
-  <div class="topbar-meta">%s · refresh 45s</div>
+  <span class="pill %s">%s · %d%%</span>
+  <div class="topbar-meta">%s</div>
 </div>
 <div class="strip">
   <div class="strip-cell"><div class="strip-label">Nifty</div><div class="strip-val">%s</div><div class="strip-sub %s">%+.2f%%</div></div>
   <div class="strip-cell"><div class="strip-label">Consensus</div><div class="strip-val %s">%s</div><div class="strip-sub">%d%% · %s</div></div>
   <div class="strip-cell"><div class="strip-label">Setups</div><div class="strip-val">%d</div><div class="strip-sub">L %d / S %d</div></div>
   <div class="strip-cell"><div class="strip-label">Avg breadth</div><div class="strip-val">%.0f%%</div><div class="strip-sub">members green</div></div>
-  <div class="strip-cell"><div class="strip-label">Lead sector</div><div class="strip-val" style="font-size:.85rem">%s</div><div class="strip-sub">%s</div></div>
-  <div class="strip-cell"><div class="strip-label">Weak sector</div><div class="strip-val" style="font-size:.85rem">%s</div><div class="strip-sub">short only if Nifty down</div></div>
+  <div class="strip-cell"><div class="strip-label">Lead</div><div class="strip-val" style="font-size:.86rem">%s</div><div class="strip-sub">%s</div></div>
+  <div class="strip-cell"><div class="strip-label">Weak</div><div class="strip-val" style="font-size:.86rem">%s</div><div class="strip-sub">shorts only if Nifty down</div></div>
 </div>
 """ % (
     mood_pill, mood, vote_pill, vote, vote_conf, as_of,
@@ -287,17 +332,20 @@ st.markdown("""
     mkt.get("weak_sectors") or "—",
 ), unsafe_allow_html=True)
 
-tab_tape, tab_mtx, tab_hist = st.tabs(["Tape", "Matrix", "History"])
+PAGES = ["Tape", "Matrix", "History"]
+if "page" not in st.session_state:
+    st.session_state.page = "Tape"
+picked = st.radio("page", PAGES, horizontal=True, label_visibility="collapsed", key="page")
 
-with tab_tape:
-    st.markdown('<p class="section-h">Free agents</p>', unsafe_allow_html=True)
+if picked == "Tape":
+    st.markdown('<p class="section-h">Agents</p>', unsafe_allow_html=True)
     cards = []
     for a in agents:
         cls = "long" if a["vote"] == "LONG" else ("short" if a["vote"] == "SHORT" else "flat")
         bar = "dn" if a["vote"] == "SHORT" else ("fl" if a["vote"] == "FLAT" else "")
         col = "up" if a["vote"] == "LONG" else ("dn" if a["vote"] == "SHORT" else "")
         cards.append(
-            '<div class="agent %s"><div class="agent-k">%s agent</div>'
+            '<div class="agent %s"><div class="agent-k">%s</div>'
             '<div class="agent-v %s">%s</div><div class="agent-c">%d%% confidence</div>'
             '<div class="bar %s"><i style="width:%d%%"></i></div>'
             '<div class="agent-why">%s</div></div>'
@@ -305,7 +353,7 @@ with tab_tape:
         )
     st.markdown('<div class="agent-grid">%s</div>' % "".join(cards), unsafe_allow_html=True)
 
-    st.markdown('<p class="section-h">Sector map</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-h">Sectors</p>', unsafe_allow_html=True)
     if sec_df.empty:
         st.markdown('<div class="empty">No sector data — run scanner</div>', unsafe_allow_html=True)
     else:
@@ -324,9 +372,9 @@ with tab_tape:
             )
         st.markdown('<div class="sec-grid">%s</div>' % "".join(scards), unsafe_allow_html=True)
 
-    st.markdown('<p class="section-h">Setups · long + short</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-h">Setups</p>', unsafe_allow_html=True)
     if live_df.empty:
-        st.markdown('<div class="empty">No setups — stand aside. Agents need 3/5 agreement to trade.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="empty">No setups. Agents need 3/5 agreement to trade.</div>', unsafe_allow_html=True)
     else:
         rows_html = []
         for _, t in live_df.iterrows():
@@ -340,10 +388,10 @@ with tab_tape:
                 '<div class="setup %s"><div><div class="setup-side %s">%s</div>'
                 '<div class="setup-sub">%s</div></div><div>'
                 '<div class="setup-name">%s</div>'
-                '<div class="setup-sub">%s · RVOL %s x · score %s</div></div>'
-                '<div class="conf"><div class="conf-n %s">%d</div><div class="conf-l">confidence</div></div>'
-                '<div class="setup-levels">Entry <b>INR %s</b><br>SL <b>INR %s</b><br>'
-                'T1 1R <b>INR %s</b><br>T2 INR %s · qty %d</div></div>'
+                '<div class="setup-sub">%s · RVOL %sx · score %s</div></div>'
+                '<div class="conf"><div class="conf-n %s">%d</div><div class="conf-l">conf</div></div>'
+                '<div class="setup-levels">Entry <b>%s</b><br>SL <b>%s</b><br>'
+                'T1 1R <b>%s</b><br>T2 %s · qty %d</div></div>'
                 % (side, side, label, t.get("Setup"), name, t.get("Sector"), t.get("VolSurge"), t.get("Score"),
                    conf_c, conf, "{:,.2f}".format(sf(t.get("Entry"))), "{:,.2f}".format(sf(t.get("SL"))),
                    "{:,.2f}".format(sf(t.get("Target1"))), "{:,.2f}".format(sf(t.get("Target2"))),
@@ -351,12 +399,12 @@ with tab_tape:
             )
         st.markdown("".join(rows_html), unsafe_allow_html=True)
 
-        st.markdown('<p class="section-h" style="margin-top:1.5rem">Inspect</p>', unsafe_allow_html=True)
+        st.markdown('<p class="section-h" style="margin-top:1.4rem">Inspect</p>', unsafe_allow_html=True)
         selected = st.selectbox("stock", live_df["Stock"].tolist(), label_visibility="collapsed")
         row = live_df[live_df["Stock"] == selected].iloc[0]
         sig = str(row.get("Signal", "BUY")).upper()
         conf = setup_conf(row, nret)
-        col_c, col_t = st.columns([1.6, 1])
+        col_c, col_t = st.columns([1.65, 1])
         with col_c:
             hist = yf.Ticker(selected).history(period="5d", interval="5m")
             if hist.empty:
@@ -369,20 +417,20 @@ with tab_tape:
                     increasing_fillcolor="#3ecf8e", decreasing_fillcolor="#f07178",
                 ))
                 for y, color, label in [
-                    (sf(row.get("Entry")), "#a0a3ab", "Entry"),
+                    (sf(row.get("Entry")), "#9aa0ab", "Entry"),
                     (sf(row.get("SL")), "#f07178", "SL"),
                     (sf(row.get("Target1")), "#3ecf8e", "T1"),
-                    (sf(row.get("Target2")), "#6b6e78", "T2"),
+                    (sf(row.get("Target2")), "#6e7480", "T2"),
                 ]:
                     if y:
                         fig.add_hline(y=y, line_dash="dot", line_color=color, line_width=1,
                                       annotation_text=label, annotation_font_size=10)
                 fig.update_layout(
-                    template="plotly_dark", plot_bgcolor="#0d0e12", paper_bgcolor="#0d0e12",
-                    font=dict(family="JetBrains Mono", size=10, color="#6b6e78"),
+                    template="plotly_dark", plot_bgcolor="#0d0f14", paper_bgcolor="#0d0f14",
+                    font=dict(family="IBM Plex Mono", size=10, color="#6e7480"),
                     margin=dict(l=4, r=4, t=8, b=4), height=380,
                     xaxis_rangeslider_visible=False, showlegend=False,
-                    xaxis=dict(gridcolor="#15171c"), yaxis=dict(gridcolor="#15171c", side="right"),
+                    xaxis=dict(gridcolor="#171a22"), yaxis=dict(gridcolor="#171a22", side="right"),
                 )
                 st.plotly_chart(fig, use_container_width=True)
         with col_t:
@@ -397,9 +445,9 @@ with tab_tape:
                 '<div class="setup-name" style="margin:8px 0">%s</div>'
                 '<div class="conf-n %s">%d%% confidence</div>'
                 '<div class="setup-levels" style="text-align:left;margin-top:10px">'
-                'Entry <b>INR %s</b><br>SL <b>INR %s</b><br>T1 1R <b>INR %s</b><br>T2 <b>INR %s</b><br><br>'
-                'Size <b>%d</b> sh<br>Margin INR %s<br>Risk INR %s</div>'
-                '<div class="setup-sub" style="margin-top:10px">Skip if agents FLAT · book 1R · MIS · flat 15:10</div></div>'
+                'Entry <b>%s</b><br>SL <b>%s</b><br>T1 1R <b>%s</b><br>T2 <b>%s</b><br><br>'
+                'Size <b>%d</b> sh<br>Margin %s<br>Risk %s</div>'
+                '<div class="setup-sub" style="margin-top:10px">Skip if FLAT · book 1R · MIS · flat 15:10</div></div>'
                 % (side_cls, side_cls, action, str(selected).replace(".NS", ""),
                    "up" if conf >= 70 else "", conf,
                    "{:,.2f}".format(e), "{:,.2f}".format(s),
@@ -408,12 +456,12 @@ with tab_tape:
                 unsafe_allow_html=True,
             )
 
-with tab_mtx:
+if picked == "Matrix":
     st.markdown('<p class="section-h">Sector matrix</p>', unsafe_allow_html=True)
     if sec_df.empty:
         st.markdown('<div class="empty">No sector matrix</div>', unsafe_allow_html=True)
     else:
-        rows = ["<table class='mtx'><thead><tr><th>Sector</th><th>Bias</th><th>Return</th><th>vs Nifty</th><th>Breadth</th><th>Score</th><th>Last</th></tr></thead><tbody>"]
+        rows = ["<div class='mtx-wrap'><table class='mtx'><thead><tr><th>Sector</th><th>Bias</th><th>Return</th><th>vs Nifty</th><th>Breadth</th><th>Score</th><th>Last</th></tr></thead><tbody>"]
         for _, r in sec_df.sort_values("Score", ascending=False).iterrows():
             ret, vs, br, sc = sf(r.get("ReturnPct")), sf(r.get("VsNifty")), sf(r.get("Breadth")), int(sf(r.get("Score")))
             bias = str(r.get("Bias", "")).upper()
@@ -426,23 +474,23 @@ with tab_mtx:
                 "<td>%+d</td><td>%s</td></tr>"
                 % (r.get("Sector"), bcls, bias, heat(ret), ret, heat(vs), vs, heat(br, False), br, sc, "{:,.2f}".format(sf(r.get("Last"))))
             )
-        rows.append("</tbody></table>")
+        rows.append("</tbody></table></div>")
         st.markdown("".join(rows), unsafe_allow_html=True)
 
-    st.markdown('<p class="section-h">Agent vote board</p>', unsafe_allow_html=True)
-    vrows = ["<table class='mtx'><thead><tr><th>Agent</th><th>Vote</th><th>Conf</th><th>Why</th></tr></thead><tbody>"]
+    st.markdown('<p class="section-h">Agent votes</p>', unsafe_allow_html=True)
+    vrows = ["<div class='mtx-wrap'><table class='mtx'><thead><tr><th>Agent</th><th>Vote</th><th>Conf</th><th>Why</th></tr></thead><tbody>"]
     for a in agents:
         cls = "hi" if a["vote"] == "LONG" else ("lo" if a["vote"] == "SHORT" else "mid")
         vrows.append("<tr><td>%s</td><td><span class='cell %s'>%s</span></td><td>%d%%</td><td>%s</td></tr>" % (a["name"], cls, a["vote"], a["conf"], a["why"]))
     ccls = "hi" if vote == "LONG" else ("lo" if vote == "SHORT" else "mid")
-    vrows.append("<tr><td><b>CONSENSUS</b></td><td><span class='cell %s'>%s</span></td><td>%d%%</td><td>%s</td></tr></tbody></table>" % (ccls, vote, vote_conf, vote_why))
+    vrows.append("<tr><td><b>CONSENSUS</b></td><td><span class='cell %s'>%s</span></td><td>%d%%</td><td>%s</td></tr></tbody></table></div>" % (ccls, vote, vote_conf, vote_why))
     st.markdown("".join(vrows), unsafe_allow_html=True)
-    st.caption("Free yfinance tape only. Need 3/5 same side to trade.")
+    st.caption("Free yfinance tape. Need 3/5 same side. FLAT = no trade.")
 
 raw_history = load_json_history("performance_history.json")
-with tab_hist:
+if picked == "History":
     if raw_history.empty:
-        st.markdown('<div class="empty">No ledger</div>', unsafe_allow_html=True)
+        st.markdown('<div class="empty">No ledger yet</div>', unsafe_allow_html=True)
     else:
         valid = raw_history[raw_history["Status"].astype(str).str.contains("ACTIVE|CLOSED|HIT|EXIT", case=False, na=False)]
-        st.dataframe(valid, use_container_width=True, height=400, hide_index=True)
+        st.dataframe(valid, use_container_width=True, height=420, hide_index=True)
