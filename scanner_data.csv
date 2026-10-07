@@ -1,1 +1,2 @@
 Stock,Signal,Setup,Sector,SectorBias,WeeklyTrend,MTF,Price,Score,RSI,VolSurge,Entry,SL,Target1,Target2,RR,ORHigh,ORLow,VsSector,Qty,Margin,RiskRs
+ULTRACEMCO.NS,SELL,ORB breakdown,Infra,WEAK,INTRADAY,Opening range,10658.0,88,-0.5,4.23,10658.0,10680.0,10636.0,10614.0,1.0,10718.0,10664.0,-0.04,4,42632.0,88.0
